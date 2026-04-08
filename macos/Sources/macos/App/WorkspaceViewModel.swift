@@ -36,7 +36,7 @@ private struct BrowserPerformanceSnapshot {
     }
 }
 
-struct BrowserCardMetadata {
+struct BrowserCardMetadata: Hashable {
     let labelNames: [String]
     let labelLine: String
     let summaryText: String
@@ -61,23 +61,71 @@ struct BrowserLinkRenderData: Identifiable {
     let link: FrieveLink
     let start: CGPoint
     let end: CGPoint
-    let path: Path
-    let arrowHead: [CGPoint]?
+    let path: CGPath
+    let arrowHead: CGPath?
     let labelPoint: CGPoint?
     let isHighlighted: Bool
 
     var id: UUID { link.id }
 }
 
-struct BrowserOverviewSnapshot {
-    struct CardPoint: Identifiable {
+enum BrowserCardDetailLevel: Int, Hashable {
+    case thumbnail
+    case compact
+    case full
+}
+
+struct BrowserCardLayerSnapshot: Identifiable, Hashable {
+    let card: FrieveCard
+    let position: FrievePoint
+    let metadata: BrowserCardMetadata
+    let isSelected: Bool
+    let isHovered: Bool
+    let detailLevel: BrowserCardDetailLevel
+
+    var id: Int { card.id }
+}
+
+struct BrowserLinkLayerSnapshot: Identifiable {
+    let id: UUID
+    let path: CGPath
+    let arrowHead: CGPath?
+    let labelPoint: CGPoint?
+    let labelText: String?
+    let isHighlighted: Bool
+}
+
+struct BrowserOverlaySnapshot {
+    let selectionFrame: CGRect?
+    let marqueeRect: CGRect?
+    let linkPreviewSegment: (CGPoint, CGPoint)?
+}
+
+struct BrowserCardHitRegion: Hashable {
+    let cardID: Int
+    let frame: CGRect
+}
+
+struct BrowserSurfaceSceneSnapshot {
+    let canvasSize: CGSize
+    let worldToCanvasTransform: CGAffineTransform
+    let backgroundGuidePath: CGPath
+    let cards: [BrowserCardLayerSnapshot]
+    let links: [BrowserLinkLayerSnapshot]
+    let hitRegions: [BrowserCardHitRegion]
+    let overlay: BrowserOverlaySnapshot
+    let viewportSummary: String
+}
+
+struct BrowserOverviewSnapshot: Hashable {
+    struct CardPoint: Identifiable, Hashable {
         let cardID: Int
         let point: FrievePoint
 
         var id: Int { cardID }
     }
 
-    struct LinkSegment: Identifiable {
+    struct LinkSegment: Identifiable, Hashable {
         let id: UUID
         let from: FrievePoint
         let to: FrievePoint
@@ -169,6 +217,10 @@ final class WorkspaceViewModel: ObservableObject {
     private var drawingPreviewCache: [Int: (encoded: String, items: [DrawingPreviewItem])] = [:]
     private var drawingPreviewBoundsCache: [Int: (encoded: String, bounds: CGRect)] = [:]
     private var drawingPreviewImageCache: [String: NSImage] = [:]
+    private var browserCardRasterCache: [String: NSImage] = [:]
+    private var browserCardRasterCacheOrder: [String] = []
+    private var drawingPreviewImageCacheOrder: [String] = []
+    private var mediaImageCacheOrder: [String] = []
     private var mediaImageCache: [String: NSImage] = [:]
     private var mediaThumbnailTasks: Set<String> = []
     private var missingMediaCacheKeys: Set<String> = []
@@ -365,6 +417,7 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     func setBrowserHoverCard(_ cardID: Int?) {
+        guard browserHoverCardID != cardID else { return }
         browserHoverCardID = cardID
     }
 
@@ -416,14 +469,22 @@ final class WorkspaceViewModel: ObservableObject {
         let height = max(Int(targetSize.height.rounded()), 1)
         let cacheKey = "\(card.id):\(width)x\(height):\(card.drawingEncoded.hashValue)"
         if let cached = drawingPreviewImageCache[cacheKey] {
+            touchDrawingPreviewCacheKey(cacheKey)
             return cached
         }
         let items = drawingPreviewItems(for: card)
         guard !items.isEmpty else { return nil }
-        let image = renderDrawingPreviewImage(items: items, sourceBounds: drawingPreviewBounds(for: card), targetSize: CGSize(width: width, height: height), colorProvider: { rawValue, fallback in
-            self.drawingColor(rawValue: rawValue, fallback: fallback)
-        })
-        drawingPreviewImageCache[cacheKey] = image
+        guard let image = renderDrawingPreviewImage(
+            items: items,
+            sourceBounds: drawingPreviewBounds(for: card),
+            targetSize: CGSize(width: width, height: height),
+            colorProvider: { rawValue, fallback in
+                self.drawingColor(rawValue: rawValue, fallback: fallback)
+            }
+        ) else {
+            return nil
+        }
+        cacheDrawingPreviewImage(image, forKey: cacheKey)
         return image
     }
 
@@ -455,6 +516,7 @@ final class WorkspaceViewModel: ObservableObject {
         guard let imageURL = mediaURL(for: card.imagePath) else { return nil }
         let cacheKey = imageURL.path
         if let image = mediaImageCache[cacheKey] {
+            touchMediaImageCacheKey(cacheKey)
             return image
         }
         if missingMediaCacheKeys.contains(cacheKey) {
@@ -475,11 +537,74 @@ final class WorkspaceViewModel: ObservableObject {
                     guard let self else { return }
                     self.mediaThumbnailTasks.remove(cacheKey)
                     self.objectWillChange.send()
-                    self.mediaImageCache[cacheKey] = thumbnail
+                    self.cacheMediaImage(thumbnail, forKey: cacheKey)
                 }
             }
         }
         return nil
+    }
+
+    func browserCardRasterCacheKey(for snapshot: BrowserCardLayerSnapshot, previewReady: Bool, drawingPreviewReady: Bool) -> String {
+        [
+            String(snapshot.card.id),
+            String(snapshot.detailLevel.rawValue),
+            snapshot.card.updated,
+            snapshot.card.title,
+            snapshot.metadata.summaryText,
+            snapshot.metadata.labelLine,
+            snapshot.metadata.detailSummary,
+            snapshot.metadata.badges.joined(separator: "|"),
+            snapshot.card.imagePath ?? "",
+            snapshot.card.videoPath ?? "",
+            previewReady ? "preview-ready" : "preview-pending",
+            drawingPreviewReady ? "drawing-ready" : "drawing-none",
+            "\(Int(snapshot.metadata.canvasSize.width.rounded()))x\(Int(snapshot.metadata.canvasSize.height.rounded()))"
+        ].joined(separator: "::")
+    }
+
+    func browserCardRasterKey(for snapshot: BrowserCardLayerSnapshot) -> String {
+        let previewReady = snapshot.detailLevel == .thumbnail ? false : cachedPreviewImage(for: snapshot.card) != nil
+        let drawingPreviewReady = snapshot.detailLevel == .full
+            ? cachedDrawingPreviewImage(for: snapshot.card, targetSize: CGSize(width: 96, height: 72)) != nil
+            : false
+        return browserCardRasterCacheKey(
+            for: snapshot,
+            previewReady: previewReady,
+            drawingPreviewReady: drawingPreviewReady
+        )
+    }
+
+    func cachedBrowserCardRaster(for snapshot: BrowserCardLayerSnapshot) -> NSImage? {
+        cachedBrowserCardRaster(for: snapshot, cacheKey: browserCardRasterKey(for: snapshot))
+    }
+
+    func cachedBrowserCardRaster(for snapshot: BrowserCardLayerSnapshot, cacheKey: String) -> NSImage? {
+        let previewImage = snapshot.detailLevel == .thumbnail ? nil : cachedPreviewImage(for: snapshot.card)
+        let drawingPreviewImage = snapshot.detailLevel == .full
+            ? cachedDrawingPreviewImage(for: snapshot.card, targetSize: CGSize(width: 96, height: 72))
+            : nil
+        if let cached = browserCardRasterCache[cacheKey] {
+            touchBrowserCardRasterCacheKey(cacheKey)
+            return cached
+        }
+
+        let renderer = ImageRenderer(
+            content: BrowserCardRasterContentView(
+                card: snapshot.card,
+                metadata: snapshot.metadata,
+                detailLevel: snapshot.detailLevel,
+                fillColor: color(for: snapshot.card),
+                previewImage: previewImage,
+                drawingPreviewImage: drawingPreviewImage
+            )
+            .frame(width: snapshot.metadata.canvasSize.width, height: snapshot.metadata.canvasSize.height)
+        )
+        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
+        guard let image = renderer.nsImage else { return nil }
+        browserCardRasterCache[cacheKey] = image
+        touchBrowserCardRasterCacheKey(cacheKey)
+        evictCacheIfNeeded(order: &browserCardRasterCacheOrder, storage: &browserCardRasterCache, maxEntries: 240)
+        return image
     }
 
     func browserInlineEditorFrame(for card: FrieveCard, in size: CGSize) -> CGRect {
@@ -1020,9 +1145,41 @@ final class WorkspaceViewModel: ObservableObject {
 
     func browserCanvasScene(in size: CGSize, canvasPadding: CGFloat = 220) -> (cards: [BrowserCardRenderData], links: [BrowserLinkRenderData]) {
         let cards = visibleCardRenderData(in: size, canvasPadding: canvasPadding)
-        let visibleCardIDs = Set(cards.map(\.id))
+        let visibleCardIDs = Set(cards.map { $0.id })
         let links = visibleLinkRenderData(in: size, visibleCardIDs: visibleCardIDs)
         return (cards, links)
+    }
+
+    func browserSurfaceScene(in size: CGSize, canvasPadding: CGFloat = 260) -> BrowserSurfaceSceneSnapshot {
+        let detailLevel = browserCardDetailLevel()
+        let visibleCards = visibleBrowserCards(in: size, canvasPadding: canvasPadding)
+        let cards = visibleCards.map { card in
+            BrowserCardLayerSnapshot(
+                card: card,
+                position: currentPosition(for: card),
+                metadata: metadata(for: card),
+                isSelected: selectedCardIDs.contains(card.id),
+                isHovered: browserHoverCardID == card.id,
+                detailLevel: detailLevel
+            )
+        }
+        let hitRegions = visibleCards.map { BrowserCardHitRegion(cardID: $0.id, frame: cardFrame(for: $0, in: size)) }
+        let visibleCardIDs = Set(cards.map { $0.id })
+        let links = visibleLinkLayerSnapshots(in: size, visibleCardIDs: visibleCardIDs)
+        return BrowserSurfaceSceneSnapshot(
+            canvasSize: size,
+            worldToCanvasTransform: browserWorldToCanvasTransform(in: size),
+            backgroundGuidePath: browserBackgroundGuideCGPath(in: size),
+            cards: cards,
+            links: links,
+            hitRegions: hitRegions,
+            overlay: BrowserOverlaySnapshot(
+                selectionFrame: selectionFrame(in: size),
+                marqueeRect: marqueeRect(),
+                linkPreviewSegment: linkPreviewSegment(in: size)
+            ),
+            viewportSummary: browserViewportSummary(in: size)
+        )
     }
 
     func visibleCardRenderData(in size: CGSize, canvasPadding: CGFloat = 220) -> [BrowserCardRenderData] {
@@ -1069,6 +1226,42 @@ final class WorkspaceViewModel: ObservableObject {
         }
         recordPerformanceMetric(start, keyPath: \BrowserPerformanceSnapshot.visibleLinks)
         return renders
+    }
+
+    func visibleLinkLayerSnapshots(in size: CGSize, visibleCardIDs: Set<Int>) -> [BrowserLinkLayerSnapshot] {
+        guard !visibleCardIDs.isEmpty else { return [] }
+        let scale = max(browserScale(in: size), 1)
+        let detailLevel = browserCardDetailLevel()
+        let showsLabels = linkLabelsVisible && detailLevel != .thumbnail
+        let visible = visibleWorldRect(in: size).insetBy(dx: -0.12, dy: -0.12)
+        return document.links.compactMap { link -> BrowserLinkLayerSnapshot? in
+            guard let from = cardByID(link.fromCardID), let to = cardByID(link.toCardID) else { return nil }
+            let fromPosition = currentPosition(for: from)
+            let toPosition = currentPosition(for: to)
+            let shouldInclude: Bool
+            if visibleCardIDs.contains(link.fromCardID) || visibleCardIDs.contains(link.toCardID) {
+                shouldInclude = true
+            } else {
+                let segmentBounds = CGRect(
+                    x: min(fromPosition.x, toPosition.x),
+                    y: min(fromPosition.y, toPosition.y),
+                    width: abs(toPosition.x - fromPosition.x),
+                    height: abs(toPosition.y - fromPosition.y)
+                ).insetBy(dx: -0.05, dy: -0.05)
+                shouldInclude = visible.intersects(segmentBounds)
+            }
+            guard shouldInclude else { return nil }
+            let start = CGPoint(x: fromPosition.x, y: fromPosition.y)
+            let end = CGPoint(x: toPosition.x, y: toPosition.y)
+            return BrowserLinkLayerSnapshot(
+                id: link.id,
+                path: buildLinkPath(for: link, start: start, end: end, baseScale: CGFloat(scale)),
+                arrowHead: buildLinkArrowHead(for: link, start: start, end: end, baseScale: CGFloat(scale)),
+                labelPoint: buildLinkLabelPoint(for: link, start: start, end: end, baseScale: CGFloat(scale)),
+                labelText: showsLabels ? link.name.trimmed.nilIfEmpty : nil,
+                isHighlighted: selectedCardIDs.contains(link.fromCardID) || selectedCardIDs.contains(link.toCardID)
+            )
+        }
     }
 
     func cardFrame(for card: FrieveCard, in size: CGSize) -> CGRect {
@@ -1128,8 +1321,12 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     func browserBackgroundGuidePath(in size: CGSize) -> Path {
+        Path(browserBackgroundGuideCGPath(in: size))
+    }
+
+    func browserBackgroundGuideCGPath(in size: CGSize) -> CGPath {
         let visible = visibleWorldRect(in: size)
-        var path = Path()
+        let path = CGMutablePath()
         let center = canvasPoint(for: canvasCenter, in: size)
         path.move(to: CGPoint(x: center.x, y: 0))
         path.addLine(to: CGPoint(x: center.x, y: size.height))
@@ -1212,10 +1409,10 @@ final class WorkspaceViewModel: ObservableObject {
 
     func linkPath(for link: FrieveLink, in size: CGSize) -> Path? {
         guard let points = linkEndpoints(for: link, in: size) else { return nil }
-        return buildLinkPath(for: link, start: points.start, end: points.end)
+        return Path(buildLinkPath(for: link, start: points.start, end: points.end))
     }
 
-    func linkArrowHead(for link: FrieveLink, in size: CGSize) -> [CGPoint]? {
+    func linkArrowHead(for link: FrieveLink, in size: CGSize) -> CGPath? {
         guard let points = linkEndpoints(for: link, in: size) else { return nil }
         return buildLinkArrowHead(for: link, start: points.start, end: points.end)
     }
@@ -1243,7 +1440,8 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     func hitTestCard(at point: CGPoint, in size: CGSize, excludingCardID: Int? = nil) -> FrieveCard? {
-        for card in sortedCards().reversed() {
+        let candidates = visibleBrowserCards(in: size, canvasPadding: 40)
+        for card in candidates.reversed() {
             guard card.id != excludingCardID else { continue }
             if cardFrame(for: card, in: size).contains(point) {
                 return card
@@ -1320,6 +1518,10 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     func updateCardInteraction(cardID: Int, gesture: DragGesture.Value, in size: CGSize, modifiers: NSEvent.ModifierFlags) {
+        updateCardInteraction(cardID: cardID, from: gesture.startLocation, to: gesture.location, in: size, modifiers: modifiers)
+    }
+
+    func updateCardInteraction(cardID: Int, from startPoint: CGPoint, to currentPoint: CGPoint, in size: CGSize, modifiers: NSEvent.ModifierFlags) {
         let start = CACurrentMediaTime()
         if browserGestureMode == nil {
             beginCardInteraction(cardID: cardID, modifiers: modifiers)
@@ -1329,11 +1531,11 @@ final class WorkspaceViewModel: ObservableObject {
         case .movingSelection:
             let scale = browserScale(in: size)
             currentDragTranslation = FrievePoint(
-                x: Double(gesture.translation.width) / scale,
-                y: Double(gesture.translation.height) / scale
+                x: Double(currentPoint.x - startPoint.x) / scale,
+                y: Double(currentPoint.y - startPoint.y) / scale
             )
         case .creatingLink:
-            linkPreviewCanvasPoint = gesture.location
+            linkPreviewCanvasPoint = currentPoint
         case .none, .panning, .marquee:
             break
         }
@@ -1367,9 +1569,13 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     func endCardInteraction(gesture: DragGesture.Value, in size: CGSize) {
+        endCardInteraction(at: gesture.location, in: size)
+    }
+
+    func endCardInteraction(at location: CGPoint, in size: CGSize) {
         switch browserGestureMode {
         case let .creatingLink(sourceCardID):
-            if let target = hitTestCard(at: gesture.location, in: size, excludingCardID: sourceCardID) {
+            if let target = hitTestCard(at: location, in: size, excludingCardID: sourceCardID) {
                 appendLinkIfNeeded(from: sourceCardID, to: target.id, name: "Related")
             }
         case .movingSelection:
@@ -1618,7 +1824,11 @@ final class WorkspaceViewModel: ObservableObject {
         drawingPreviewCache.removeAll(keepingCapacity: true)
         drawingPreviewBoundsCache.removeAll(keepingCapacity: true)
         drawingPreviewImageCache.removeAll(keepingCapacity: true)
+        drawingPreviewImageCacheOrder.removeAll(keepingCapacity: true)
+        browserCardRasterCache.removeAll(keepingCapacity: true)
+        browserCardRasterCacheOrder.removeAll(keepingCapacity: true)
         mediaImageCache.removeAll(keepingCapacity: true)
+        mediaImageCacheOrder.removeAll(keepingCapacity: true)
         mediaThumbnailTasks.removeAll(keepingCapacity: true)
         missingMediaCacheKeys.removeAll(keepingCapacity: true)
         invalidateDocumentCaches()
@@ -1831,6 +2041,40 @@ final class WorkspaceViewModel: ObservableObject {
         browserPerformance[keyPath: keyPath].record(elapsed)
     }
 
+    private func touchBrowserCardRasterCacheKey(_ key: String) {
+        browserCardRasterCacheOrder.removeAll { $0 == key }
+        browserCardRasterCacheOrder.append(key)
+    }
+
+    private func touchDrawingPreviewCacheKey(_ key: String) {
+        drawingPreviewImageCacheOrder.removeAll { $0 == key }
+        drawingPreviewImageCacheOrder.append(key)
+    }
+
+    private func touchMediaImageCacheKey(_ key: String) {
+        mediaImageCacheOrder.removeAll { $0 == key }
+        mediaImageCacheOrder.append(key)
+    }
+
+    private func cacheMediaImage(_ image: NSImage, forKey key: String) {
+        mediaImageCache[key] = image
+        touchMediaImageCacheKey(key)
+        evictCacheIfNeeded(order: &mediaImageCacheOrder, storage: &mediaImageCache, maxEntries: 96)
+    }
+
+    private func cacheDrawingPreviewImage(_ image: NSImage, forKey key: String) {
+        drawingPreviewImageCache[key] = image
+        touchDrawingPreviewCacheKey(key)
+        evictCacheIfNeeded(order: &drawingPreviewImageCacheOrder, storage: &drawingPreviewImageCache, maxEntries: 160)
+    }
+
+    private func evictCacheIfNeeded(order: inout [String], storage: inout [String: NSImage], maxEntries: Int) {
+        while order.count > maxEntries {
+            let evictedKey = order.removeFirst()
+            storage.removeValue(forKey: evictedKey)
+        }
+    }
+
     private func buildBrowserBadgeItems(for card: FrieveCard, labelNames: [String], linkCount: Int, hasDrawingPreview: Bool) -> [String] {
         var badges: [String] = []
         if card.isTop {
@@ -1902,11 +2146,35 @@ final class WorkspaceViewModel: ObservableObject {
         return CGSize(width: baseWidth, height: min(max(height, 130), 360))
     }
 
-    private func buildLinkPath(for link: FrieveLink, start: CGPoint, end: CGPoint) -> Path {
-        var path = Path()
+    private func browserCardDetailLevel() -> BrowserCardDetailLevel {
+        switch zoom {
+        case ..<0.7:
+            return .thumbnail
+        case ..<1.35:
+            return .compact
+        default:
+            return .full
+        }
+    }
+
+    private func browserWorldToCanvasTransform(in size: CGSize) -> CGAffineTransform {
+        let scale = CGFloat(browserScale(in: size))
+        return CGAffineTransform(
+            a: scale,
+            b: 0,
+            c: 0,
+            d: scale,
+            tx: size.width / 2 - CGFloat(canvasCenter.x) * scale,
+            ty: size.height / 2 - CGFloat(canvasCenter.y) * scale
+        )
+    }
+
+    private func buildLinkPath(for link: FrieveLink, start: CGPoint, end: CGPoint, baseScale: CGFloat = 1) -> CGPath {
+        let path = CGMutablePath()
         path.move(to: start)
         let dx = end.x - start.x
-        let controlOffset = max(abs(dx) * 0.35, 28)
+        let scale = max(baseScale, 0.0001)
+        let controlOffset = max(abs(dx) * 0.35, 28 / scale)
         switch abs(link.shape % 6) {
         case 1, 3:
             let cp1 = CGPoint(x: start.x + controlOffset, y: start.y)
@@ -1923,26 +2191,33 @@ final class WorkspaceViewModel: ObservableObject {
         return path
     }
 
-    private func buildLinkArrowHead(for link: FrieveLink, start: CGPoint, end: CGPoint) -> [CGPoint]? {
+    private func buildLinkArrowHead(for link: FrieveLink, start: CGPoint, end: CGPoint, baseScale: CGFloat = 1) -> CGPath? {
         guard link.directionVisible else { return nil }
         let dx = end.x - start.x
         let dy = end.y - start.y
         let length = max(hypot(dx, dy), 0.0001)
         let ux = dx / length
         let uy = dy / length
-        let arrowLength: CGFloat = 10
-        let arrowWidth: CGFloat = 5
+        let scale = max(baseScale, 0.0001)
+        let arrowLength: CGFloat = 10 / scale
+        let arrowWidth: CGFloat = 5 / scale
         let tip = end
         let base = CGPoint(x: end.x - ux * arrowLength, y: end.y - uy * arrowLength)
         let left = CGPoint(x: base.x - uy * arrowWidth, y: base.y + ux * arrowWidth)
         let right = CGPoint(x: base.x + uy * arrowWidth, y: base.y - ux * arrowWidth)
-        return [tip, left, right]
+        let path = CGMutablePath()
+        path.move(to: tip)
+        path.addLine(to: left)
+        path.addLine(to: right)
+        path.closeSubpath()
+        return path
     }
 
-    private func buildLinkLabelPoint(for link: FrieveLink, start: CGPoint, end: CGPoint) -> CGPoint? {
+    private func buildLinkLabelPoint(for link: FrieveLink, start: CGPoint, end: CGPoint, baseScale: CGFloat = 1) -> CGPoint? {
         let name = link.name.trimmed
         guard !name.isEmpty else { return nil }
-        return CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 - 8)
+        let verticalOffset = 8 / max(baseScale, 0.0001)
+        return CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 - verticalOffset)
     }
 
     private func drawingPreviewBounds(for items: [DrawingPreviewItem]) -> CGRect {
