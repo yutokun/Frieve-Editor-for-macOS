@@ -1,0 +1,2990 @@
+[Global]
+DefaultView=1
+ReadOnly=1
+Version=8
+Arrange=1
+ArrangeMode=2
+AutoScroll=1
+AutoZoom=1
+FullScreen=-1
+Exit=-1
+Zoom=-0.170000001788139
+X=0.519599974155426
+Y=0.519900023937225
+TargetCard=-1000
+SizeLimitation=0
+LinkLimitation=0
+DateLimitation=0
+SizeLimitation=100
+LinkLimitation=3
+LinkDirection=0
+LinkBackward=0
+LinkTarget=-1
+DateLimitation=0
+DateLimitationDateType=0
+DateLimitationType=0
+[Card]
+CardID=0
+Num=79
+0=0
+1=3
+2=1
+3=2
+4=59
+5=49
+6=50
+7=69
+8=51
+9=7
+10=6
+11=61
+12=15
+13=62
+14=8
+15=9
+16=78
+17=64
+18=14
+19=10
+20=22
+21=11
+22=52
+23=53
+24=77
+25=65
+26=12
+27=13
+28=17
+29=16
+30=63
+31=18
+32=19
+33=23
+34=20
+35=35
+36=36
+37=5
+38=21
+39=24
+40=25
+41=26
+42=27
+43=28
+44=73
+45=29
+46=30
+47=74
+48=32
+49=33
+50=34
+51=60
+52=4
+53=75
+54=67
+55=71
+56=48
+57=31
+58=40
+59=37
+60=56
+61=55
+62=76
+63=54
+64=58
+65=57
+66=38
+67=39
+68=70
+69=66
+70=68
+71=41
+72=42
+73=43
+74=44
+75=45
+76=46
+77=72
+78=47
+[Link]
+Num=88
+0=Fr3,De1,Di1,Sh5,Na
+1=Fr3,De2,Di1,Sh5,Na
+2=Fr0,De3,Di1,Sh5,Na
+3=Fr0,De7,Di1,Sh5,Na
+4=Fr7,De6,Di1,Sh5,Na
+5=Fr7,De8,Di1,Sh5,Na
+6=Fr7,De10,Di1,Sh5,Na
+7=Fr7,De11,Di1,Sh5,Na
+8=Fr0,De12,Di1,Sh5,Na
+9=Fr12,De13,Di1,Sh5,Na
+10=Fr7,De14,Di1,Sh5,Na
+11=Fr7,De15,Di1,Sh5,Na
+12=Fr12,De18,Di1,Sh5,Na
+13=Fr12,De16,Di1,Sh5,Na
+14=Fr12,De17,Di1,Sh5,Na
+15=Fr12,De19,Di1,Sh5,Na
+16=Fr12,De20,Di1,Sh5,Na
+17=Fr0,De21,Di1,Sh5,Na
+18=Fr7,De22,Di1,Sh5,Na
+19=Fr12,De23,Di1,Sh5,Na
+20=Fr7,De24,Di1,Sh5,Na
+21=Fr12,De25,Di1,Sh5,Na
+22=Fr21,De25,Di1,Sh5,Na
+23=Fr21,De24,Di1,Sh5,Na
+24=Fr21,De23,Di1,Sh5,Na
+25=Fr21,De22,Di1,Sh5,Na
+26=Fr21,De26,Di1,Sh5,Na
+27=Fr21,De27,Di1,Sh5,Na
+28=Fr21,De29,Di1,Sh5,Na
+29=Fr21,De28,Di1,Sh5,Na
+30=Fr0,De30,Di1,Sh5,Na
+31=Fr30,De31,Di1,Sh5,Na
+32=Fr30,De33,Di1,Sh5,Na
+33=Fr30,De34,Di1,Sh5,Na
+34=Fr30,De32,Di1,Sh5,Na
+35=Fr12,De36,Di1,Sh5,Na
+36=Fr12,De35,Di1,Sh5,Na
+37=Fr0,De37,Di1,Sh5,Na
+38=Fr37,De39,Di1,Sh5,Na
+39=Fr37,De38,Di1,Sh5,Na
+40=Fr30,De40,Di1,Sh5,Na
+41=Fr0,De41,Di1,Sh5,Na
+42=Fr41,De42,Di1,Sh5,Na
+43=Fr41,De43,Di1,Sh5,Na
+44=Fr41,De44,Di1,Sh5,Na
+45=Fr41,De45,Di1,Sh5,Na
+46=Fr41,De46,Di1,Sh5,Na
+47=Fr41,De47,Di1,Sh5,Na
+48=Fr30,De48,Di1,Sh5,Na
+49=Fr10,De24,Di1,Sh5,La1,Na
+50=Fr3,De50,Di1,Sh5,Na
+51=Fr3,De49,Di1,Sh5,Na
+52=Fr3,De51,Di1,Sh5,Na
+53=Fr7,De52,Di1,Sh5,Na
+54=Fr37,De54,Di1,Sh5,Na
+55=Fr37,De55,Di1,Sh5,Na
+56=Fr37,De56,Di1,Sh5,Na
+57=Fr37,De57,Di1,Sh5,Na
+58=Fr37,De58,Di1,Sh5,Na
+59=Fr52,De57,Di1,Sh5,La1,Na
+60=Fr19,De25,Di1,Sh5,La1,Na
+61=Fr3,De59,Di1,Sh5,Na
+62=Fr30,De60,Di1,Sh5,Na
+63=Fr7,De61,Di1,Sh5,Na
+64=Fr7,De62,Di1,Sh5,Na
+65=Fr30,De62,Di1,Sh5,Na
+66=Fr7,De64,Di1,Sh5,Na
+67=Fr12,De63,Di1,Sh5,Na
+68=Fr7,De65,Di1,Sh5,Na
+69=Fr0,De66,Di1,Sh5,Na
+70=Fr66,De68,Di1,Sh5,Na
+71=Fr66,De66,Di1,Sh5,Na
+72=Fr3,De69,Di1,Sh5,Na
+73=Fr30,De71,Di1,Sh5,Na
+74=Fr21,De73,Di1,Sh5,Na
+75=Fr30,De74,Di1,Sh5,Na
+76=Fr30,De75,Di1,Sh5,Na
+77=Fr7,De9,Di1,Sh5,Na
+78=Fr68,De68,Di1,Sh5,Na
+79=Fr30,De4,Di1,Sh5,Na
+80=Fr12,De5,Di1,Sh5,Na
+81=Fr7,De53,Di1,Sh5,Na
+82=Fr37,De76,Di1,Sh5,Na
+83=Fr30,De67,Di1,Sh5,Na
+84=Fr7,De77,Di1,Sh5,Na
+85=Fr37,De70,Di1,Sh5,Na
+86=Fr41,De72,Di1,Sh5,Na
+87=Fr7,De78,Di1,Sh0,Na
+[Label]
+Num=9
+0=Co16711680,En1,Sh1,Hi0,Fo0,Si100,NaOverview
+1=Co65280,En1,Sh1,Hi0,Fo0,Si100,NaCard Editing
+2=Co255,En1,Sh1,Hi0,Fo0,Si100,NaLink Editing
+3=Co33023,En1,Sh1,Hi0,Fo0,Si100,NaLabel Editing
+4=Co16711935,En1,Sh1,Hi0,Fo0,Si100,NaCard Arrangement
+5=Co65535,En1,Sh1,Hi0,Fo0,Si100,NaBrowsing
+6=Co16776960,En1,Sh1,Hi0,Fo0,Si100,NaMenu Guide
+7=Co14671839,En1,Sh1,Hi0,Fo0,Si168,NaNode
+8=Co15991944,En1,Sh1,Hi0,Fo0,Si100,NaPrinting
+[LinkLabel]
+Num=1
+0=Co16711680,En1,Sh0,Hi0,Fo1,Si0,NaRelated
+[CardData]
+23
+Title:Frieve Editor Help
+Fixed:0
+X:0.527909159660339
+Y:0.485341817140579
+Top:1
+Size:237
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:2013/11/02 22:35:21
+Viewed:2023/04/14 20:37:39
+-
+============================================================================
+Frieve Editor Version 3.00 Help
+============================================================================
+
+Thank you for downloading Frieve Editor.
+Frieve Editor is a new kind of editor designed to help you organize your thoughts
+and come up with original ideas.
+
+To browse this help file, select the topic you want from Cards on the left side
+of the screen.
+You can also follow the links shown at the bottom of the screen to open related articles.
+15
+Title:Overview
+Label:1,8
+Fixed:0
+X:0.223215848207474
+Y:0.852238237857819
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+============================================================================
+Overview
+============================================================================
+45
+Title: Purpose
+Label:1
+Fixed:0
+X:0.229445829987526
+Y:0.93997061252594
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+Purpose
+----------------------------------------------------------------------------
+
+Frieve Editor is designed for uses such as the following.
+
+- As an idea processor
+  Place keyword cards that can spark ideas one after another on the screen.
+  As new ideas come to you, place those on the screen as cards as well, add labels
+  to classify them, and write their relationships to other keywords as links.
+  The labels and links you add can then be used to arrange the cards automatically.
+  Features such as randomly showing cards or randomly tracing links help support
+  fresh and unconventional thinking.
+
+- For concise description and organization of complex situations
+  Write down complex situations whose conditions are intertwined, starting from
+  whatever parts you already understand.
+  By defining relationships with labels and links, you can describe complex matters
+  more clearly. Doing so helps you discover solutions that take into account effects
+  that are easy to overlook in everyday thinking. Even complicated ideas that were
+  previously very hard to explain or share can be communicated naturally.
+
+- As a project management tool
+  Describe the tasks that need to be done, how they relate to one another, the order
+  in which they should be performed, budgets, risks, and so on.
+  With labels, each card can be classified as already completed, something that must
+  be done immediately, something to postpone, and more. This makes it easier to judge
+  what should be done next, what is likely to become a problem, and how the project
+  should move forward.
+
+- Other uses
+  You can also use it for meeting minutes, personal notes, system descriptions,
+  blog post drafts, and many other purposes.
+40
+Title: Key Features
+Label:1
+Fixed:0
+X:0.238106444478035
+Y:0.904705762863159
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+Key Features
+----------------------------------------------------------------------------
+
+The main features of Frieve Editor are as follows.
+
+- Representation with cards and links
+  In Frieve Editor, each idea or fact is written on a single card, and the
+  relationships between cards are expressed with links. Because links can be drawn
+  from any card to any other card, even complex topics can be described naturally.
+
+- Classification of cards and links with labels
+  Each card and link can have multiple labels. Labels can be defined freely by the
+  user. Because cards and links are color-coded by label on screen, you can grasp
+  their meaning at a glance.
+
+- Automatic arrangement and display filtering for cards
+  Frieve Editor can automatically arrange card layouts based on the links attached to
+  cards and the labels assigned to them. This makes it easy to view your information
+  from different angles. You can also show or hide cards and links by label, or limit
+  the visible range by number of links, so that only the information you need is shown.
+
+- Animation
+  Frieve Editor includes several animations to support idea generation and to help
+  you understand what has been described.
+  Animations that present created cards at random encourage new connections between
+  different cards. Animations that trace links at random help you intuitively grasp
+  how cards are related.
+41
+Title: Basic Features
+Label:1
+Fixed:0
+X:0.19487227499485
+Y:0.933239459991455
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:2023/04/14 20:14:08
+-
+----------------------------------------------------------------------------
+Basic Features
+----------------------------------------------------------------------------
+
+- Cards
+  In Frieve Editor, one piece of writing is stored in one card.
+  Whenever you think of something, create a card and write it down. To describe
+  things efficiently, break a topic down into pieces as small as possible and
+  describe it using many cards.
+
+- Links
+  Links define relationships between cards. A link can be drawn from one card to
+  another card. Based on multiple links between cards, Frieve Editor can automatically
+  arrange cards so that linked cards are placed near one another.
+
+- Labels
+  Frieve Editor lets you assign labels to both cards and links.
+  By default, three labels are defined: Problem, Solution, and Result,
+  but labels can be edited freely.
+
+  Assigning labels to cards helps you organize them efficiently. For example, you can
+  automatically arrange cards so that cards with the same label are placed close to
+  one another, show only cards with a certain label, or hide them. You can also group
+  cards with the same label and display them as a single card.
+
+  In the same way, labels attached to links can be used to show or hide only links
+  with a certain label. Combined with automatic arrangement based on linked cards being
+  placed close together, this makes it easy to reorganize cards while focusing on a
+  particular kind of relationship.
+279
+Title: Version History
+Label:1
+Fixed:0
+X:0.153297424316406
+Y:0.897660434246063
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:2023/04/14 20:14:19
+Viewed:2023/04/14 20:14:08
+-
+----------------------------------------------------------------------------
+Version History
+----------------------------------------------------------------------------
+
+- 3.00 (2026/03/19)
+  Changed the default file format to the AI-friendly fip2 format.
+  Added Auto Save / Auto Reload functionality.
+  Improved wheel and gesture operations (wheel = scroll, Ctrl+wheel = zoom,
+  Ctrl+Shift+wheel = font size, pinch = zoom).
+  Added support for 13 languages (menu display and language-specific help files).
+  Restored text-to-speech (TTS) functionality.
+  Changed to the MIT license.
+  Also made several small improvements and bug fixes:
+    Optimized search speed.
+    When the same file is already open in another instance, that instance is now activated.
+    Fixed a bug with GPT model specification in setting2.ini.
+    Fixed web search functionality.
+    Fixed label button layout.
+
+- 2.00 (2023/04/14)
+  Added support for calling the ChatGPT API.
+
+- 1.40 (2021/08/09)
+  Made several small improvements and bug fixes.
+
+- 1.32 (2013/11/02)
+  Added support for newer versions of Windows.
+  Added 64-bit support.
+  Changed the default language to Japanese.
+  Also made several small improvements and bug fixes.
+
+- 1.31 (2008/09/07)
+  Saving a file now stores the current coordinates and various settings, and loading
+  the file restores them.
+  Added curved links.
+  Added HierarchicalText to File menu -> Export.
+  Added string replacement for card names and body text (Edit menu -> Replace, Ctrl+R).
+  Selected links now blink.
+  Links related to the current card are now highlighted.
+  Changed the shortcut for editing a card title from Ctrl+T to F2.
+  Localized some messages that had not yet been translated into Japanese.
+  Fixed a bug in the Statistics tab where the day of the week could shift.
+  Fixed a bug that caused an error when editing body text on the right or bottom side
+  of the Browser.
+  Fixed a bug where using dotted lines could sometimes cause an error.
+  Fixed a memory leak when displaying the Statistics tab.
+  Fixed a memory leak when using Tree (Radial) auto-arrangement.
+
+- 1.30 (2008/06/15)
+  Added support for inserting simple drawings into cards (Drawing tab).
+  Added statistical graph display such as label counts (Statistics tab).
+  Added a function to link to all cards with a designated label (Insert menu).
+  Added a function to add a designated label to all destination cards (Insert menu).
+  Added Japanese localization for all windows (View menu -> Language).
+  The status bar now shows the number of selected cards.
+  Also made several small improvements and bug fixes.
+
+- 1.23 (2008/04/15)
+  You can now start typing a title directly without clicking a card first.
+  The current selection is now used as the search key.
+  Search keyword history is now saved.
+  Zooming with the Page Up and Page Down keys is now supported.
+  Selecting a link in the link list now moves Related Text.
+  Improved the initial position of child and sibling cards when auto-arrangement is off.
+  The body editor shown on the right or bottom of the Browser is now resizable.
+  Fixed a bug on Windows 98 where right-clicking after selecting multiple lines caused
+  an error.
+  Fixed an issue where text being converted by the IME could fail to display.
+  Fixed an issue where adding images or video by drag and drop was not reflected immediately.
+  Fixed an issue where zooming with the mouse wheel could not reach the final zoom level.
+  Fixed an issue where link-related settings were not saved.
+  Also made several small bug fixes and improvements.
+
+- 1.22 (2008/02/11)
+  Added global search (list display of search results).
+  Added internet search using selected text or card titles.
+  Added support for inserting external links by drag and drop and creating cards with
+  external links.
+  Added Matrix (Index), which arranges cards neatly by card order.
+  Added Find Previous (Edit menu -> Find Previous, Shift+F3).
+  The Editor tab can now display the body text of linked cards (Related Text).
+  You can now cut text from the body and create a linked card from the selected card.
+  Added support for importing text in which hierarchy is represented with periods
+  (File menu -> Import).
+  Added Text Length to score display.
+  Added Snow and Cherry Blossom to background animations.
+  Selecting a card now scrolls immediately by default (this can be changed from
+  View menu -> Others).
+  Fixed a bug where F3 could search only card titles.
+  Fixed an issue where the initial size of the link list under the editor was 0.
+  Fixed an issue where Ctrl+click on an external link in the Editor tab sometimes
+  did not open it.
+  Fixed an issue where score type settings were not saved.
+  Also made several small bug fixes and improvements.
+
+- 1.21 (2007/12/01)
+  Added hierarchical auto-arrangement (Tree (Radial); requires a root card).
+  Added a file list for quickly opening files (move the mouse to the left side of
+  the screen).
+  Added Random Jump and Random Map animations.
+  Added batch conversion of link direction (Edit menu -> Batch Conversion).
+  Card list visibility can now be configured (View menu -> Others).
+  The width of the card list and related settings are now saved when the program exits.
+  Added support for specifying video playback position
+  (start(ms)-end(ms)| before the file name).
+  Cursor animation can now be turned on and off (View menu -> Others).
+  Fixed a bug where double-clicking a link under the Editor tab did not follow it.
+  Fixed a bug where titles could not be edited in the Browser while the editor was
+  always visible.
+  Fixed a bug where moving cards with the cursor canceled AutoZoom.
+  Fixed a bug where hidden cards could be selected by range selection.
+  Fixed a bug where Full Screen could not be toggled during animation.
+  Fixed a bug where dragging on the Overview was not possible when anti-aliasing
+  was enabled.
+  Fixed a bug where pressing Ctrl+E while editing a card title in the Browser caused
+  an error.
+  Reduced screen flicker.
+  Also made several small bug fixes and improvements.
+
+- 1.20 (2007/11/04)
+  Added Undo and Redo for up to 10 editing operations.
+  Added multiple-card selection.
+  Added cut, copy, and paste for cards.
+  Added body editing in the Browser screen (View menu -> Text).
+  Added search limited to currently visible cards.
+  The current card is now marked with a visible cursor.
+  Added background animation (View menu -> Others).
+  Added Japanese localization for popup menus.
+  Changed opening external links from Ctrl+click to Ctrl+Shift+click.
+  Also made several small bug fixes and improvements.
+
+- 1.13 (2007/10/15)
+  Added various editing commands to the Browser right-click menu.
+  Link style can now be changed.
+  Added batch conversion of all card shapes and all link shapes (Edit -> Change Shape).
+  Added default size, shape, and fixed-position settings for cards and links.
+  Added ticker display of the first one or two lines of body text in the Browser.
+  Added card shadow drawing.
+  Added simple gradient display for cards.
+  Added outline drawing for links.
+  Added support for displaying video inside cards (enter a file name or URL in the body).
+  Added support for importing hierarchical text and text files in folders (File menu -> Import).
+  Added export of Browser images in BMP and JPEG formats (File menu -> Export).
+  Added support for copying various data to the clipboard (File menu -> Export).
+  Added anti-aliasing for Browser display (View menu -> Others).
+  Included sample wallpapers in the wallpaper folder under the installation folder.
+  Added various editing features in full-screen mode (move the mouse to the top of the screen).
+  Fixed a bug where LinkLabel in some files was not loaded correctly.
+  Fixed a bug where hexagonal cards were not drawn correctly.
+  Fixed a bug where double-clicking a card in full screen caused an error.
+  Also made several small bug fixes and improvements.
+
+- 1.12 (2007/10/01)
+  Fixed a bug where adding a card while Arrange ON and Zoom were active caused an error.
+  Also made several small bug fixes.
+
+- 1.11 (2007/09/30)
+  Added fixed card positions (pushpin button).
+  Added Arrange (Matrix), which arranges cards neatly in a grid.
+  Added an overview of the whole card layout in the lower-right corner of the Browser.
+  Cards can now be moved with the cursor keys in the Browser.
+  Added Link Limitation that shows only cards linked in the reverse direction.
+  Added Link Limitation that shows links between the current card and the target.
+  Added a new card shape that draws a small figure at the center and hollows out the text.
+  In addition to circles around cards with the same label, rectangles can now be drawn.
+  The font can now be changed (View menu -> Font -> Change Font).
+  Wallpaper can now be specified for the Browser screen (View menu -> Others).
+  Added Soft arrangement modes that prioritize avoiding overlap.
+  Card auto-arrangement now continues even while dragging.
+  Auto-arrangement and scrolling are now slightly smoother.
+  Added shortcuts for moving between Browser and Editor (Ctrl+B, Ctrl+E).
+  Changed the highlight trigger for the three most recently viewed cards from Shift
+  to Space.
+  Changed the drag modifier for moving cards with the same label from Shift to Ctrl.
+  Also made several small bug fixes and improvements.
+
+- 1.10 (2007/09/01)
+  Added a setting to wrap body text at the right edge via View menu -> Text -> WordWrap.
+  Card titles can now contain line breaks using \n or Ctrl+Enter in the Browser.
+  Added arrangement by title/body similarity (Similarity).
+  Added Normalize, which zooms the layout so cards fit on screen.
+  Added support for various score types (View menu -> Score).
+  Added read-aloud for card titles (at the time, Microsoft Agent; the current app uses
+  Windows speech synthesis / SAPI).
+  Added case-insensitive search (leave Match Case unchecked).
+  Fixed a bug where shortcut keys could not be used in the search dialog.
+  Fixed an issue where an error could occur right after startup.
+  Also made several small bug fixes and improvements.
+
+- 1.05 (2007/08/03)
+  Added Japanese menu selection via View menu -> Change Language.
+  Added support for displaying images specified by external links on cards.
+  Added score calculation and display via View menu -> Others.
+  Added export of the card title list via File menu -> Export.
+  Cards viewed more recently are now displayed in front.
+  Pressing Shift now highlights the three most recently viewed cards.
+  Label names are now displayed inside the label circles in the Browser.
+  Expanded the Browser card layout area to four times the previous size
+  (twice as wide and twice as tall).
+  AutoZoom now always keeps related cards within the visible screen.
+  File loading is now faster.
+  Fixed an issue where cards could overlap during auto-arrangement.
+  Fixed an issue where Delete could not remove a card immediately after editing its title.
+  Also made several small bug fixes and improvements.
+
+- 1.04 (2007/07/16)
+  Added per-label card size settings with the View button on the Browser tab.
+  Labels can now be enabled or disabled.
+  Added filtering of visible cards by date.
+  Added filtering of visible cards by minimum card size.
+  Foreground and background colors can now be changed from View menu -> Others.
+  Multiple cards can now be created at once from multi-line text, using each line as a title.
+  The file name of the file being edited is now shown on the taskbar.
+  When a card is selected, Cards now scrolls until the selected card is visible.
+  Fixed a bug where the program could not start if no default printer existed.
+  Fixed a bug where deleting a Link Label that was in use caused an error and left the
+  application unusable.
+  Fixed an issue where saving could fail under heavy load and the cursor remained as an
+  hourglass.
+  Fixed an issue where closing the search dialog returned the cursor position to the top
+  of the page.
+  Fixed an issue where clicking blank space while Fold was active could select a card.
+  Fixed an issue where the selection range during search was incorrect.
+  Also made several small bug fixes and improvements.
+
+- 1.03 (2006/12/17)
+  Added simple printing of the Browser display.
+  Added Shift+Insert to create a parent-node card.
+  Card shapes and sizes can now be changed.
+  Added support for larger zoom levels.
+  Added a status bar showing character counts and similar information
+  (visibility can be changed from the View menu).
+  Added Select All to the Edit menu.
+  Fixed display corruption and file corruption when pasting RichText.
+  Fixed a bug where deleting a link with the Delete key while dragging it caused an error.
+  Fixed an issue where the line was not shown when dragging a labeled link.
+  Also made several small bug fixes and improvements.
+
+- 1.02 (2006/10/21)
+  Added Insert to create a child-node card.
+  Added Enter to create a sibling-node card.
+  Added Insert while a link is selected to create a card between the linked cards.
+  Links can now be edited by dragging.
+  Added search limited to card titles or body text.
+  Added card-title search from the Browser screen.
+  Added Shift+drag to move cards with the same label together.
+  Search is now faster.
+  Display is now slightly faster.
+  When creating a new card, the initial Index now changes depending on the card currently
+  being edited.
+  Fixed an issue where folded cards repelled too strongly during Arrange.
+  Fixed an issue where Tab could not be inserted into the body.
+  Also made several small bug fixes and improvements.
+
+- 1.01 (2006/10/07)
+  Card titles can now be edited directly in the Browser.
+  Immediately after creating a new card, the program now enters title editing mode.
+  Added Auto Zoom, which automatically zooms the Browser screen in or out.
+  Added arrangement by card order (Index).
+  View button -> Link Limitation can now limit by link direction.
+  Added Cut to New Card Title to the Editor right-click menu.
+  Added Shuffle, which randomizes card coordinates in the Browser.
+  Added Shuffle (Edit -> Sort menu), which randomizes card order.
+  Fixed a bug where clicking a card in the Browser could select the card underneath it.
+
+- 1.00 (2006/09/24)
+  Initial release.
+24
+Title: Copyright and License
+Label:1
+Fixed:0
+X:0.127202451229095
+Y:0.852422893047333
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+Copyright and License
+----------------------------------------------------------------------------
+
+This software is freeware, and the copyright belongs to Frieve.
+Even if the use of this application causes some kind of problem, we cannot accept
+any responsibility.
+
+Redistribution has been freely permitted since Version 1.00.
+When redistributing the software, please redistribute the latest version and keep
+the file format exactly as it was when downloaded. If you would like to redistribute
+it in a special form, please contact Frieve in advance.
+61
+Title: Frequently Asked Questions
+Label:1
+Fixed:0
+X:0.173380136489868
+Y:0.835304021835327
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+Frequently Asked Questions
+----------------------------------------------------------------------------
+
+Q. Is there any way to make the Browser area larger?
+
+A. In Arrange (automatic card layout) at the top of the Browser screen, select
+Normalize and press the Arrange ON button. The cards will be arranged automatically
+around the center of the Browser while preserving their relative positions.
+After arranging, you can use the Zoom bar to zoom in or out, and you can change the
+visible area of the Browser by clicking or dragging the scrollbars or the overview
+display at the lower right of the Browser.
+
+
+Q. Can Frieve Editor be started from a USB memory device or similar media?
+
+A. Copy every file from the Frieve Editor installation folder
+(normally c:\Program Files\Frieve Editor\) to the USB memory device.
+You can then use Frieve Editor by running feditor.exe there.
+Frieve Editor does not use the registry.
+
+
+Q. I would like to use Frieve Editor for work.
+
+A. Frieve Editor is free for both personal and commercial use.
+You do not need to contact us even if you deploy it widely.
+
+
+Q. It seems to connect to the internet when it starts. What is it doing?
+
+A. It is checking the update status of the latest Frieve Editor release.
+This is the same operation as Help menu -> Check Latest Release.
+You can also configure from Help menu -> Check Latest Release whether the newest
+release should be checked automatically.
+If you do not want it to connect, blocking it with a firewall or similar tool will
+not cause any problem at all.
+
+
+Q. Japanese text appears garbled in the Browser.
+
+A. The font character set may be set to a non-Japanese option such as a Western
+font set. Open the font dialog from View menu -> Font -> Change Font, choose a
+Japanese font, and set the character set to Japanese.
+
+
+Q. Video attached to a card will not play.
+
+A. Try installing the codec introduced here:
+http://ja.wikipedia.org/wiki/Ffdshow
+25
+Title: Other Information
+Label:1
+Fixed:0
+X:0.197277724742889
+Y:0.895450711250305
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+Other Information
+----------------------------------------------------------------------------
+
+For the latest information about Frieve, please visit:
+http://www.frieve.com/
+
+For the latest information about Frieve Editor, please visit:
+http://www.frieve.com/feditor/
+
+Frieve's email address is shown below.
+Please note that we may not always be able to reply to messages you send.
+frieve-a@frieve.com
+15
+Title:Edit Cards
+Label:2,8
+Fixed:0
+X:0.135771751403809
+Y:0.464719504117966
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+============================================================================
+Edit Cards
+============================================================================
+56
+Title: How to Create a New Card
+Label:2
+Fixed:0
+X:0.0362772606313229
+Y:0.610172748565674
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Create a New Card
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Double-click any empty area in the Browser where no card is placed.
+
+Note: In this case, the new card is added to the end of the card list.
+
+Note: If you click the third button from the left at the top-left of the Browser
+      screen (the button marked with L and a card), choose a label, and then
+      double-click, you can add a card that already has that label assigned.
+
+Or,
+
+Select New Card from the Insert menu.
+
+Note: In this case, the new card is added after the currently selected card.
+      If no card is selected, it is added to the end of the card list.
+
+Or,
+
+1. Right-click in the Cards list on the left side of the screen.
+2. Choose New Card from the menu that appears.
+
+Note: In this case, the new card is added before the currently selected card.
+      If no card is selected, it is added to the end of the card list.
+
+Or,
+
+1. In the Editor tab, select a portion of an existing card's body text that you
+   want to use as the body of a new card.
+2. Choose Cut to New Card from the Editor's right-click menu.
+   A new card is created using the selected text as its body.
+
+Or,
+
+1. In the Editor tab, select the line or lines in an existing card's body that you
+   want to use as the title of a new card
+   (select multiple lines to create multiple cards at once).
+2. Choose Cut to New Card Title or Cut to New Card Title with Link from the
+   Editor's right-click menu. A new card is created using the selected text as
+   its title. If you choose with Link, a link is also created from the original
+   card to the newly created card.
+57
+Title: How to Create a Card Linked from an Existing Card
+Label:2
+Fixed:0
+X:0.00704234046861529
+Y:0.547152161598206
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Create a Card Linked from an Existing Card
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Select the source card in the Browser.
+3. Press the Insert key. A new card linked from the selected card is created.
+
+Note: In this case, the new card is added after the last card among the cards
+      linked from the selected card.
+
+Note: The labels of the selected card are inherited by the new card.
+
+Or,
+
+1. Click the Browser tab.
+2. Select the source card in the Browser.
+3. Press Shift+Insert. A new card linked to the selected card is created.
+
+Note: In this case, the new card is added after the last card among the cards
+      linked to the selected card.
+
+Note: The labels of the selected card are inherited by the new card.
+
+Or,
+
+1. Click the Browser tab.
+2. Select a card that is a sibling of the card you want to create.
+3. Press Enter. A new card linked from the source card of the selected card is created.
+
+Note: In this case, the new card is added after the currently selected card.
+
+Note: If more than one card links to the selected card, the new card is created
+      from the most recently selected of those source cards.
+
+Note: The labels of the selected card are inherited by the new card.
+
+Or,
+
+1. Click the Browser tab.
+2. Select the link where you want to insert a card.
+3. Press the Insert key. A new card is created in the middle of the selected link.
+
+Note: In this case, the new card is added after the last card among the cards
+      linked from the source card of the selected card.
+32
+Title: How to Select Cards
+Label:2
+Fixed:0
+X:0
+Y:0.419560462236404
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Select Cards
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the card you want to select. To select multiple cards at the same time,
+   hold down Ctrl while clicking cards.
+
+Or,
+
+1. Click the Browser tab.
+2. Hold down Shift and drag over an empty area to define a selection range.
+   Cards inside the range you drag out with the mouse are selected.
+
+Or,
+
+Click cards in the Cards list on the left side of the screen.
+To select multiple cards, hold down Ctrl while clicking cards, drag over the
+range you want to select, or select the first card in the range and then hold
+down Shift while clicking the last card in the range.
+26
+Title: How to Move Cards
+Label:2,5
+Fixed:0
+X:0.340611904859543
+Y:0.683660268783569
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Move Cards
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Drag the card you want to move.
+
+Note: If multiple cards are selected, you can move all selected cards together.
+
+Or,
+
+1. Click the Browser tab.
+2. Hold down Ctrl and drag a card.
+   This lets you move cards with the same label together.
+18
+Title: How to Edit a Card Title
+Label:2
+Fixed:0
+X:0.0260267276316881
+Y:0.359273552894592
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Edit a Card Title
+----------------------------------------------------------------------------
+
+1. Select the card whose title you want to edit.
+2. Enter the new title in Title on the Card panel.
+20
+Title: How to Edit Card Content
+Label:2
+Fixed:0
+X:0.00242089992389083
+Y:0.481038421392441
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:2023/04/14 20:17:51
+-
+----------------------------------------------------------------------------
+How to Edit Card Content
+----------------------------------------------------------------------------
+
+1. Double-click the card you want to edit in the Browser, or double-click it in
+   the Card list on the left side of the screen. If the card is already selected,
+   click the Editor tab to display the Editor.
+2. Edit the card content in the Editor.
+109
+Title: How to Edit Card Content with GPT
+Label:2
+Fixed:0
+X:0.0822317451238632
+Y:0.539448618888855
+Size:100
+Shape:2
+Visible:1
+Created:2023/04/14 20:17:39
+Updated:2023/04/14 20:37:19
+Viewed:2023/04/14 20:23:50
+-
+----------------------------------------------------------------------------
+How to Edit Card Content with GPT
+----------------------------------------------------------------------------
+
+1. Choose GPT from the Edit menu, or press Ctrl+G on the keyboard.
+   Using Ctrl+G is recommended.
+2. Select the operation you want from the popup menu.
+3. The first time you use it, enter your OpenAI API Key in the dialog box that appears.
+
+Frieve Editor's GPT integration uses the paid, but extremely inexpensive, OpenAI API.
+To use the OpenAI API, you need to create an OpenAI account and register a credit card.
+For details on obtaining an OpenAI API Key, please refer to the OpenAI API website.
+https://platform.openai.com/overview
+
+
+The following operations are available by default.
+
+Create
+  Enter prompt instructions and generate new text based on them.
+  You can use Japanese in the prompt as well.
+  If no text is selected, text is generated from scratch.
+  If text is selected, the generated result is based on both the selected text
+  and your instruction.
+
+
+Continue
+  Generates text that continues from the current cursor position.
+
+Simplify
+  Replaces the selected text with a simpler version.
+
+Longer
+  Expands the selected text and replaces it with a longer version.
+
+Summarize
+  Summarizes the selected text.
+
+Proofread
+  Corrects grammar mistakes, typos, and similar issues in the selected text.
+
+Translate to English
+  Translates the selected text into English.
+
+Translate to Japanese
+  Translates the selected text into Japanese.
+
+
+Title
+  Generates a card title based on the selected text.
+
+
+By editing setting2.ini, which is included with Frieve Editor, in a text editor,
+you can add any ChatGPT integration features you want.
+
+[GPTSystem]
+SystemPrompt=Response should only be a single processing result. No additional explanations or excuses needed. Respond in the last language of the user's instructions without translating unless otherwise instructed by the user.
+[GPT]
+Create=Insert,(Input)
+-=
+Continue=InsertAfter, Generate text that follow the text below.
+Simplify=Replace,Replace the text below with simpler text.
+Longer=Replace,Inflate the text below and replace it with longer text than the original.
+Summarize=Replace,Summarize and replace the following text.
+Proofread=Replace,You are a professional multilingual proofreader. Replace the text below with the corrected text for grammar, misspellings, etc. If you do not need proofreading, please answer the original text as it is.
+-=
+Translate to English=Replace,Translate the following sentences into English.
+Translate to Japanese=Replace,Translate the following sentences into Japanese.
+-=
+Title=Title,Create a title based on the following sentences.Responses should be in the original language.
+
+[GPTSystem] SystemPrompt= is followed by the text used as the system instruction
+for ChatGPT when every GPT integration feature is called.
+
+Add any operation you like to each line under [GPT] in the following format.
+OperationName=OperationType,Prompt that instructs the processing
+
+Any text can be used as the operation name.
+The operation name specified here is used for the popup menu shown when calling
+the GPT feature.
+If you add a line that says "-=", the menu is shown with a separator there.
+
+Choose one of the following four operation types.
+
+Insert
+  Insert generated text at the current cursor position
+InsertAfter
+  Generate text based on the text up to the current cursor position and insert
+  it at the current cursor position
+Replace
+  Replace the text in the current selection with generated text
+Title
+  Set the card title to text generated from the text in the current selection
+
+Any text can be used as the prompt that instructs the processing.
+You may also use Japanese in the prompt.
+If you specify (Input), a dialog box opens after the operation is selected and
+prompts the user to enter any prompt.
+35
+Title: How to Search for Cards
+Label:2
+Fixed:0
+X:0.0635863617062569
+Y:0.322657883167267
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:2023/04/14 20:23:48
+-
+----------------------------------------------------------------------------
+How to Search for Cards
+----------------------------------------------------------------------------
+
+1. Choose Find from the Edit menu, or press Ctrl+F.
+2. Enter the search string in the dialog box that appears.
+3. To search card titles, check Card Title.
+4. To search the body text of cards, check Text.
+5. To perform a case-sensitive search, check Match Case.
+   To perform a case-insensitive search, clear Match Case.
+6. To include cards hidden in the Browser in the search, check Invisible Card.
+   If you do not want hidden cards included, clear Invisible Card.
+7. Press Find Next.
+8. To search for the next candidate using the same keyword and conditions,
+   choose Find Next from the Edit menu or press F3.
+
+Or,
+
+1. Click the Browser tab.
+2. Enter the search string in the edit box at the upper right of the Browser tab.
+3. Press the Find button to the right of the edit box.
+   This searches the currently visible cards for card titles that contain the
+   search string.
+25
+Title: How to Delete Cards
+Label:2
+Fixed:0
+X:0.24679708480835
+Y:0.473888546228409
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Delete Cards
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Select the card you want to delete.
+3. Press the Delete key.
+
+Or,
+
+1. Click the card you want to delete in the Cards list on the left and select it.
+2. Right-click in the Cards list.
+3. Choose Delete Card from the popup menu that appears.
+28
+Title: How to Add a Label to a Card
+Label:2
+Fixed:0
+X:0.214659854769707
+Y:0.532409250736237
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Add a Label to a Card
+----------------------------------------------------------------------------
+
+1. Select the card you want to label.
+2. Click one of the buttons to the right of Label on the Card panel that does not
+   currently have a label assigned.
+3. Choose the label to apply to the card from the popup menu that appears.
+
+Or,
+
+1. Click the Browser tab.
+2. Click the third button from the left at the top-left of the Browser screen
+   (the button marked with L and a card) to select it.
+3. Choose the label to apply from the popup menu that appears.
+4. Click the card you want to label.
+19
+Title: How to Add a New Label to a Card
+Label:2,4
+Fixed:0
+X:0.155212134122849
+Y:0.217682495713234
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Add a New Label to a Card
+----------------------------------------------------------------------------
+
+1. Select the card whose labels you want to edit.
+2. Choose New Label from the Insert menu.
+3. Enter the new label name in the dialog box that appears and press OK.
+21
+Title: How to Remove or Change a Card Label
+Label:2
+Fixed:0
+X:0.119580142199993
+Y:0.362847059965134
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Remove or Change a Card Label
+----------------------------------------------------------------------------
+
+1. Select the card whose labels you want to edit.
+2. Click the label button you want to remove or change among the buttons to the
+   right of Label on the Card panel.
+3. Choose the label to assign to the card from the popup menu that appears.
+   If you choose No Label here, the label is removed.
+28
+Title: How to Associate an External File or URL with a Card
+Label:2
+Fixed:0
+X:0.208069488406181
+Y:0.412064760923386
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Associate an External File or URL with a Card
+----------------------------------------------------------------------------
+
+1. Double-click the card you want to edit in the Browser, or double-click it in
+   the Card list on the left side of the screen. If the card is already selected,
+   click the Editor tab to display the Editor.
+2. On one line in the card body, enter either the file name (full path) of the
+   external file or a URL.
+
+Or,
+
+1. Select the card to associate with the external item.
+2. Choose New Ext Link from the Insert menu.
+3. Specify the file to associate.
+   The specified file name is added as the last line of the card body.
+35
+Title: How to Display Images or Video on a Card
+Label:2
+Fixed:0
+X:0.1629708558321
+Y:0.582576215267181
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Display Images or Video on a Card
+----------------------------------------------------------------------------
+
+1. Double-click the card you want to edit in the Browser, or double-click it in
+   the Card list on the left side of the screen. If the card is already selected,
+   click the Editor tab to display the Editor.
+2. On one line in the card body, enter either the image file name (full path) or
+   the URL of an image or video file.
+
+Or,
+
+1. Select the card to associate with the media.
+2. Choose New Ext Link from the Insert menu.
+3. Specify the image or video file.
+   The specified file name is added as the last line of the card body.
+
+Note: Supported image and video formats are currently bmp, jpg, avi, and mpg.
+
+Note: If you write "playback start position (ms)-playback end position (ms)|"
+      before the video file name or URL, the specified range will loop.
+Example: 1000-5000|c:\movie.mpg
+         Loops playback from 1 second to 5 seconds of c:\movie.mpg
+73
+Title: How to Display Drawings on a Card
+Label:2
+Fixed:0
+X:0.057452104985714
+Y:0.426572859287262
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Display Drawings on a Card
+----------------------------------------------------------------------------
+
+1. Select the card into which you want to insert a drawing, either in the Browser
+   or from the card list on the left side of the screen.
+2. Click the Drawing tab to display the drawing editor.
+3. Edit the drawing in the Drawing tab.
+4. When you return to the Browser, the edited drawing is displayed on the card.
+
+
+- To add a shape
+
+1. At the upper left of the Drawing tab, click to choose the type of shape to add:
+   freehand line, straight line, rectangle, or ellipse.
+2. Drag the mouse inside the dotted frame to add the shape.
+
+
+- To select a shape
+
+1. At the upper left of the Drawing tab, choose the selection button with the
+   mouse cursor icon.
+2. Click the shape you want to select. Hold down Ctrl while clicking to toggle
+   selection for multiple shapes, or drag over an area to select several shapes
+   at once. To select all shapes, choose Select All from the Edit menu or from
+   the right-click menu.
+
+
+- To cut, copy, or delete a shape
+
+1. Select the shape to edit.
+2. Choose Cut, Copy, or Delete from the Edit menu or the right-click menu.
+   You can also use the Delete key to delete it.
+
+
+- To paste a cut or copied shape
+
+Choose Paste from the Edit menu or the right-click menu.
+
+
+- To resize a shape
+
+1. Select the shape you want to resize.
+2. Drag one of the small squares shown at the corners of the shape.
+
+
+- To move a shape
+
+1. Select the shape you want to move (multiple selection is allowed).
+2. Drag any part of the shape other than the corner handles.
+
+
+- To change the color of a shape
+
+1. Select the shape.
+2. Choose a color with Color.
+   To use the card drawing color determined by labels, click Default.
+   To choose another color, click the small button two positions to the right of
+   Default and choose a color in the color selection dialog that appears.
+   If the color you want has already been selected, you can simply click the color
+   area immediately to the right of Default.
+25
+Title: How to Change a Card's Shape and Size
+Label:2
+Fixed:0
+X:0.0962711051106453
+Y:0.620324313640594
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Change a Card's Shape and Size
+----------------------------------------------------------------------------
+
+1. Select the card whose size you want to change.
+2. Change the Size value to the right of Title on the Card panel.
+   At +8 the card becomes four times its original size, and at -8 it becomes one quarter.
+
+Or,
+
+1. Select the card whose shape you want to change.
+2. Click the button showing the card shape to the right of Size on the Card panel.
+3. Choose the card shape from the popup menu that appears.
+15
+Title:Edit Links
+Label:3,8
+Fixed:0
+X:0.623000621795654
+Y:0.104134030640125
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+============================================================================
+Edit Links
+============================================================================
+44
+Title: How to Create a Link Between Cards
+Label:3
+Fixed:0
+X:0.566736936569214
+Y:0
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Create a Link Between Cards
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the second button from the left at the top-left of the Browser tab
+   (the button with a line on it) to select it.
+3. Drag the mouse from the source card to the destination card.
+
+Or,
+1. Click the Browser tab.
+2. Click the source card to select it.
+3. While holding down Shift, click the destination card.
+   You can create links quickly by continuing to click cards while holding Shift.
+
+Note: If you click the fourth button from the left at the top-left of the Browser
+      screen (the button marked with L and a line), choose a label, and then
+      create a link, you can add a link with that label assigned by default.
+
+Or,
+
+1. Select the source card.
+2. Choose New Link from the Insert menu.
+3. Select the destination card in the dialog box that appears and press OK.
+
+Or,
+
+1. Select the source card.
+2. Click the Editor tab.
+3. Right-click in the link list at the bottom of the screen.
+4. Choose New Link from the popup menu that appears.
+5. Select the destination card in the dialog box that appears and press OK.
+18
+Title: How to Select Links
+Label:3
+Fixed:0
+X:0.56929486989975
+Y:0.059209194034338
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Select Links
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the link you want to select.
+18
+Title: How to Edit a Link Title
+Label:3
+Fixed:0
+X:0.678290367126465
+Y:0.0122391069307923
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Edit a Link Title
+----------------------------------------------------------------------------
+
+1. Select the link whose title you want to edit.
+2. Enter the new title in Title on the Link panel.
+25
+Title: How to Change a Link's Source or Destination
+Label:3
+Fixed:0
+X:0.621458947658539
+Y:4.14445894421078E-5
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Change a Link's Source or Destination
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Drag the end of the link that is closer to the source card.
+   You can change the source to another card.
+
+Or,
+
+1. Click the Browser tab.
+2. Drag the end of the link that is closer to the destination card.
+   You can change the destination to another card.
+27
+Title: How to Delete Links
+Label:3
+Fixed:0
+X:0.740672647953033
+Y:0.0434682369232178
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Delete Links
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Select the link you want to delete.
+3. Press the Delete key.
+
+Or,
+
+1. Select a card that has the link you want to delete.
+2. Click the Editor tab.
+3. Select the link you want to delete from the link list at the bottom of the screen.
+4. Right-click in the link list.
+5. Choose Delete Link from the popup menu that appears.
+27
+Title: How to Add a Label to a Link
+Label:3
+Fixed:0
+X:0.696277678012848
+Y:0.0758924931287766
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Add a Label to a Link
+----------------------------------------------------------------------------
+
+1. Select the link you want to label.
+2. Click the button to the right of Label on the Link panel.
+3. Choose the label to apply to the link from the popup menu that appears.
+
+Or,
+
+1. Click the Browser tab.
+2. Click the fourth button from the left at the top-left of the Browser screen
+   (the button marked with L and a line) to select it.
+3. Choose the label to apply from the popup menu that appears.
+4. Click the link you want to label.
+19
+Title: How to Add a New Label to a Link
+Label:3,4
+Fixed:0
+X:0.44114363193512
+Y:0.0377795398235321
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Add a New Label to a Link
+----------------------------------------------------------------------------
+
+1. Select the link whose labels you want to edit.
+2. Choose New Link Label from the Insert menu.
+3. Enter the new label name in the dialog box that appears and press OK.
+21
+Title: How to Remove or Change a Link Label
+Label:3
+Fixed:0
+X:0.659928321838379
+Y:0.18743234872818
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:2013/11/02 22:43:18
+-
+----------------------------------------------------------------------------
+How to Remove or Change a Link Label
+----------------------------------------------------------------------------
+
+1. Select the link whose labels you want to edit.
+2. Click the label button you want to remove or change among the buttons to the
+   right of Label on the Link panel.
+3. Choose the label to assign to the link from the popup menu that appears.
+   If you choose No Label here, the label is removed.
+18
+Title: How to Reverse Link Direction
+Label:3
+Fixed:0
+X:0.766370892524719
+Y:0.0960935428738594
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Reverse Link Direction
+----------------------------------------------------------------------------
+
+1. Select the link whose direction you want to reverse.
+2. Click the Inverse button on the Link panel.
+18
+Title: How to Toggle Link Direction On or Off
+Label:3
+Fixed:0
+X:0.726710617542267
+Y:0.148985609412193
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Toggle Link Direction On or Off
+----------------------------------------------------------------------------
+
+1. Select the link whose direction setting you want to toggle.
+2. Click the Direction checkbox on the Link panel.
+20
+Title: How to Change Link Style
+Label:3
+Fixed:0
+X:0.5890052318573
+Y:0.169725924730301
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Change Link Style
+----------------------------------------------------------------------------
+
+1. Select the link whose line style you want to change.
+2. Click the button showing the line to the right of the Inverse button on the
+   Link panel.
+3. Choose the link line style from the popup menu that appears.
+15
+Title:Edit Labels
+Label:4,8
+Fixed:0
+X:0.309822618961334
+Y:0.138032555580139
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+============================================================================
+Edit Labels
+============================================================================
+18
+Title: How to Open the Card Label Editor
+Label:2,4
+Fixed:0
+X:0.239311203360558
+Y:0.262179970741272
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Open the Card Label Editor
+----------------------------------------------------------------------------
+
+Choose Label from the Edit menu.
+The Label editing dialog opens.
+18
+Title: How to Open the Link Label Editor
+Label:3,4
+Fixed:0
+X:0.450650095939636
+Y:0.125855848193169
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Open the Link Label Editor
+----------------------------------------------------------------------------
+
+Choose Link Label from the Edit menu.
+The Link Label editing dialog opens.
+19
+Title: How to Create a New Label
+Label:4
+Fixed:0
+X:0.249744102358818
+Y:0.0495991483330727
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Create a New Label
+----------------------------------------------------------------------------
+
+1. Open the label editing screen.
+2. Press the New button at the lower left of the editing screen.
+3. Enter the new label name in the dialog box that appears and press OK.
+19
+Title: How to Rename a Label
+Label:4
+Fixed:0
+X:0.205345436930656
+Y:0.0864511057734489
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Rename a Label
+----------------------------------------------------------------------------
+
+1. Open the label editing screen.
+2. Double-click the name of the label you want to change.
+3. Change the label name in the dialog box that appears and press OK.
+19
+Title: How to Change a Label Color
+Label:4
+Fixed:0
+X:0.247681140899658
+Y:0.112559519708157
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Change a Label Color
+----------------------------------------------------------------------------
+
+1. Open the label editing screen.
+2. Double-click the color area of the label you want to change.
+3. Specify the label color in the dialog box that appears and press OK.
+22
+Title: How to Enable or Disable a Label
+Label:4
+Fixed:0
+X:0.304129838943481
+Y:0.029614919796586
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Enable or Disable a Label
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the VIEW button on the screen. The VIEW dialog appears.
+3. Click the Label tab to select it.
+4. Click the Enable column for the label to toggle the label between enabled and disabled.
+   Disabled labels are treated as if they are not attached when displaying cards
+   and arranging them.
+19
+Title: How to Delete a Label
+Label:4
+Fixed:0
+X:0.32245659828186
+Y:0.076952651143074
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Delete a Label
+----------------------------------------------------------------------------
+
+1. Open the label editing screen.
+2. Click the label you want to delete.
+3. Press the Delete button at the bottom of the editing screen.
+15
+Title:Arrange Cards
+Label:5,8
+Fixed:0
+X:0.541004419326782
+Y:0.876301765441895
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+============================================================================
+Arrange Cards
+============================================================================
+20
+Title: How to Fit All Cards on Screen
+Label:5
+Fixed:0
+X:0.659723877906799
+Y:0.860044479370117
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Fit All Cards on Screen
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the Arrange ON button so that it is pressed.
+3. Press the button to the right of the Arrange ON button and choose Normalize
+   from the popup menu that appears.
+20
+Title: How to Arrange Cards So They Do Not Overlap
+Label:5
+Fixed:0
+X:0.609346568584442
+Y:0.806378960609436
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Arrange Cards So They Do Not Overlap
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the Arrange ON button so that it is pressed.
+3. Press the button to the right of the Arrange ON button and choose Repulsion
+   from the popup menu that appears.
+23
+Title: How to Arrange Cards by Links
+Label:5
+Fixed:0
+X:0.427540153264999
+Y:0.961856842041016
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Arrange Cards by Links
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the Arrange ON button so that it is pressed.
+3. Press the button to the right of the Arrange ON button and choose Link or
+   Link(Soft) from the popup menu that appears.
+
+Note: Compared with Link, Link(Soft) gives higher priority to preventing cards
+      from overlapping.
+23
+Title: How to Arrange Cards by Labels
+Label:5
+Fixed:0
+X:0.536202609539032
+Y:0.785390555858612
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Arrange Cards by Labels
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the Arrange ON button so that it is pressed.
+3. Press the button to the right of the Arrange ON button and choose Label or
+   Label(Soft) from the popup menu that appears.
+
+Note: Compared with Label, Label(Soft) gives higher priority to preventing cards
+      from overlapping.
+24
+Title: How to Arrange Cards by Index
+Label:5
+Fixed:0
+X:0.465191870927811
+Y:0.83367508649826
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Arrange Cards by Index
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the Arrange ON button so that it is pressed.
+3. Press the button to the right of the Arrange ON button and choose Index,
+   Index(Soft), or Index(Matrix) from the popup menu that appears.
+
+Note: Compared with Index, Index(Soft) gives higher priority to preventing cards
+      from overlapping.
+Index(Matrix) arranges cards neatly in order from the upper left.
+20
+Title: How to Arrange Cards in a Grid
+Label:5
+Fixed:0
+X:0.442980200052261
+Y:0.904361963272095
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Arrange Cards in a Grid
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the Arrange ON button so that it is pressed.
+3. Press the button to the right of the Arrange ON button and choose Matrix from
+   the popup menu that appears.
+37
+Title: How to Arrange Cards by Title/Text Similarity
+Label:5
+Fixed:0
+X:0.52382880449295
+Y:0.988851726055145
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Arrange Cards by Title/Text Similarity
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the Arrange ON button so that it is pressed.
+3. Press the button to the right of the Arrange ON button and choose Similarity
+   or Similarity(Soft) from the popup menu that appears.
+4. To arrange cards using the latest similarity values, press the update button
+   further to the right.
+
+Caution: In projects without body text, similarity calculation finishes in a few
+seconds, but if the number of cards reaches the thousands or the file is centered
+on body text, similarity calculation may take a long time. For example, if the
+body text size reaches about 500 kB, the calculation can take about one minute on
+a CPU around 2 GHz.
+
+Note: Because similarity calculation takes time, Frieve Editor calculates similarity
+      between cards only once when Similarity is selected while the ON button is
+      pressed, or when the ON button is pressed while Similarity is selected.
+      After card titles or body text are edited, press the update button to rearrange
+      cards using similarity values that reflect those edits.
+
+Note: Compared with Similarity, Similarity(Soft) gives higher priority to preventing
+      cards from overlapping.
+46
+Title: How to Arrange Cards Hierarchically
+Label:5
+Fixed:0
+X:0.468564659357071
+Y:0.998640239238739
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Arrange Cards Hierarchically
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the card that will become the root (the top of the hierarchy) to select it.
+3. Turn on the root designation button on the screen
+   (to the right of the pushpin button and to the left of the label).
+4. Click the Arrange ON button so that it is pressed.
+5. Press the button to the right of the Arrange ON button and choose Tree (Radial)
+   from the popup menu that appears.
+
+To change the order of cards within the same level, use the Up/Down buttons at the
+upper right of the card list on the left side of the screen, or drag cards up and
+down in the Browser.
+
+To edit the hierarchy itself, drag links in the Browser and reconnect them.
+
+To hide the lower levels under a specific card, press the "-" button shown at the
+lower right of the card. To show a hidden level again, press the "+" button shown
+at the lower right of the card.
+
+Caution: When auto-arrangement is performed with Tree (Radial), card Index values
+are forcibly sorted into hierarchy order.
+
+Note: A card designated as a root shows ">" to the left of its title in the card
+      list on the left side of the screen.
+
+Note: When auto-arrangement is performed with Tree (Radial), the card list on the
+      left side of the screen is displayed with indentation that matches hierarchy
+      levels.
+
+Note: If multiple cards are set as roots, multiple trees rooted at those cards are
+      arranged on screen at the same time.
+21
+Title: How to Change Card Size by Label
+Label:5
+Fixed:0
+X:0.586505353450775
+Y:1
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Change Card Size by Label
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the VIEW button on the screen. The VIEW dialog appears.
+3. Click the Label tab to select it.
+4. In the Label and Size columns, use the + and - buttons to specify how much each
+   label affects card size.
+23
+Title: How to Group Cards with the Same Label
+Label:5
+Fixed:0
+X:0.655330836772919
+Y:0.973314940929413
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Group Cards with the Same Label
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the VIEW button on the screen. The VIEW dialog for choosing which cards
+   and links to display appears.
+3. Click the Label tab to select it.
+4. In the Label and Fold columns, specify the label you want to group.
+   Cards with that checked label are shown in the Browser as a single card with the
+   label's name.
+78
+Title: How to Choose Which Cards and Links Are Shown in the Browser
+Label:5
+Fixed:0
+X:0.69487738609314
+Y:0.919996082782745
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Choose Which Cards and Links Are Shown in the Browser
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Click the VIEW button on the screen. The VIEW dialog for choosing which cards
+   and links to display appears.
+3. Click either the Label tab or the Limitation tab.
+
+
+- To limit visible cards by card size
+
+1. Check Size Limitation.
+2. Use the slider to the right of Size Limitation to specify the minimum size of
+   cards to display.
+
+
+- To limit visible cards by the number of links from the selected card
+
+1. Check Link Limitation.
+2. Use the Link Limitation slider to specify the link limit.
+3. To further limit the result by link direction while using this setting, check Direction.
+4. To limit to forward direction, check Forward. To limit to reverse direction, check Backward.
+5. To add a restriction by target card, press the button to the right of Target Card,
+   choose Select, and select the target card in the dialog box.
+   Or, in the Browser, hold down Alt while clicking the target card.
+   To clear the target-card restriction, press the button to the right of Target Card
+   and choose No Assign.
+
+
+- To limit visible cards by date
+
+1. Check Date Limitation.
+2. In Date Type, choose the date to use for the restriction.
+   Created is the date and time the card was created, Edited is the date and time the
+   card body was last edited, and Viewed is the date and time the card was last selected
+   or shown.
+3. In Date Limitation Type, choose how the restriction is applied.
+   Old shows cards in order from oldest, New shows cards in order from newest,
+   Near shows cards with dates close to the currently selected card, Older shows cards
+   that are older than the selected card and close in date, and Newer shows cards that
+   are newer than the selected card and close in date.
+4. Use the slider to the right of Date Limitation to specify the strength of the restriction.
+   With Old, the oldest cards are shown when the slider is at the left, and newer cards
+   are added as you move it right.
+   With New, the newest cards are shown when the slider is at the right, and older cards
+   are added as you move it left.
+   With Near, Older, and Newer, moving the bar to the right relaxes the restriction.
+
+
+- To show or hide cards with labels
+
+1. To show cards with certain labels, specify those labels in the Show column under Label.
+   If a card has one or more of the checked labels, it is shown.
+2. To hide cards with certain labels, specify those labels in the Hide column.
+   If a card has one or more labels checked there, it is hidden.
+   Hide settings take priority over show settings.
+
+
+- To show or hide links with labels
+
+1. To show links with certain labels, specify those labels in the Show column under
+   Link Label. If a link has one or more of the checked labels, it is shown.
+2. To hide links with certain labels, specify those labels in the Hide column.
+   If a link has one or more labels checked there, it is hidden.
+   Hide settings take priority over show settings.
+28
+Title: How to Sort Cards
+Label:5
+Fixed:0
+X:0.602828919887543
+Y:0.92449277639389
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Sort Cards
+----------------------------------------------------------------------------
+
+Choose a sort method from Edit menu -> Sort Card.
+Title sorts cards by title.
+Date Created sorts by creation order.
+Date Edited sorts by the date the card was last edited.
+Date Viewed sorts by the date the card was last selected.
+Items marked Inverse sort in the reverse order.
+
+Or,
+
+1. Click the card you want to reorder in the Cards list on the left side of the screen.
+2. Use the UpDown buttons at the upper right of the Cards list to move the card's
+   position in the list.
+15
+Title:Browse and Animate
+Label:6,8
+Fixed:0
+X:0.900903046131134
+Y:0.648530066013336
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+============================================================================
+Browse and Animate
+============================================================================
+37
+Title: How to Scroll the Browser
+Label:6
+Fixed:0
+X:0.915158331394196
+Y:0.562265038490295
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Scroll the Browser
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Check Auto Scroll at the upper right of the Browser tab.
+   While Auto Scroll is checked, each time you select a card or link, the Browser
+   scrolls automatically so that the selected card or link comes to the center of
+   the screen.
+
+Or,
+
+1. Click the Browser tab.
+2. Drag an empty area where there is no card.
+
+Or,
+
+1. Click the Browser tab.
+2. Use the scroll bars on the right and bottom of the Browser screen.
+
+Or,
+
+1. Click the Browser tab.
+2. Use the mouse wheel (without Ctrl) to scroll vertically.
+   Hold Shift for horizontal panning (trackpad two-finger scroll).
+35
+Title: How to Zoom the Browser
+Label:6
+Fixed:0
+X:0.843023300170898
+Y:0.610661089420319
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Zoom the Browser
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Check Auto Zoom at the upper right of the Browser tab.
+   While Auto Zoom is checked, each time you select a card or link, the Browser
+   automatically zooms so that the selected card or link and related cards fit on screen.
+
+Or,
+
+1. Click the Browser tab.
+2. Drag the Zoom control on the Browser tab.
+
+Or,
+
+1. Click the Browser tab.
+2. Hold down Ctrl and use the mouse wheel to zoom in and out.
+
+Or,
+
+1. Click the Browser tab.
+2. Pinch/stretch on a touchpad to zoom in and out.
+34
+Title: How to Move Between Cards with the Keyboard
+Label:6
+Fixed:0
+X:0.862526595592499
+Y:0.718110978603363
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Move Between Cards with the Keyboard
+----------------------------------------------------------------------------
+
+Press the arrow keys.
+This moves to the card nearest to the current card, regardless of links.
+
+Or,
+
+Press Ctrl+Up or Ctrl+Down.
+These move to the most recently shown parent card or child card, respectively.
+
+Or,
+
+Press Ctrl+Left or Ctrl+Right.
+These move to sibling cards counterclockwise or clockwise, respectively.
+
+Or,
+
+Press Shift+arrow keys.
+Among the cards linked to the current card, this moves to the one nearest to the
+current card.
+27
+Title: How to Change Text Size
+Label:6
+Fixed:0
+X:0.894776344299316
+Y:0.773412644863129
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Change Text Size
+----------------------------------------------------------------------------
+
+Choose Magnify or Reduce from View menu -> Font Size.
+
+Or,
+
+Press Ctrl+Shift+PageUp to enlarge or Ctrl+Shift+PageDown to reduce.
+
+Or,
+
+Hold down Ctrl+Shift and use the mouse wheel to change the font size.
+
+To return the text size to its default value, choose Default from View menu -> Font Size, or press Ctrl+Shift+0.
+23
+Title: How to Use Full Screen
+Label:6
+Fixed:0
+X:0.93836522102356
+Y:0.761452257633209
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Use Full Screen
+----------------------------------------------------------------------------
+
+Choose Full Screen from the View menu.
+
+Or,
+
+Press F10.
+
+To leave Full Screen, press Esc or F10.
+28
+Title: How to Open External Links Attached to Cards
+Label:6
+Fixed:0
+X:0.968530714511871
+Y:0.712656259536743
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Open External Links Attached to Cards
+----------------------------------------------------------------------------
+
+1. Click the Browser tab.
+2. Hold down Ctrl and Shift while clicking the card whose external link you want to open.
+   If the card has only one external link, it opens immediately.
+3. If the card has multiple external links, click the link you want to open in the
+   popup menu that appears.
+
+Or,
+
+1. Double-click the card whose external link you want to open in the Browser, or
+   double-click it in the Card list on the left side of the screen. If that card is
+   already selected, click the Editor tab to display the Editor.
+2. Hold down Ctrl while clicking the line that contains the external link.
+28
+Title: How to Show Cards Randomly
+Label:6
+Fixed:0
+X:0.992111325263977
+Y:0.654013574123383
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Show Cards Randomly
+----------------------------------------------------------------------------
+
+1. Choose Random Flash, Random Map, Random Scroll, or Random Jump from the Animation
+   menu. The animation starts and the Random Animation dialog appears.
+   Random Flash displays the specified number of cards one after another.
+   Random Map displays a random card, then expands the display to cards linked from it.
+   Random Scroll scrolls the specified number of cards across the screen.
+   Random Jump makes the specified number of cards bounce up from the bottom of the screen.
+2. To zoom in or out, change Zoom.
+3. To change the display speed, adjust Speed.
+4. To change how many cards are shown on the screen at once, adjust Cards.
+5. To enter or leave full-screen mode, press the Full Screen button or F10.
+6. To pause or resume the animation, press the Pause button.
+7. To end the animation, press the Stop button.
+23
+Title: How to Trace Links Randomly
+Label:6
+Fixed:0
+X:0.97888195514679
+Y:0.560383975505829
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Trace Links Randomly
+----------------------------------------------------------------------------
+
+1. Choose Random Trace from the Animation menu.
+   The animation starts and the Random Animation dialog appears.
+2. To zoom in or out, change Zoom.
+3. To change the display speed, adjust Speed.
+4. To enter or leave full-screen mode, press the Full Screen button or F10.
+5. To pause or resume the animation, press the Pause button.
+6. To end the animation, press the Stop button.
+35
+Title: How to View Statistics
+Label:6
+Fixed:0
+X:1
+Y:0.603599071502686
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to View Statistics
+----------------------------------------------------------------------------
+
+1. Click the Statistics tab.
+   Initially, a graph showing the number of cards for each label is displayed.
+2. To change the key used for the graph display, click the button to the right of Key
+   and choose one of the following.
+
+   Label: Displays a graph of the number of cards for each label (default)
+   Number of Link: Displays a graph of the number of cards for each link count
+   Created Date: Displays a graph of the number of cards by creation date and time
+   Edited Date: Displays a graph of the number of cards by last edited date and time
+   Viewed Date: Displays a graph of the number of cards by viewed date and time
+
+   If Created Date, Edited Date, or Viewed Date is selected, you can also choose the
+   aggregation unit from Year, Month, Day, Week, or Hour.
+
+3. To list the cards included in each graph, click a bar in the graph.
+   A list of included cards appears on the right side of the screen.
+
+
+Note: This feature can also be used to list only cards that have a specific label.
+15
+Title:Print
+Label:9,8
+Fixed:0
+X:0.624003529548645
+Y:0.466246157884598
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+============================================================================
+Print
+============================================================================
+24
+Title: How to Print the Browser View
+Label:9
+Fixed:0
+X:0.675095319747925
+Y:0.453982561826706
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+How to Print the Browser View
+----------------------------------------------------------------------------
+
+1. Choose Print Image from the File menu.
+2. In the dialog box that appears, choose and configure the printer as needed.
+3. Press OK to start printing.
+
+Note: The current Browser view is printed centered on the selected paper.
+
+Note: Except for being scaled to fit the paper size, the current Browser view is
+      basically printed as it appears on screen.
+15
+Title:Menu Guide
+Label:7,8
+Fixed:0
+X:0.896600604057312
+Y:0.321872353553772
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:2023/04/14 20:14:35
+-
+============================================================================
+Menu Guide
+============================================================================
+81
+Title: File Menu
+Label:7
+Fixed:0
+X:0.959879457950592
+Y:0.36121729016304
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+File Menu
+----------------------------------------------------------------------------
+
+New
+  Creates a new project.
+
+Open
+  Opens a saved project.
+
+Save
+  Overwrites the current project.
+
+Save As
+  Saves the current project with a new name.
+
+Auto Save (This File)
+  Toggles automatic saving on or off for this file.
+  When enabled, changes are automatically saved after a period of inactivity.
+  On application exit, unsaved changes are saved without a confirmation dialog.
+
+Auto Reload (This File)
+  Toggles automatic reloading on or off for this file.
+  When enabled, the file is automatically reloaded when modified externally.
+  However, automatic reloading does not occur while unsaved changes exist in the application.
+
+
+Recent Files
+  Opens a project that was used before.
+
+Recent Folders
+  Opens a project from a folder that was used before.
+
+
+Import
+  Loads data from files other than fip files.
+  Txt File loads one or more text files as one card each.
+  Hierarchical Text File loads a hierarchical text file whose leading indentation is
+  made with tabs or spaces, using one line per card.
+  Hierarchical Text File 2 loads a hierarchical text file in which the hierarchy is
+  represented by the number of leading periods and the remaining text becomes the body.
+  Text Files in a Folder loads all text files under a specified folder together with
+  the folder structure.
+
+
+Export
+  Exports data to external files.
+  Txt file(Card Title) outputs all card titles to a single text file.
+  Txt file(Text) outputs the body text of all cards to a single text file.
+  Txt files outputs each card as a separate text file. In that case, each file name is
+  the card title plus ".txt".
+  html files outputs the data in HTML format for browsing on the web.
+  In addition to the file with the specified name, "cards.html" and files named
+  card number + ".html" are created.
+  Hierarchical Text outputs a text file in which hierarchy is represented by the number
+  of leading periods. Hierarchical text exported in this format can be imported with
+  Import menu -> Hierarchical Text File 2.
+
+Caution: When performing Export operations that create multiple files, if files with
+  the same names already exist, they are overwritten without warning.
+
+
+Print Image
+  Performs simple printing of the Browser display.
+  The current Browser view is scaled to the selected paper size and printed.
+
+
+Exit
+  Exits Frieve Editor.
+72
+Title: Edit Menu
+Label:7
+Fixed:0
+X:0.908938229084015
+Y:0.362814664840698
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+Edit Menu
+----------------------------------------------------------------------------
+
+Undo
+  Cancels the most recent edit.
+
+Redo
+  Repeats the edit that was most recently undone.
+
+
+Cut
+  Copies the selected text to the clipboard and then deletes it.
+
+Copy
+  Copies the selected text to the clipboard.
+
+Paste
+  Pastes the clipboard text at the current position.
+
+Delete
+  Deletes the selected text.
+
+Select All
+  Selects all text.
+
+
+Find
+  Searches for a specified string.
+
+Replace
+  Replaces a specified string with another string.
+
+Find Next
+  Searches for the next occurrence of the specified string.
+
+Find Previous
+  Searches for the previous occurrence of the specified string.
+
+Web Search
+  Searches the web using the selected card title or selected text.
+
+Read Aloud
+  Reads the selected text in the Editor using Windows speech synthesis (SAPI).
+
+
+Sort Card
+  Sorts cards by card name or date.
+
+Batch Conversion
+  All Cards Shape batch-converts all cards to the specified shape.
+  All Links Shape batch-converts all links to the specified shape.
+  All Links Direction reverses the direction of all links.
+
+
+Label
+  Opens the label editing dialog.
+
+Link Label
+  Opens the link label editing dialog.
+40
+Title: Insert Menu
+Label:7
+Fixed:0
+X:0.986021161079407
+Y:0.335430890321732
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+Insert Menu
+----------------------------------------------------------------------------
+
+New Card
+  Creates a new card.
+
+New Link
+  Creates a new link from the selected card.
+
+New Ext Link
+  Inserts an external link (file name) into the selected card.
+
+New Label
+  Adds a new label to the selected card.
+
+New Link Label
+  Adds a new label to the selected link.
+
+
+Link to All Cards with Designated Label
+  Creates links from the current card to all cards that have the specified label.
+
+New Card Links to All Cards with Designated Label
+  Creates a new card linked to all cards that have the specified label.
+
+Add Designated Label to All Destination Cards
+  Adds the specified label to all destination cards.
+31
+Title: Animation Menu
+Label:7
+Fixed:0
+X:0.968556582927704
+Y:0.297196090221405
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:1899/12/30
+-
+----------------------------------------------------------------------------
+Animation Menu
+----------------------------------------------------------------------------
+
+Random Flash
+  Runs an animation that shows cards at random.
+
+Random Map
+  Runs an animation that shows a random card and then expands the display to cards
+  linked from that card.
+
+Random Scroll
+  Runs an animation that scrolls cards at random.
+
+Random Jump
+  Runs an animation in which cards bounce up randomly from the bottom of the screen.
+
+Random Trace
+  Runs an animation that follows links at random.
+107
+Title: View Menu
+Label:7
+Fixed:0
+X:0.957366585731506
+Y:0.258614063262939
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:2023/04/14 20:17:18
+-
+----------------------------------------------------------------------------
+View Menu
+----------------------------------------------------------------------------
+
+Font
+  Changes the font.
+  Default Size restores the standard size, Magnify enlarges it, and Reduce makes it smaller.
+  To change the font family itself, choose Change Font and specify the font.
+
+Card
+  Changes card display settings.
+  Shadow toggles card shadows on or off.
+  Gradation toggles card gradients on or off.
+  Ticker toggles ticker display of body text on cards. 1Line displays the first line
+  of the card body, and 2Lines displays the first and second lines as ticker text.
+  Image toggles thumbnail display of images on or off. The first jpg or bmp file written
+  in the card body is used.
+  Video toggles video display on or off. The first mpg or avi file written in the card body
+  is used. Video display takes priority over image display.
+  Drawing toggles drawing display on or off. Drawing display takes priority over image
+  and video display.
+  32x32 to 320x320 specifies the maximum size of images, video, and drawings shown on cards.
+  Media larger than that is reduced so it fits within the specified size.
+
+Link
+  Changes link display settings.
+  Link toggles link lines, Hemming toggles link outlines, Direction toggles link direction,
+  and Name toggles link-name display on or off.
+
+Label
+  Changes label display settings.
+  Circle toggles circles that show groups of the same label on or off.
+  Rectangle toggles rectangles that show groups of the same label on or off.
+  Name toggles label-name display on or off.
+
+Text
+  Changes body-text display settings.
+  Text toggles display of the selected card's body text in the Browser.
+  Centering toggles centered display or top-left display of body text in the Browser.
+  Edit In Browser toggles whether double-clicking a card in the Browser edits its body in place.
+  Always Show Editor toggles whether the editor is always shown in the Browser
+  (effective with any setting except Under the Card).
+  Under the Card edits the body immediately below the card.
+  Browser Right edits the body at the right edge of the Browser.
+  Browser Bottom edits the body at the bottom of the Browser.
+
+Score
+  Score toggles score display on or off.
+  Authenticity calculates a score in which cards linked from high-score cards become
+  higher in score.
+  StartingPoint gives higher scores to source cards.
+  Destination gives higher scores to destination cards.
+  Links(Out) uses the number of outgoing links from a card.
+  Links(In) uses the number of incoming links to a card.
+  Links(Total) uses the total number of links on a card.
+  Links(In-Out) uses incoming links minus outgoing links.
+  Text Length uses the length of the body text.
+
+Read Aloud
+  Toggles read-aloud for card titles on or off.
+
+Note: Card title read-aloud uses Windows speech synthesis (SAPI / Text-to-Speech).
+      If speech is not available in the environment, a warning is shown when you try
+      to enable it and the option turns off.
+
+Others
+  Changes other display-related settings.
+  Card List toggles the card list on the left side of the screen on or off.
+  File List toggles the file list shown when the mouse is moved to the left side
+  of the screen on or off.
+  Overview toggles the overview display at the lower right of the Browser on or off.
+  ForegroundColor changes the foreground color, and BackgroundColor changes the background color.
+  Wallpaper specifies a wallpaper. To clear the wallpaper, choose Wallpaper again.
+  Fix Wallpaper fixes the wallpaper to fill the screen.
+  Tile Wallpaper tiles the wallpaper across the whole Browser area.
+  Background Animation toggles background animation on or off.
+  Background Animation Type changes the kind of background animation.
+  Cursor Animation toggles cursor animation on or off.
+  No Scroll Lag toggles whether auto-scroll happens immediately when a card is selected.
+  Anti-Aliasing toggles anti-aliasing on or off.
+  2x performs anti-aliasing at twice the vertical and horizontal resolution, and 4x uses four times.
+
+Change Language
+  Changes the menu language (multiple languages are supported; see the bundled .lng files).
+  To add or replace a language, place a .lng file in the Frieve Editor folder
+  (text-file format; see Japanese.lng for the format). Language-specific help uses
+  help_<language>.fip when available.
+
+
+Full Screen
+  Toggles full-screen display of the Browser.
+
+
+Status Bar
+  Toggles the status bar on or off.
+26
+Title: Settings Menu
+Label:7
+Fixed:0
+X:0.924349308013916
+Y:0.239721909165382
+Size:100
+Shape:2
+Visible:1
+Created:2023/04/14 20:14:47
+Updated:2023/04/14 20:17:21
+Viewed:2023/04/14 20:17:19
+-
+----------------------------------------------------------------------------
+Settings Menu
+----------------------------------------------------------------------------
+
+GPT API Key
+  Sets the API Key obtained from the OpenAI website in order to use GPT integration.
+
+Auto Save Default
+  Toggles the default automatic saving setting for newly created files.
+  When enabled, new files will have automatic saving turned on from the start.
+
+Auto Reload Default
+  Toggles the default automatic reloading setting for newly created files.
+  When enabled, new files will have automatic reloading turned on from the start.
+31
+Title: Help Menu
+Label:7
+Fixed:0
+X:0.891983985900879
+Y:0.273029625415802
+Size:100
+Shape:2
+Visible:1
+Created:1899/12/30
+Updated:1899/12/30
+Viewed:2023/04/14 20:15:15
+-
+----------------------------------------------------------------------------
+Help Menu
+----------------------------------------------------------------------------
+
+Contents
+  Opens and displays this help file in Frieve Editor.
+
+Open Frieve Web Site
+  Opens the Frieve website in the default browser.
+
+Open Frieve Editor Web Site
+  Opens the Frieve Editor website in the default browser.
+
+Check Latest Release
+  Checks the latest released version.
+
+
+About
+  Displays version information.
