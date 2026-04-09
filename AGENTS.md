@@ -1,5 +1,9 @@
 # AGENTS.md
 
+!IMPORTANT!
+Since we are working on a project to port the Windows version to a Mac, do not edit the Windows version at all, just refer to it to make the Mac version.
+!IMPORTANT!
+
 ## Purpose
 
 This repository contains two platform-specific Frieve Editor implementations plus a shared file-format specification. Use this guide as the first stop before making changes.
