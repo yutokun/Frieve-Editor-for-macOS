@@ -10,6 +10,15 @@ This repository contains two platform-specific Frieve Editor implementations plu
 - `macos/`: macOS application implemented as a Swift Package with SwiftUI.
 - `shared/`: shared specifications and other cross-platform reference material.
 
+## File organization and refactor direction
+
+- Make file-organization decisions platform-first: prefer placing code under `windows/` or `macos/` based on the implementation that owns the behavior, and only use `shared/` for truly cross-platform specifications or reference material.
+- Use responsibility-based file ownership: each file or unit should have a narrow, durable reason to change, with document, session, settings, browser, timer, codec, and UI concerns owned by distinct files once they are non-trivial.
+- Avoid catch-all files that mix UI rendering, file I/O, timers, orchestration, and service logic in one place. When a file starts accumulating multiple responsibilities, split it by behavior boundaries instead of extending the grab-bag.
+- For macOS, prefer splitting large types across focused extensions in separate files when that improves ownership and navigation, while keeping app entry, SwiftUI views, state models, and AppKit bridge code in clearly separated pieces.
+- For Windows, keep VCL forms thin and focused on wiring and presentation. Move timer handling, document lifecycle, session state, browser integration, settings, and similar logic into dedicated units as they grow, rather than continuing to expand the main form files.
+- These organization rules do not relax the format-change requirements: any document format or serialization change still has to be coordinated across the shared spec and both platform implementations.
+
 ## Where to start reading
 
 ### Windows

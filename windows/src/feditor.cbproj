@@ -339,6 +339,13 @@
         <None Include="forms\fomain_timer.h">
             <BuildOrder>25t</BuildOrder>
         </None>
+        <CppCompile Include="forms\fomain_timer_ops.cpp">
+            <DependentOn>forms\fomain_timer_ops.h</DependentOn>
+            <BuildOrder>25ta</BuildOrder>
+        </CppCompile>
+        <None Include="forms\fomain_timer_ops.h">
+            <BuildOrder>25tb</BuildOrder>
+        </None>
         <CppCompile Include="forms\fomain_handlers.cpp">
             <DependentOn>forms\fomain_handlers.h</DependentOn>
             <BuildOrder>25u</BuildOrder>
@@ -431,13 +438,29 @@
             <DependentOn>utils\document.h</DependentOn>
             <BuildOrder>49</BuildOrder>
         </CppCompile>
+        <None Include="utils\document.h">
+            <BuildOrder>50</BuildOrder>
+        </None>
+        <CppCompile Include="utils\document_clipboard.cpp">
+            <DependentOn>utils\document.h</DependentOn>
+            <BuildOrder>50a</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="utils\document_core.cpp">
+            <DependentOn>utils\document.h</DependentOn>
+            <BuildOrder>50b</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="utils\document_io.cpp">
+            <DependentOn>utils\document.h</DependentOn>
+            <BuildOrder>50c</BuildOrder>
+        </CppCompile>
+        <CppCompile Include="utils\document_undo.cpp">
+            <DependentOn>utils\document.h</DependentOn>
+            <BuildOrder>50d</BuildOrder>
+        </CppCompile>
         <CppCompile Include="utils\document_fip2.cpp">
             <DependentOn>utils\document.h</DependentOn>
             <BuildOrder>49</BuildOrder>
         </CppCompile>
-        <None Include="utils\document.h">
-            <BuildOrder>50</BuildOrder>
-        </None>
         <CppCompile Include="utils\drawing.cpp">
             <DependentOn>utils\drawing.h</DependentOn>
             <BuildOrder>51</BuildOrder>
