@@ -37,13 +37,13 @@ struct WorkspaceRootView: View {
                 .frame(width: 330)
 
                 Picker("Arrange", selection: $viewModel.arrangeMode) {
+                    Text("None").tag("None")
                     Text("Link").tag("Link")
+                    Text("Link(Soft)").tag("Link(Soft)")
                     Text("Matrix").tag("Matrix")
                     Text("Tree").tag("Tree")
                 }
-                .frame(width: 140)
-
-                Button("Arrange") { viewModel.arrangeCards() }
+                .fixedSize()
                 Button("Shuffle") { viewModel.shuffleLayout() }
                 Button {
                     viewModel.zoomOut()

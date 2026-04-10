@@ -241,13 +241,15 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var showInspector: Bool = true {
         didSet { settings.showInspector = showInspector }
     }
-    @Published var arrangeMode: String = "Link" {
+    @Published var arrangeMode: String = "None" {
         didSet {
-            if arrangeMode != oldValue {
-                resetBrowserArrangeTransientState()
-            }
-            if arrangeMode != "Link" && arrangeMode != "Matrix" && arrangeMode != "Tree" && browserAutoArrangeEnabled {
+            guard arrangeMode != oldValue else { return }
+            resetBrowserArrangeTransientState()
+            if arrangeMode == "None" {
                 browserAutoArrangeEnabled = false
+            } else {
+                browserAutoArrangeEnabled = true
+                browserActiveArrangeMode = arrangeMode
             }
         }
     }

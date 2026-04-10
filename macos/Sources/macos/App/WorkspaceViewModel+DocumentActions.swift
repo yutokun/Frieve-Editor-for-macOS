@@ -274,26 +274,12 @@ extension WorkspaceViewModel {
     }
 
     func arrangeCards() {
-        switch arrangeMode {
-        case "Link", "Matrix", "Tree":
-            let switchingModeWhileEnabled = browserAutoArrangeEnabled && browserActiveArrangeMode != arrangeMode
-            if browserAutoArrangeEnabled && !switchingModeWhileEnabled {
-                browserAutoArrangeEnabled = false
-                statusMessage = "Auto arrange disabled"
-                return
-            }
-
-            browserAutoArrangeEnabled = true
-            browserActiveArrangeMode = arrangeMode
-            resetBrowserArrangeTransientState()
-            applyBrowserAutoArrangeStepIfNeeded(force: true)
-            if autoZoom {
-                requestBrowserFit()
-            }
-            statusMessage = "Auto arrange (\(arrangeMode)) enabled"
-        default:
-            browserAutoArrangeEnabled = false
-            applyBrowserLegacyArrangeMode()
+        if arrangeMode == "None" {
+            // Toggle: switch to Link
+            arrangeMode = "Link"
+        } else {
+            // Toggle: switch to None
+            arrangeMode = "None"
         }
     }
 
@@ -304,6 +290,8 @@ extension WorkspaceViewModel {
         switch arrangeMode {
         case "Link":
             applyBrowserLinkAutoArrangeStep()
+        case "Link(Soft)":
+            applyBrowserLinkAutoArrangeStep(ratio: 0.33)
         case "Matrix":
             applyBrowserMatrixAutoArrangeStep()
         case "Tree":
@@ -348,7 +336,7 @@ extension WorkspaceViewModel {
             positions[card.id] = card.position
         }
 
-        let repulsionRatio = ratio * 0.5
+        let repulsionRatio = 0.5
         let linkRatio = ratio * 0.66 * 0.3
         var nextPositions = positions
 
