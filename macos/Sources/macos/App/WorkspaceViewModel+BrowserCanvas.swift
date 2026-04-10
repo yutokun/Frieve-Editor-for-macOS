@@ -71,7 +71,7 @@ extension WorkspaceViewModel {
         for id in activeIDs {
             document.moveCard(id, dx: dx, dy: dy)
         }
-        noteDocumentMutation(status: activeIDs.count == 1 ? "Moved the selected card" : "Moved \(activeIDs.count) selected cards", updateSearch: false)
+        noteDocumentMutation(status: activeIDs.count == 1 ? "Moved the selected card" : "Moved \(activeIDs.count) selected cards")
     }
 
     func browserScale(in size: CGSize) -> Double {

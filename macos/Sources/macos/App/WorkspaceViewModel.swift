@@ -221,10 +221,7 @@ final class WorkspaceViewModel: ObservableObject {
         didSet { syncDocumentMetadataFromSettings() }
     }
     @Published var searchQuery: String = ""
-    @Published var globalSearchQuery: String = "" {
-        didSet { refreshSearchResults() }
-    }
-    @Published var statusMessage: String = "Ready"
+@Published var statusMessage: String = "Ready"
     @Published var zoom: Double = 1.0
     @Published var autoScroll: Bool = false
     @Published var autoZoom: Bool = true
@@ -263,8 +260,7 @@ final class WorkspaceViewModel: ObservableObject {
     }
     @Published var selectedDrawingTool: String = "Cursor"
     @Published var recentFiles: [URL] = []
-    @Published var globalSearchResults: [FrieveCard] = []
-    @Published var lastGPTPrompt: String = ""
+@Published var lastGPTPrompt: String = ""
     @Published var browserViewportRevision: Int = 0
     @Published var browserSurfaceContentRevision: Int = 0
     @Published var browserSurfaceViewportRevision: Int = 0
@@ -352,7 +348,6 @@ final class WorkspaceViewModel: ObservableObject {
         }
         syncDocumentMetadataFromSettings()
         resetCanvasStateFromDocument()
-        refreshSearchResults()
     }
 
     var filteredCards: [FrieveCard] {
@@ -384,5 +379,10 @@ final class WorkspaceViewModel: ObservableObject {
             return URL(fileURLWithPath: path).lastPathComponent
         }
         return "Unsaved.fip2"
+    }
+
+    var documentURL: URL? {
+        guard let path = document.sourcePath else { return nil }
+        return URL(fileURLWithPath: path)
     }
 }

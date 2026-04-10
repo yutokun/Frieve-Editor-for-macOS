@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct EditorWorkspaceView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
@@ -103,101 +104,68 @@ struct InspectorPaneView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Inspector")
-                .font(.headline)
-            if let card = viewModel.selectedCard {
-                LabeledContent("Title", value: card.title)
-                LabeledContent("Card ID", value: String(card.id))
-                LabeledContent("Labels", value: viewModel.cardLabelNames(for: card).joined(separator: ", "))
-                LabeledContent("Created", value: card.created)
-                LabeledContent("Updated", value: card.updated)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Inspector")
+                    .font(.headline)
+                if let card = viewModel.selectedCard {
+                    LabeledContent("Title", value: card.title)
+                    LabeledContent("Card ID", value: String(card.id))
+                    LabeledContent("Labels", value: viewModel.cardLabelNames(for: card).joined(separator: ", "))
+                    LabeledContent("Created", value: card.created)
+                    LabeledContent("Updated", value: card.updated)
 
-                Picker("Shape", selection: viewModel.bindingForSelectedShape()) {
-                    Text("Rect").tag(0)
-                    Text("Capsule").tag(1)
-                    Text("Round").tag(2)
-                    Text("Diamond").tag(3)
-                    Text("Hexagon").tag(4)
-                    Text("Note").tag(5)
-                }
-                .pickerStyle(.menu)
+                    Picker("Shape", selection: viewModel.bindingForSelectedShape()) {
+                        Text("Rect").tag(0)
+                        Text("Capsule").tag(1)
+                        Text("Round").tag(2)
+                        Text("Diamond").tag(3)
+                        Text("Hexagon").tag(4)
+                        Text("Note").tag(5)
+                    }
+                    .pickerStyle(.menu)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    let sizeStep = browserCardSizeStep(forStoredSize: card.size)
+                    VStack(alignment: .leading, spacing: 4) {
+                        let sizeStep = browserCardSizeStep(forStoredSize: card.size)
+                        HStack {
+                            Text("Card Size")
+                            Spacer()
+                            Text("\(sizeStep)")
+                                .foregroundStyle(.secondary)
+                        }
+                        Slider(value: viewModel.bindingForSelectedSize(), in: -8 ... 8, step: 1)
+                    }
+
+                    TextField("Image path", text: viewModel.bindingForSelectedImagePath())
+                        .textFieldStyle(.roundedBorder)
+                    TextField("Video path", text: viewModel.bindingForSelectedVideoPath())
+                        .textFieldStyle(.roundedBorder)
+
+                    Toggle("Top Card", isOn: .constant(card.isTop))
+                        .disabled(true)
+                    Toggle("Fixed", isOn: viewModel.bindingForSelectedFixed())
+                    Toggle("Folded", isOn: viewModel.bindingForSelectedFolded())
+
                     HStack {
-                        Text("Card Size")
-                        Spacer()
-                        Text("\(sizeStep)")
-                            .foregroundStyle(.secondary)
+                        Button("Focus Browser") {
+                            viewModel.selectedTab = .browser
+                            viewModel.focusBrowser(on: card.id)
+                        }
+                        Button("Inline Edit") {
+                            viewModel.selectedTab = .browser
+                            viewModel.handleCardDoubleClick(card.id)
+                        }
                     }
-                    Slider(value: viewModel.bindingForSelectedSize(), in: -8 ... 8, step: 1)
+                } else {
+                    Text("No card selected")
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-
-                TextField("Image path", text: viewModel.bindingForSelectedImagePath())
-                    .textFieldStyle(.roundedBorder)
-                TextField("Video path", text: viewModel.bindingForSelectedVideoPath())
-                    .textFieldStyle(.roundedBorder)
-
-                Toggle("Top Card", isOn: .constant(card.isTop))
-                    .disabled(true)
-                Toggle("Fixed", isOn: viewModel.bindingForSelectedFixed())
-                Toggle("Folded", isOn: viewModel.bindingForSelectedFolded())
-
-                HStack {
-                    Button("Focus Browser") {
-                        viewModel.selectedTab = .browser
-                        viewModel.focusBrowser(on: card.id)
-                    }
-                    Button("Inline Edit") {
-                        viewModel.selectedTab = .browser
-                        viewModel.handleCardDoubleClick(card.id)
-                    }
-                }
-            } else {
-                Text("No card selected")
-                    .foregroundStyle(.secondary)
             }
-
-            Divider()
-
-            Text("Automation")
-                .font(.headline)
-            Toggle("Auto Save", isOn: $viewModel.settings.autoSaveDefault)
-            Toggle("Auto Reload", isOn: $viewModel.settings.autoReloadDefault)
-            HStack {
-                Text("Web Search")
-                Spacer()
-                Picker("Web Search", selection: $viewModel.settings.preferredWebSearchName) {
-                    ForEach(viewModel.settings.webSearchProviders) { provider in
-                        Text(provider.name).tag(provider.name)
-                    }
-                }
-                .labelsHidden()
-                .frame(width: 150)
-            }
-            HStack {
-                Text("Read Speed")
-                Spacer()
-                Text("\(Int(viewModel.settings.readAloudRate))")
-                    .foregroundStyle(.secondary)
-            }
-            Slider(value: $viewModel.settings.readAloudRate, in: 100 ... 320, step: 5)
-            TextField("GPT Model", text: $viewModel.settings.gptModel)
-                .textFieldStyle(.roundedBorder)
-
-            Divider()
-
-            Text("Global Search")
-                .font(.headline)
-            List(viewModel.globalSearchResults) { card in
-                Button(card.title) {
-                    viewModel.selectCard(card.id)
-                }
-                .buttonStyle(.plain)
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
         }
-        .padding(16)
+        .scrollContentBackground(.hidden)
     }
 }
 

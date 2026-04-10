@@ -12,7 +12,6 @@ extension WorkspaceViewModel {
         syncDocumentMetadataFromSettings()
         resetCanvasStateFromDocument()
         statusMessage = "Started a new document"
-        refreshSearchResults()
     }
 
     func openDocument() {
@@ -39,7 +38,6 @@ extension WorkspaceViewModel {
             syncDocumentMetadataFromSettings()
             resetCanvasStateFromDocument()
             statusMessage = "Opened \(url.lastPathComponent)"
-            refreshSearchResults()
         } catch {
             statusMessage = error.localizedDescription
         }
@@ -204,7 +202,7 @@ extension WorkspaceViewModel {
             card.drawingEncoded = drawing
             card.updated = isoTimestamp()
         }
-        noteDocumentMutation(updateSearch: false)
+        noteDocumentMutation()
     }
 
     func updateSelectedCardShape(_ shape: Int) {
@@ -213,7 +211,7 @@ extension WorkspaceViewModel {
             card.shape = shape
             card.updated = isoTimestamp()
         }
-        noteDocumentMutation(updateSearch: false)
+        noteDocumentMutation()
     }
 
     func updateSelectedCardSize(_ size: Int) {
@@ -222,7 +220,7 @@ extension WorkspaceViewModel {
             card.size = max(25, min(size, 400))
             card.updated = isoTimestamp()
         }
-        noteDocumentMutation(updateSearch: false)
+        noteDocumentMutation()
     }
 
     func updateSelectedCardSizeStep(_ step: Int) {
@@ -235,7 +233,7 @@ extension WorkspaceViewModel {
             card.imagePath = path.trimmed.isEmpty ? nil : path.trimmed
             card.updated = isoTimestamp()
         }
-        noteDocumentMutation(updateSearch: false)
+        noteDocumentMutation()
     }
 
     func updateSelectedCardVideoPath(_ path: String) {
@@ -244,7 +242,7 @@ extension WorkspaceViewModel {
             card.videoPath = path.trimmed.isEmpty ? nil : path.trimmed
             card.updated = isoTimestamp()
         }
-        noteDocumentMutation(updateSearch: false)
+        noteDocumentMutation()
     }
 
     func updateSelectedCardFixed(_ isFixed: Bool) {
@@ -253,7 +251,7 @@ extension WorkspaceViewModel {
             card.isFixed = isFixed
             card.updated = isoTimestamp()
         }
-        noteDocumentMutation(updateSearch: false)
+        noteDocumentMutation()
     }
 
     func updateSelectedCardFolded(_ isFolded: Bool) {
@@ -262,7 +260,7 @@ extension WorkspaceViewModel {
             card.isFolded = isFolded
             card.updated = isoTimestamp()
         }
-        noteDocumentMutation(updateSearch: false)
+        noteDocumentMutation()
     }
 
     func shuffleLayout() {
@@ -270,7 +268,7 @@ extension WorkspaceViewModel {
         for card in document.cards {
             document.moveCard(card.id, dx: Double.random(in: -0.2 ... 0.2), dy: Double.random(in: -0.2 ... 0.2))
         }
-        noteDocumentMutation(status: "Shuffled card positions", updateSearch: false)
+        noteDocumentMutation(status: "Shuffled card positions")
     }
 
     func arrangeCards() {
@@ -317,7 +315,7 @@ extension WorkspaceViewModel {
         if autoZoom {
             requestBrowserFit()
         }
-        noteDocumentMutation(status: "Arranged cards using \(arrangeMode)", updateSearch: false)
+        noteDocumentMutation(status: "Arranged cards using \(arrangeMode)")
     }
 
     func resetBrowserArrangeTransientState() {
@@ -1027,14 +1025,7 @@ extension WorkspaceViewModel {
         markBrowserSurfacePresentationDirty()
     }
 
-    func refreshSearchResults() {
-        globalSearchResults = document.filteredCards(query: globalSearchQuery)
-        if globalSearchQuery.trimmed.isEmpty {
-            globalSearchResults = sortedCards()
-        }
-    }
-
-    func browseHelp() {
+func browseHelp() {
         if let url = URL(string: "https://www.frieve.com/software/frieve-editor") {
             NSWorkspace.shared.open(url)
         }

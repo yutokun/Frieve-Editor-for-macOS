@@ -91,7 +91,6 @@ extension WorkspaceViewModel {
             markBrowserSurfaceViewportDirty()
         }
         markBrowserSurfacePresentationDirty()
-        refreshSearchResults()
     }
 
     func clearSelection() {
@@ -100,7 +99,6 @@ extension WorkspaceViewModel {
         browserInlineEditorCardID = nil
         document.focusedCardID = nil
         markBrowserSurfacePresentationDirty()
-        refreshSearchResults()
     }
 
     func handleCardTap(_ id: Int, modifiers: NSEvent.ModifierFlags) {

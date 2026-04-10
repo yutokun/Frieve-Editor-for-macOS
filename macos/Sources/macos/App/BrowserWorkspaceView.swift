@@ -8,14 +8,13 @@ struct BrowserWorkspaceView: View {
         GeometryReader { geometry in
             ZStack(alignment: .bottomTrailing) {
                 BrowserLayerSurfaceView(viewModel: viewModel)
-                    .padding(12)
 
                 VStack(alignment: .trailing, spacing: 10) {
-                    BrowserCanvasHUD(viewModel: viewModel, canvasSize: geometry.size)
                     if viewModel.showOverview {
                         OverviewMiniMapView(viewModel: viewModel, size: geometry.size)
                             .frame(width: 220, height: 150)
                     }
+                    BrowserCanvasHUD(viewModel: viewModel, canvasSize: geometry.size)
                 }
                 .padding(16)
             }
@@ -174,6 +173,8 @@ private struct BrowserCanvasHUD: View {
                     get: { viewModel.linkLabelsVisible },
                     set: { viewModel.setBrowserLinkLabelsVisible($0) }
                 ))
+                    .toggleStyle(.checkbox)
+                Toggle("Overview", isOn: $viewModel.showOverview)
                     .toggleStyle(.checkbox)
             }
             Text(viewModel.browserPerformanceSummary)

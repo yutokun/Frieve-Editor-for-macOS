@@ -141,7 +141,7 @@ extension WorkspaceViewModel {
                         card.updated = timestamp
                     }
                 }
-                noteDocumentMutation(status: selectedCardIDs.count > 1 ? "Moved \(selectedCardIDs.count) selected cards" : "Moved the selected card", updateSearch: false)
+                noteDocumentMutation(status: selectedCardIDs.count > 1 ? "Moved \(selectedCardIDs.count) selected cards" : "Moved the selected card")
             }
         case .none, .panning, .marquee:
             break
@@ -249,7 +249,6 @@ extension WorkspaceViewModel {
             document.touchFocusedCard()
         }
         statusMessage = hits.isEmpty ? "No cards in selection" : "Selected \(selectedCardIDs.count) card(s)"
-        refreshSearchResults()
     }
 
     func browserWorldToCanvasTransform(in size: CGSize) -> CGAffineTransform {

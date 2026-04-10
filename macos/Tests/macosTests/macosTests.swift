@@ -247,6 +247,37 @@ import Testing
     #expect(states.1 == true)
 }
 
+@Test func automationSettingsPersistWhenEditedDirectly() async throws {
+    let suiteName = "FrieveEditorMacTests.automationSettings"
+
+    let values = await MainActor.run { () -> (Bool, Bool, String, Int, String) in
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let settings = AppSettings(userDefaults: defaults)
+        settings.autoSaveDefault = false
+        settings.autoReloadDefault = false
+        settings.preferredWebSearchName = "DuckDuckGo"
+        settings.readAloudRate = 205
+        settings.gptModel = "gpt-4.1-mini"
+
+        let reloaded = AppSettings(userDefaults: defaults)
+        return (
+            reloaded.autoSaveDefault,
+            reloaded.autoReloadDefault,
+            reloaded.preferredWebSearchName,
+            Int(reloaded.readAloudRate),
+            reloaded.gptModel
+        )
+    }
+
+    #expect(values.0 == false)
+    #expect(values.1 == false)
+    #expect(values.2 == "DuckDuckGo")
+    #expect(values.3 == 205)
+    #expect(values.4 == "gpt-4.1-mini")
+}
+
 @Test func browserCardSizeStepMappingMatchesWindowsRange() async throws {
     #expect(browserCardStoredSize(forStep: -8) == 25)
     #expect(browserCardStoredSize(forStep: 0) == 100)

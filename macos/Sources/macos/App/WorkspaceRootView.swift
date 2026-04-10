@@ -13,21 +13,38 @@ struct WorkspaceRootView: View {
                 .navigationSplitViewColumnWidth(min: 230, ideal: 280, max: 340)
         } detail: {
             WorkspaceContentView(viewModel: viewModel)
+                .ignoresSafeArea(.all, edges: .top)
+                .toolbar {
+                    ToolbarItemGroup(placement: .primaryAction) {
+                        Picker("Arrange", selection: $viewModel.arrangeMode) {
+                            Text("None").tag("None")
+                            Text("Link").tag("Link")
+                            Text("Link(Soft)").tag("Link(Soft)")
+                            Text("Matrix").tag("Matrix")
+                            Text("Tree").tag("Tree")
+                        }
+                        .fixedSize()
+                        Button("Shuffle") { viewModel.shuffleLayout() }
+                    }
+                }
         }
+        .inspector(isPresented: $viewModel.showInspector) {
+            InspectorPaneView(viewModel: viewModel)
+                .inspectorColumnWidth(min: 240, ideal: 280, max: 360)
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            viewModel.showInspector.toggle()
+                        } label: {
+                            Label("Inspector", systemImage: "sidebar.right")
+                        }
+                    }
+                }
+        }
+        .modifier(DocumentTitleModifier(fileDisplayName: viewModel.fileDisplayName,
+                                        documentURL: viewModel.documentURL))
         .toolbar {
-            ToolbarItemGroup(placement: .navigation) {
-                Button(action: viewModel.newDocument) {
-                    Label("New", systemImage: "doc.badge.plus")
-                }
-                Button(action: viewModel.openDocument) {
-                    Label("Open", systemImage: "folder")
-                }
-                Button(action: viewModel.saveDocument) {
-                    Label("Save", systemImage: "square.and.arrow.down")
-                }
-            }
-
-            ToolbarItemGroup(placement: .primaryAction) {
+            ToolbarItem(placement: .principal) {
                 Picker("Mode", selection: $viewModel.selectedTab) {
                     ForEach(WorkspaceTab.allCases) { tab in
                         Text(tab.rawValue).tag(tab)
@@ -35,43 +52,6 @@ struct WorkspaceRootView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 330)
-
-                Picker("Arrange", selection: $viewModel.arrangeMode) {
-                    Text("None").tag("None")
-                    Text("Link").tag("Link")
-                    Text("Link(Soft)").tag("Link(Soft)")
-                    Text("Matrix").tag("Matrix")
-                    Text("Tree").tag("Tree")
-                }
-                .fixedSize()
-                Button("Shuffle") { viewModel.shuffleLayout() }
-                Button {
-                    viewModel.zoomOut()
-                } label: {
-                    Label("Zoom Out", systemImage: "minus.magnifyingglass")
-                }
-                Button {
-                    viewModel.requestBrowserFit()
-                } label: {
-                    Label("Fit", systemImage: "arrow.up.left.and.down.right.magnifyingglass")
-                }
-                Button {
-                    viewModel.zoomToSelection(in: CGSize(width: 1200, height: 800))
-                } label: {
-                    Label("Selection", systemImage: "selection.pin.in.out")
-                }
-                Button {
-                    viewModel.zoomIn()
-                } label: {
-                    Label("Zoom In", systemImage: "plus.magnifyingglass")
-                }
-                Toggle("Auto Zoom", isOn: $viewModel.autoZoom)
-                Toggle("Overview", isOn: $viewModel.showOverview)
-                Button {
-                    viewModel.showInspector.toggle()
-                } label: {
-                    Label("Inspector", systemImage: "sidebar.right")
-                }
             }
         }
     }
@@ -93,10 +73,6 @@ private struct SidebarView: View {
             }
             .padding(.horizontal, 12)
             .padding(.top, 12)
-
-            TextField("Filter cards", text: $viewModel.searchQuery)
-                .textFieldStyle(.roundedBorder)
-                .padding(12)
 
             List {
                 if viewModel.showFileList {
@@ -122,7 +98,6 @@ private struct SidebarView: View {
 
             Spacer(minLength: 0)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
     }
 }
 
@@ -154,6 +129,11 @@ private struct CardListPane: View {
                         }
                     }
                 })) {
+                    TextField("Filter cards", text: $viewModel.searchQuery)
+                        .textFieldStyle(.roundedBorder)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 4, trailing: 8))
+
                     ForEach(viewModel.filteredCards) { card in
                         Text(card.title)
                             .fontWeight(viewModel.selectedCardIDs.contains(card.id) ? .semibold : .regular)
@@ -163,6 +143,7 @@ private struct CardListPane: View {
                     }
                 }
                 .listStyle(.inset)
+                .scrollContentBackground(.hidden)
             } else {
                 Spacer()
             }
@@ -178,41 +159,19 @@ private struct WorkspaceContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                Text(viewModel.fileDisplayName)
-                    .font(.title3.weight(.semibold))
-                Spacer()
-                TextField("Global Search", text: $viewModel.globalSearchQuery)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 260)
-                Stepper(value: $viewModel.zoom, in: 0.5 ... 2.0, step: 0.1) {
-                    Text("Zoom \(viewModel.zoom.formatted(.number.precision(.fractionLength(1))))x")
-                }
-                .frame(width: 170)
-            }
-            .padding(12)
-
-            HStack(spacing: 0) {
-                Group {
-                    switch viewModel.selectedTab {
-                    case .browser:
-                        BrowserWorkspaceView(viewModel: viewModel)
-                    case .editor:
-                        EditorWorkspaceView(viewModel: viewModel)
-                    case .drawing:
-                        DrawingWorkspaceView(viewModel: viewModel)
-                    case .statistics:
-                        StatisticsWorkspaceView(viewModel: viewModel)
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                if viewModel.showInspector {
-                    InspectorPaneView(viewModel: viewModel)
-                        .frame(width: 280)
-                        .background(Color(nsColor: .controlBackgroundColor))
+            Group {
+                switch viewModel.selectedTab {
+                case .browser:
+                    BrowserWorkspaceView(viewModel: viewModel)
+                case .editor:
+                    EditorWorkspaceView(viewModel: viewModel)
+                case .drawing:
+                    DrawingWorkspaceView(viewModel: viewModel)
+                case .statistics:
+                    StatisticsWorkspaceView(viewModel: viewModel)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             StatusBarView(viewModel: viewModel)
         }
@@ -233,5 +192,34 @@ private struct WorkspaceContentView: View {
                     }
             }
         )
+    }
+}
+
+private struct DocumentTitleModifier: ViewModifier {
+    let fileDisplayName: String
+    let documentURL: URL?
+
+    func body(content: Content) -> some View {
+        content
+            .background(WindowDocumentConfigurator(title: fileDisplayName, representedURL: documentURL))
+    }
+}
+
+/// NSWindow に直接アクセスして title と representedURL を設定する。
+/// representedURL が設定されると macOS がタイトルバーにプロキシアイコンと下向き矢印を表示し、
+/// クリックするとファイル名・保存場所を変更できる標準ポップオーバーが表示される。
+private struct WindowDocumentConfigurator: NSViewRepresentable {
+    let title: String
+    let representedURL: URL?
+
+    func makeNSView(context: Context) -> NSView { NSView() }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            guard let window = nsView.window else { return }
+            window.title = title
+            window.representedURL = representedURL
+            window.styleMask.insert(.fullSizeContentView)
+        }
     }
 }

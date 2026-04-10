@@ -81,7 +81,6 @@ extension WorkspaceViewModel {
             lastKnownFileModificationDate = modificationDate
             syncDocumentMetadataFromSettings()
             resetCanvasStateFromDocument()
-            refreshSearchResults()
             statusMessage = "Reloaded \(url.lastPathComponent) from disk"
         } catch {
             statusMessage = error.localizedDescription
@@ -99,16 +98,13 @@ extension WorkspaceViewModel {
         document.metadata["ReadSpeed"] = String(Int(settings.readAloudRate))
     }
 
-    func noteDocumentMutation(status: String? = nil, updateSearch: Bool = true) {
+    func noteDocumentMutation(status: String? = nil) {
         hasUnsavedChanges = true
         lastMutationAt = Date()
         syncDocumentMetadataFromSettings()
         markBrowserSurfaceContentDirty()
         if let status {
             statusMessage = status
-        }
-        if updateSearch {
-            refreshSearchResults()
         }
     }
 
@@ -160,9 +156,6 @@ extension WorkspaceViewModel {
     }
 
     func selectedWebSearchQuery() -> String {
-        if !globalSearchQuery.trimmed.isEmpty {
-            return globalSearchQuery.trimmed
-        }
         if selectedCardIDs.count > 1 {
             return selectedCards.map(\.title).joined(separator: " ")
         }
