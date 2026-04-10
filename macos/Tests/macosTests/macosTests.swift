@@ -120,6 +120,21 @@ import Testing
     #expect(visibleCounts.0 >= 1)
     #expect(visibleCounts.1 >= 0)
 
+    let surfaceSceneCardCount = await MainActor.run { () -> Int in
+        model.markBrowserSurfaceContentDirty()
+        return model.browserSurfaceScene(in: canvasSize).cards.count
+    }
+    #expect(surfaceSceneCardCount >= visibleCounts.0)
+
+    let hoverOnlySceneSignatureChanges = await MainActor.run { () -> Bool in
+        model.markBrowserSurfaceContentDirty()
+        let baseline = model.browserSurfaceScene(in: canvasSize)
+        model.setBrowserHoverCard(model.document.cards.first?.id)
+        let hovered = model.browserSurfaceScene(in: canvasSize)
+        return baseline.cardSnapshotSignature != hovered.cardSnapshotSignature && baseline.linkSnapshotSignature == hovered.linkSnapshotSignature
+    }
+    #expect(hoverOnlySceneSignatureChanges)
+
     let nudgedPositionChanged = await MainActor.run { () -> Bool in
         let before = model.document.card(withID: model.selectedCardID!)!.position
         model.nudgeSelection(dx: 0.01, dy: -0.02)
@@ -167,6 +182,38 @@ import Testing
     #expect(results.5)
     #expect(results.6.contains("Center"))
     #expect(results.6.contains("|nop"))
+}
+
+@Test func browserLinkSnapshotUsesWorldCoordinatesForMetalRenderer() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+    let canvasSize = CGSize(width: 1280, height: 840)
+
+    let results = await MainActor.run { () -> (CGPoint, CGPoint, CGPoint, CGPoint) in
+        model.newDocument()
+        let rootID = model.document.sortedCards.first?.id ?? 0
+        model.addChildCard()
+        let childID = model.selectedCardID ?? rootID
+        model.document.updateCard(rootID) { card in
+            card.position = FrievePoint(x: 0.32, y: 0.36)
+        }
+        model.document.updateCard(childID) { card in
+            card.position = FrievePoint(x: 0.74, y: 0.68)
+        }
+        model.document.links = [FrieveLink(fromCardID: rootID, toCardID: childID, directionVisible: true, shape: 2, labelIDs: [], name: "Route")]
+        model.markBrowserSurfaceContentDirty()
+        let scene = model.browserSurfaceScene(in: canvasSize)
+        let link = try! #require(scene.links.first)
+        let worldStart = CGPoint(x: model.currentPosition(for: model.document.card(withID: rootID)!).x, y: model.currentPosition(for: model.document.card(withID: rootID)!).y)
+        let worldEnd = CGPoint(x: model.currentPosition(for: model.document.card(withID: childID)!).x, y: model.currentPosition(for: model.document.card(withID: childID)!).y)
+        let expectedCanvasStart = worldStart.applying(scene.worldToCanvasTransform)
+        let expectedCanvasEnd = worldEnd.applying(scene.worldToCanvasTransform)
+        return (link.startPoint, link.endPoint, expectedCanvasStart, expectedCanvasEnd)
+    }
+
+    #expect(abs(results.0.x - results.2.x) > 1)
+    #expect(abs(results.0.y - results.2.y) > 1)
+    #expect(abs(results.1.x - results.3.x) > 1)
+    #expect(abs(results.1.y - results.3.y) > 1)
 }
 
 @Test func legacyHelpFileLoadsAsDocument() async throws {

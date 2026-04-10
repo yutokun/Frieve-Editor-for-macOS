@@ -67,6 +67,7 @@ extension WorkspaceViewModel {
         hasUnsavedChanges = true
         lastMutationAt = Date()
         syncDocumentMetadataFromSettings()
+        markBrowserSurfaceContentDirty()
         if let status {
             statusMessage = status
         }
@@ -81,6 +82,8 @@ extension WorkspaceViewModel {
         zoom = 1.0
         browserBaseScaleFactor = 0.8
         requestBrowserFit()
+        markBrowserSurfaceContentDirty()
+        markBrowserSurfaceViewportDirty()
         clearCanvasTransientState()
     }
 
@@ -109,6 +112,7 @@ extension WorkspaceViewModel {
         browserHoverCardID = nil
         cachedOverviewSnapshotKey = nil
         cachedOverviewSnapshot = nil
+        markBrowserSurfaceViewportDirty()
     }
 
     func selectedNarrationText() -> String {
@@ -241,6 +245,8 @@ extension WorkspaceViewModel {
         cardMetadataByID.removeAll(keepingCapacity: true)
         cachedOverviewSnapshotKey = nil
         cachedOverviewSnapshot = nil
+        cachedBrowserSurfaceContentKey = nil
+        cachedBrowserSurfaceContent = nil
     }
 
     func sortedCards() -> [FrieveCard] {
@@ -303,6 +309,33 @@ extension WorkspaceViewModel {
     func recordPerformanceMetric(_ start: CFTimeInterval, keyPath: WritableKeyPath<BrowserPerformanceSnapshot, BrowserPerformanceMetric>) {
         let elapsed = max((CACurrentMediaTime() - start) * 1000, 0)
         browserPerformance[keyPath: keyPath].record(elapsed)
+    }
+
+    func recordBrowserFramePresentation(at timestamp: CFTimeInterval = CACurrentMediaTime()) {
+        if browserLastPresentedFrameAt > 0 {
+            browserPerformance[keyPath: \BrowserPerformanceSnapshot.frameInterval].record(max((timestamp - browserLastPresentedFrameAt) * 1000, 0))
+        }
+        browserLastPresentedFrameAt = timestamp
+
+        guard timestamp - browserPerformanceLastPublishedAt >= 0.25 else { return }
+        browserPerformanceLastPublishedAt = timestamp
+        objectWillChange.send()
+    }
+
+    func recordBrowserCardRasterMetric(_ milliseconds: Double) {
+        browserPerformance[keyPath: \BrowserPerformanceSnapshot.cardRaster].record(max(milliseconds, 0))
+    }
+
+    func enqueueBrowserCardRaster(for snapshot: BrowserCardLayerSnapshot, cacheKey: String) {
+        guard browserCardRasterCache[cacheKey] == nil else { return }
+        guard pendingBrowserCardRasterKeys.insert(cacheKey).inserted else { return }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.pendingBrowserCardRasterKeys.remove(cacheKey) }
+            guard self.browserCardRasterCache[cacheKey] == nil else { return }
+            guard self.cachedBrowserCardRaster(for: snapshot, cacheKey: cacheKey) != nil else { return }
+            self.markBrowserSurfacePresentationDirty()
+        }
     }
 
     func touchBrowserCardRasterCacheKey(_ key: String) {

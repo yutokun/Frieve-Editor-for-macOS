@@ -16,7 +16,8 @@ let package = Package(
         .executableTarget(
             name: "macos",
             resources: [
-                .process("Resources")
+                .process("Resources"),
+                .process("App/BrowserMetalShaders.metal")
             ]
         ),
         .testTarget(

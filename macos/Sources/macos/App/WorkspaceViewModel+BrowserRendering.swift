@@ -92,8 +92,9 @@ extension WorkspaceViewModel {
                 await MainActor.run {
                     guard let self else { return }
                     self.mediaThumbnailTasks.remove(cacheKey)
-                    self.objectWillChange.send()
                     self.cacheMediaImage(thumbnail, forKey: cacheKey)
+                    self.markBrowserSurfaceContentDirty()
+                    self.markBrowserSurfacePresentationDirty()
                 }
             }
         }
@@ -144,6 +145,7 @@ extension WorkspaceViewModel {
             return cached
         }
 
+        let rasterStart = CACurrentMediaTime()
         let renderer = ImageRenderer(
             content: BrowserCardRasterContentView(
                 card: snapshot.card,
@@ -157,10 +159,20 @@ extension WorkspaceViewModel {
         )
         renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
         guard let image = renderer.nsImage else { return nil }
+        recordBrowserCardRasterMetric((CACurrentMediaTime() - rasterStart) * 1000)
         browserCardRasterCache[cacheKey] = image
         touchBrowserCardRasterCacheKey(cacheKey)
-        evictCacheIfNeeded(order: &browserCardRasterCacheOrder, storage: &browserCardRasterCache, maxEntries: 240)
+        evictCacheIfNeeded(order: &browserCardRasterCacheOrder, storage: &browserCardRasterCache, maxEntries: 360)
         return image
+    }
+
+    func browserCardRasterIfReady(for snapshot: BrowserCardLayerSnapshot, cacheKey: String) -> NSImage? {
+        if let cached = browserCardRasterCache[cacheKey] {
+            touchBrowserCardRasterCacheKey(cacheKey)
+            return cached
+        }
+        enqueueBrowserCardRaster(for: snapshot, cacheKey: cacheKey)
+        return nil
     }
 
     func browserInlineEditorFrame(for card: FrieveCard, in size: CGSize) -> CGRect {

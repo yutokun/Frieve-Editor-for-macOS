@@ -20,6 +20,27 @@ extension WorkspaceViewModel {
         browserViewportRevision += 1
     }
 
+    func markBrowserSurfaceContentDirty() {
+        browserSurfaceContentRevision &+= 1
+        cachedBrowserSurfaceContentKey = nil
+        cachedBrowserSurfaceContent = nil
+    }
+
+    func markBrowserSurfacePresentationDirty() {
+        browserSurfacePresentationRevision &+= 1
+    }
+
+    func markBrowserSurfaceViewportDirty() {
+        browserSurfaceViewportRevision &+= 1
+    }
+
+    func setBrowserLinkLabelsVisible(_ isVisible: Bool) {
+        guard linkLabelsVisible != isVisible else { return }
+        linkLabelsVisible = isVisible
+        markBrowserSurfaceContentDirty()
+        markBrowserSurfacePresentationDirty()
+    }
+
     func resetCanvasToFit(in size: CGSize) {
         let bounds = browserDocumentBounds()
         canvasCenter = FrievePoint(x: bounds.midX, y: bounds.midY)
@@ -30,15 +51,18 @@ extension WorkspaceViewModel {
         let minDimension = max(min(size.width, size.height), 1)
         browserBaseScaleFactor = max(Double(fittedScale) / Double(minDimension), 0.05)
         zoom = 1.0
+        markBrowserSurfaceViewportDirty()
         clearCanvasTransientState()
     }
 
     func zoomIn() {
         zoom = min(zoom * 1.15, 6.0)
+        markBrowserSurfaceViewportDirty()
     }
 
     func zoomOut() {
         zoom = max(zoom / 1.15, 0.2)
+        markBrowserSurfaceViewportDirty()
     }
 
     func nudgeSelection(dx: Double, dy: Double) {
@@ -199,9 +223,34 @@ extension WorkspaceViewModel {
         return (cards, links)
     }
 
-    func browserSurfaceScene(in size: CGSize, canvasPadding: CGFloat = 260) -> BrowserSurfaceSceneSnapshot {
+    func browserSurfaceContent(in size: CGSize, canvasPadding: CGFloat = 260) -> BrowserSurfaceContentCacheEntry {
         let detailLevel = browserCardDetailLevel()
-        let visibleCards = visibleBrowserCards(in: size, canvasPadding: canvasPadding)
+        let sceneScale = max(browserScale(in: size), 1)
+        let key = BrowserSurfaceContentCacheKey(
+            contentRevision: browserSurfaceContentRevision,
+            sceneScale: sceneScale,
+            detailLevel: detailLevel,
+            canvasSize: size,
+            canvasPadding: canvasPadding,
+            labelsVisible: linkLabelsVisible
+        )
+        if let cachedBrowserSurfaceContent, cachedBrowserSurfaceContentKey == key {
+            let coverage = cachedBrowserSurfaceContent.coverageRect
+            let visible = visibleWorldRect(in: size)
+            let coverageInsetX = min(coverage.width * 0.18, 0.18)
+            let coverageInsetY = min(coverage.height * 0.18, 0.18)
+            if coverage.insetBy(dx: coverageInsetX, dy: coverageInsetY).contains(visible) {
+                return cachedBrowserSurfaceContent
+            }
+        }
+
+        let paddedVisible = visibleWorldRect(in: size).insetBy(
+            dx: -Double(canvasPadding) / sceneScale,
+            dy: -Double(canvasPadding) / sceneScale
+        )
+        let visibleCards = visibleSortedCards().filter { card in
+            paddedVisible.intersects(cardWorldFrame(for: card, in: size))
+        }
         let cards = visibleCards.map { card in
             BrowserCardLayerSnapshot(
                 card: card,
@@ -215,20 +264,66 @@ extension WorkspaceViewModel {
         let hitRegions = visibleCards.map { BrowserCardHitRegion(cardID: $0.id, frame: cardFrame(for: $0, in: size)) }
         let visibleCardIDs = Set(cards.map { $0.id })
         let links = visibleLinkLayerSnapshots(in: size, visibleCardIDs: visibleCardIDs)
-        return BrowserSurfaceSceneSnapshot(
+        let entry = BrowserSurfaceContentCacheEntry(
+            coverageRect: paddedVisible,
+            cards: cards,
+            cardSnapshotSignature: browserCardSnapshotSignature(cards),
+            links: links,
+            linkSnapshotSignature: browserLinkSnapshotSignature(links),
+            hitRegions: hitRegions
+        )
+        cachedBrowserSurfaceContentKey = key
+        cachedBrowserSurfaceContent = entry
+        return entry
+    }
+
+    func browserSurfaceScene(in size: CGSize, canvasPadding: CGFloat = 260) -> BrowserSurfaceSceneSnapshot {
+        let start = CACurrentMediaTime()
+        let content = browserSurfaceContent(in: size, canvasPadding: canvasPadding)
+        let cards = content.cards.map { snapshot in
+            BrowserCardLayerSnapshot(
+                card: snapshot.card,
+                position: snapshot.position,
+                metadata: snapshot.metadata,
+                isSelected: selectedCardIDs.contains(snapshot.id),
+                isHovered: browserHoverCardID == snapshot.id,
+                detailLevel: snapshot.detailLevel
+            )
+        }
+        let links = content.links.map { snapshot in
+            BrowserLinkLayerSnapshot(
+                id: snapshot.id,
+                fromCardID: snapshot.fromCardID,
+                toCardID: snapshot.toCardID,
+                startPoint: snapshot.startPoint,
+                endPoint: snapshot.endPoint,
+                shapeIndex: snapshot.shapeIndex,
+                directionVisible: snapshot.directionVisible,
+                labelPoint: snapshot.labelPoint,
+                labelText: snapshot.labelText,
+                isHighlighted: selectedCardIDs.contains(snapshot.fromCardID) || selectedCardIDs.contains(snapshot.toCardID)
+            )
+        }
+        let overlay = BrowserOverlaySnapshot(
+            selectionFrame: selectionFrame(in: size),
+            marqueeRect: marqueeRect(),
+            linkPreviewSegment: linkPreviewSegment(in: size)
+        )
+        let scene = BrowserSurfaceSceneSnapshot(
             canvasSize: size,
             worldToCanvasTransform: browserWorldToCanvasTransform(in: size),
             backgroundGuidePath: browserBackgroundGuideCGPath(in: size),
             cards: cards,
+            cardSnapshotSignature: browserCardSnapshotSignature(cards),
             links: links,
-            hitRegions: hitRegions,
-            overlay: BrowserOverlaySnapshot(
-                selectionFrame: selectionFrame(in: size),
-                marqueeRect: marqueeRect(),
-                linkPreviewSegment: linkPreviewSegment(in: size)
-            ),
+            linkSnapshotSignature: browserLinkSnapshotSignature(links),
+            hitRegions: content.hitRegions,
+            overlay: overlay,
+            overlaySignature: browserOverlaySignature(overlay),
             viewportSummary: browserViewportSummary(in: size)
         )
+        recordPerformanceMetric(start, keyPath: \BrowserPerformanceSnapshot.surfaceScene)
+        return scene
     }
 
     func visibleCardRenderData(in size: CGSize, canvasPadding: CGFloat = 220) -> [BrowserCardRenderData] {
@@ -304,8 +399,12 @@ extension WorkspaceViewModel {
             let end = CGPoint(x: toPosition.x, y: toPosition.y)
             return BrowserLinkLayerSnapshot(
                 id: link.id,
-                path: buildLinkPath(for: link, start: start, end: end, baseScale: CGFloat(scale)),
-                arrowHead: buildLinkArrowHead(for: link, start: start, end: end, baseScale: CGFloat(scale)),
+                fromCardID: link.fromCardID,
+                toCardID: link.toCardID,
+                startPoint: start,
+                endPoint: end,
+                shapeIndex: abs(link.shape % 6),
+                directionVisible: link.directionVisible,
                 labelPoint: buildLinkLabelPoint(for: link, start: start, end: end, baseScale: CGFloat(scale)),
                 labelText: showsLabels ? link.name.trimmed.nilIfEmpty : nil,
                 isHighlighted: selectedCardIDs.contains(link.fromCardID) || selectedCardIDs.contains(link.toCardID)
@@ -407,6 +506,70 @@ extension WorkspaceViewModel {
         return path
     }
 
+    func browserCardSnapshotSignature(_ snapshots: [BrowserCardLayerSnapshot]) -> Int {
+        var hasher = Hasher()
+        hasher.combine(snapshots.count)
+        for snapshot in snapshots {
+            hasher.combine(snapshot)
+        }
+        return hasher.finalize()
+    }
+
+    func browserLinkSnapshotSignature(_ snapshots: [BrowserLinkLayerSnapshot]) -> Int {
+        var hasher = Hasher()
+        hasher.combine(snapshots.count)
+        for snapshot in snapshots {
+            hasher.combine(snapshot.id)
+            hasher.combine(snapshot.fromCardID)
+            hasher.combine(snapshot.toCardID)
+            hasher.combine(snapshot.shapeIndex)
+            hasher.combine(snapshot.directionVisible)
+            hasher.combine(snapshot.labelText)
+            hasher.combine(snapshot.isHighlighted)
+            hasher.combine(snapshot.startPoint.x)
+            hasher.combine(snapshot.startPoint.y)
+            hasher.combine(snapshot.endPoint.x)
+            hasher.combine(snapshot.endPoint.y)
+            if let labelPoint = snapshot.labelPoint {
+                hasher.combine(labelPoint.x)
+                hasher.combine(labelPoint.y)
+            } else {
+                hasher.combine(-1.0)
+                hasher.combine(-1.0)
+            }
+        }
+        return hasher.finalize()
+    }
+
+    func browserOverlaySignature(_ overlay: BrowserOverlaySnapshot) -> Int {
+        var hasher = Hasher()
+        if let selectionFrame = overlay.selectionFrame {
+            hasher.combine(selectionFrame.minX)
+            hasher.combine(selectionFrame.minY)
+            hasher.combine(selectionFrame.width)
+            hasher.combine(selectionFrame.height)
+        } else {
+            hasher.combine(-1.0)
+        }
+        if let marqueeRect = overlay.marqueeRect {
+            hasher.combine(marqueeRect.minX)
+            hasher.combine(marqueeRect.minY)
+            hasher.combine(marqueeRect.width)
+            hasher.combine(marqueeRect.height)
+        } else {
+            hasher.combine(-2.0)
+        }
+        if let preview = overlay.linkPreviewSegment {
+            hasher.combine(preview.0.x)
+            hasher.combine(preview.0.y)
+            hasher.combine(preview.1.x)
+            hasher.combine(preview.1.y)
+        } else {
+            hasher.combine(-3.0)
+        }
+        return hasher.finalize()
+    }
+
     func browserViewportSummary(in size: CGSize) -> String {
         let visible = visibleWorldRect(in: size)
         let centerX = String(format: "%.2f", canvasCenter.x)
@@ -478,6 +641,7 @@ extension WorkspaceViewModel {
             x: bounds.minX + Double(location.x / max(overviewSize.width, 1)) * bounds.width,
             y: bounds.minY + Double(location.y / max(overviewSize.height, 1)) * bounds.height
         )
+        markBrowserSurfaceViewportDirty()
     }
 
     func zoomToSelection(in size: CGSize) {
@@ -493,6 +657,7 @@ extension WorkspaceViewModel {
         let minDimension = max(min(size.width, size.height), 1)
         browserBaseScaleFactor = max(Double(fittedScale) / Double(minDimension), 0.05)
         zoom = 1.0
+        markBrowserSurfaceViewportDirty()
     }
 
     func zoom(by factor: Double, anchor: CGPoint? = nil, in size: CGSize) {
@@ -504,6 +669,7 @@ extension WorkspaceViewModel {
             x: worldAnchor.x - Double(anchorPoint.x - size.width / 2) / scale,
             y: worldAnchor.y - Double(anchorPoint.y - size.height / 2) / scale
         )
+        markBrowserSurfaceViewportDirty()
     }
 
     func beginMagnification() {
@@ -516,6 +682,7 @@ extension WorkspaceViewModel {
             gestureZoomStart = zoom
         }
         zoom = min(max((gestureZoomStart ?? 1.0) * Double(value), 0.2), 6.0)
+        markBrowserSurfaceViewportDirty()
     }
 
     func endMagnification() {

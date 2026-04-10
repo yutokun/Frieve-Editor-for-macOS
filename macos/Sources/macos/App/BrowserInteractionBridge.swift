@@ -44,6 +44,11 @@ class BrowserInteractionNSView: NSView {
     var onZoomOut: (() -> Void)?
     var onFit: (() -> Void)?
 
+    func browserEventPoint(from event: NSEvent) -> CGPoint {
+        let point = convert(event.locationInWindow, from: nil)
+        return CGPoint(x: point.x, y: bounds.height - point.y)
+    }
+
     override var acceptsFirstResponder: Bool { true }
 
     override func viewDidMoveToWindow() {
@@ -87,7 +92,7 @@ class BrowserInteractionNSView: NSView {
     }
 
     override func scrollWheel(with event: NSEvent) {
-        let point = convert(event.locationInWindow, from: nil)
+        let point = browserEventPoint(from: event)
         onScroll?(event.scrollingDeltaX, event.scrollingDeltaY, point, event.modifierFlags)
     }
 }

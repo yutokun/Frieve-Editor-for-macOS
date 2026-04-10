@@ -24,9 +24,11 @@ extension WorkspaceViewModel {
                 x: originCenter.x - Double(current.x - start.x) / scale,
                 y: originCenter.y - Double(current.y - start.y) / scale
             )
+            markBrowserSurfaceViewportDirty()
         case .marquee:
             marqueeStartPoint = start
             marqueeCurrentPoint = current
+            markBrowserSurfaceViewportDirty()
         case .none, .movingSelection, .creatingLink:
             break
         }
@@ -46,10 +48,12 @@ extension WorkspaceViewModel {
             if !selectedCardIDs.contains(cardID) {
                 selectedCardIDs = [cardID]
                 selectedCardID = cardID
+                markBrowserSurfacePresentationDirty()
             }
             linkPreviewSourceCardID = cardID
             linkPreviewCanvasPoint = nil
             browserGestureMode = .creatingLink(sourceCardID: cardID)
+            markBrowserSurfaceViewportDirty()
             return
         }
 
@@ -86,8 +90,11 @@ extension WorkspaceViewModel {
                 x: Double(currentPoint.x - startPoint.x) / scale,
                 y: Double(currentPoint.y - startPoint.y) / scale
             )
+            markBrowserSurfaceContentDirty()
+            markBrowserSurfacePresentationDirty()
         case .creatingLink:
             linkPreviewCanvasPoint = currentPoint
+            markBrowserSurfaceViewportDirty()
         case .none, .panning, .marquee:
             break
         }
@@ -107,6 +114,7 @@ extension WorkspaceViewModel {
             x: canvasCenter.x + Double(horizontalDelta) / scale,
             y: canvasCenter.y + Double(deltaY) / scale
         )
+        markBrowserSurfaceViewportDirty()
     }
 
     func endCardInteraction(gesture: DragGesture.Value, in size: CGSize) {
@@ -141,6 +149,8 @@ extension WorkspaceViewModel {
 
         dragOriginByCardID.removeAll()
         currentDragTranslation = nil
+        markBrowserSurfaceContentDirty()
+        markBrowserSurfacePresentationDirty()
         clearCanvasTransientState()
     }
 

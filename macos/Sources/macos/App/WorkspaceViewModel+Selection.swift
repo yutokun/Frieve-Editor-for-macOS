@@ -85,7 +85,9 @@ extension WorkspaceViewModel {
         document.touchFocusedCard()
         if autoScroll, let card = cardByID(selectedCardID) {
             canvasCenter = card.position
+            markBrowserSurfaceViewportDirty()
         }
+        markBrowserSurfacePresentationDirty()
         refreshSearchResults()
     }
 
@@ -94,6 +96,7 @@ extension WorkspaceViewModel {
         selectedCardID = nil
         browserInlineEditorCardID = nil
         document.focusedCardID = nil
+        markBrowserSurfacePresentationDirty()
         refreshSearchResults()
     }
 
@@ -108,16 +111,19 @@ extension WorkspaceViewModel {
     func handleCardDoubleClick(_ id: Int) {
         selectCard(id)
         browserInlineEditorCardID = id
+        markBrowserSurfacePresentationDirty()
         statusMessage = "Opened inline browser editor"
     }
 
     func dismissBrowserInlineEditor() {
         browserInlineEditorCardID = nil
+        markBrowserSurfacePresentationDirty()
     }
 
     func setBrowserHoverCard(_ cardID: Int?) {
         guard browserHoverCardID != cardID else { return }
         browserHoverCardID = cardID
+        markBrowserSurfacePresentationDirty()
     }
 
     func cardDisplaySummary(for card: FrieveCard) -> String {
@@ -148,6 +154,7 @@ extension WorkspaceViewModel {
     func focusBrowser(on cardID: Int) {
         guard let card = cardByID(cardID) else { return }
         canvasCenter = card.position
+        markBrowserSurfaceViewportDirty()
         statusMessage = "Centered browser on \(card.title)"
     }
 }

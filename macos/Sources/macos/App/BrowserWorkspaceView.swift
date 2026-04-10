@@ -97,6 +97,9 @@ private struct BrowserLayerSurfaceView: View {
             .onChange(of: viewModel.browserViewportRevision) { _ in
                 viewModel.resetCanvasToFit(in: canvasSize)
             }
+            .onChange(of: viewModel.browserSurfaceViewportRevision) { _ in
+                browserFocused = browserFocused || viewModel.selectedTab == .browser
+            }
         }
     }
 }
@@ -165,7 +168,8 @@ private struct BrowserCanvasHUD: View {
     var body: some View {
         VStack(alignment: .trailing, spacing: 8) {
             HStack(spacing: 12) {
-                Label("AppKit", systemImage: "square.3.layers.3d")
+                Label("Metal", systemImage: "cpu")
+                Label("\(Int(viewModel.browserPerformance.frameInterval.rollingFPS.rounded())) fps", systemImage: "speedometer")
                 Label("\(viewModel.selectedCardIDs.count)", systemImage: "checkmark.circle")
                 Label("\(viewModel.zoom.formatted(.number.precision(.fractionLength(2))))×", systemImage: "magnifyingglass")
                 Label(viewModel.autoScroll ? "Follow" : "Free", systemImage: viewModel.autoScroll ? "scope" : "hand.draw")
@@ -177,7 +181,10 @@ private struct BrowserCanvasHUD: View {
                     .toggleStyle(.checkbox)
                 Toggle("Auto Zoom", isOn: $viewModel.autoZoom)
                     .toggleStyle(.checkbox)
-                Toggle("Link Labels", isOn: $viewModel.linkLabelsVisible)
+                Toggle("Link Labels", isOn: Binding(
+                    get: { viewModel.linkLabelsVisible },
+                    set: { viewModel.setBrowserLinkLabelsVisible($0) }
+                ))
                     .toggleStyle(.checkbox)
             }
             Text(viewModel.browserPerformanceSummary)

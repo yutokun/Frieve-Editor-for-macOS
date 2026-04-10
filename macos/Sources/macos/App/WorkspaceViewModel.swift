@@ -12,6 +12,16 @@ struct BrowserPerformanceMetric {
     var lastMilliseconds: Double = 0
     var rollingMilliseconds: Double = 0
 
+    var lastFPS: Double {
+        guard lastMilliseconds > 0.0001 else { return 0 }
+        return 1000.0 / lastMilliseconds
+    }
+
+    var rollingFPS: Double {
+        guard rollingMilliseconds > 0.0001 else { return 0 }
+        return 1000.0 / rollingMilliseconds
+    }
+
     mutating func record(_ milliseconds: Double) {
         lastMilliseconds = milliseconds
         rollingMilliseconds = rollingMilliseconds == 0 ? milliseconds : (rollingMilliseconds * 0.82 + milliseconds * 0.18)
@@ -19,17 +29,24 @@ struct BrowserPerformanceMetric {
 }
 
 struct BrowserPerformanceSnapshot {
+    var frameInterval = BrowserPerformanceMetric()
     var visibleCards = BrowserPerformanceMetric()
     var visibleLinks = BrowserPerformanceMetric()
     var overview = BrowserPerformanceMetric()
     var drag = BrowserPerformanceMetric()
+    var surfaceScene = BrowserPerformanceMetric()
+    var surfaceApply = BrowserPerformanceMetric()
+    var cardRaster = BrowserPerformanceMetric()
 
     func summary() -> String {
         String(
-            format: "Browser %.1f/%.1f/%.1f/%.1f ms",
+            format: "Browser %.0f fps cards %.1f links %.1f scene %.1f apply %.1f raster %.1f drag %.1f ms",
+            frameInterval.rollingFPS,
             visibleCards.rollingMilliseconds,
             visibleLinks.rollingMilliseconds,
-            overview.rollingMilliseconds,
+            surfaceScene.rollingMilliseconds,
+            surfaceApply.rollingMilliseconds,
+            cardRaster.rollingMilliseconds,
             drag.rollingMilliseconds
         )
     }
@@ -87,8 +104,12 @@ struct BrowserCardLayerSnapshot: Identifiable, Hashable {
 
 struct BrowserLinkLayerSnapshot: Identifiable {
     let id: UUID
-    let path: CGPath
-    let arrowHead: CGPath?
+    let fromCardID: Int
+    let toCardID: Int
+    let startPoint: CGPoint
+    let endPoint: CGPoint
+    let shapeIndex: Int
+    let directionVisible: Bool
     let labelPoint: CGPoint?
     let labelText: String?
     let isHighlighted: Bool
@@ -110,9 +131,12 @@ struct BrowserSurfaceSceneSnapshot {
     let worldToCanvasTransform: CGAffineTransform
     let backgroundGuidePath: CGPath
     let cards: [BrowserCardLayerSnapshot]
+    let cardSnapshotSignature: Int
     let links: [BrowserLinkLayerSnapshot]
+    let linkSnapshotSignature: Int
     let hitRegions: [BrowserCardHitRegion]
     let overlay: BrowserOverlaySnapshot
+    let overlaySignature: Int
     let viewportSummary: String
 }
 
@@ -155,6 +179,35 @@ struct BrowserOverviewCacheKey: Hashable {
     }
 }
 
+struct BrowserSurfaceContentCacheKey: Hashable {
+    let contentRevision: Int
+    let sceneScale: UInt64
+    let detailLevel: BrowserCardDetailLevel
+    let canvasWidth: UInt64
+    let canvasHeight: UInt64
+    let canvasPadding: UInt64
+    let labelsVisible: Bool
+
+    init(contentRevision: Int, sceneScale: Double, detailLevel: BrowserCardDetailLevel, canvasSize: CGSize, canvasPadding: CGFloat, labelsVisible: Bool) {
+        self.contentRevision = contentRevision
+        self.sceneScale = sceneScale.bitPattern
+        self.detailLevel = detailLevel
+        self.canvasWidth = Double(canvasSize.width).bitPattern
+        self.canvasHeight = Double(canvasSize.height).bitPattern
+        self.canvasPadding = Double(canvasPadding).bitPattern
+        self.labelsVisible = labelsVisible
+    }
+}
+
+struct BrowserSurfaceContentCacheEntry {
+    let coverageRect: CGRect
+    let cards: [BrowserCardLayerSnapshot]
+    let cardSnapshotSignature: Int
+    let links: [BrowserLinkLayerSnapshot]
+    let linkSnapshotSignature: Int
+    let hitRegions: [BrowserCardHitRegion]
+}
+
 @MainActor
 final class WorkspaceViewModel: ObservableObject {
     var settings: AppSettings
@@ -194,6 +247,9 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var globalSearchResults: [FrieveCard] = []
     @Published var lastGPTPrompt: String = ""
     @Published var browserViewportRevision: Int = 0
+    @Published var browserSurfaceContentRevision: Int = 0
+    @Published var browserSurfaceViewportRevision: Int = 0
+    @Published var browserSurfacePresentationRevision: Int = 0
     @Published var canvasCenter: FrievePoint = .zero
     @Published var marqueeStartPoint: CGPoint?
     @Published var marqueeCurrentPoint: CGPoint?
@@ -223,7 +279,10 @@ final class WorkspaceViewModel: ObservableObject {
     var mediaImageCache: [String: NSImage] = [:]
     var mediaThumbnailTasks: Set<String> = []
     var missingMediaCacheKeys: Set<String> = []
+    var pendingBrowserCardRasterKeys: Set<String> = []
     var browserPerformance = BrowserPerformanceSnapshot()
+    var browserLastPresentedFrameAt: CFTimeInterval = 0
+    var browserPerformanceLastPublishedAt: CFTimeInterval = 0
 
     var documentCacheVersion: Int = 0
     var cachedDocumentCacheVersion: Int = -1
@@ -237,6 +296,8 @@ final class WorkspaceViewModel: ObservableObject {
     var cardMetadataByID: [Int: BrowserCardMetadata] = [:]
     var cachedOverviewSnapshotKey: BrowserOverviewCacheKey?
     var cachedOverviewSnapshot: BrowserOverviewSnapshot?
+    var cachedBrowserSurfaceContentKey: BrowserSurfaceContentCacheKey?
+    var cachedBrowserSurfaceContent: BrowserSurfaceContentCacheEntry?
 
     init(settings: AppSettings = AppSettings()) {
         self.settings = settings
