@@ -86,12 +86,19 @@ import Testing
 
     let initialCenter = await MainActor.run { model.canvasCenter }
     await MainActor.run {
+        model.handleScrollWheel(deltaX: 24, deltaY: 36, modifiers: [], at: CGPoint(x: 500, y: 320), in: canvasSize)
+    }
+    let scrolledCenter = await MainActor.run { model.canvasCenter }
+    #expect(scrolledCenter.x < initialCenter.x)
+    #expect(scrolledCenter.y < initialCenter.y)
+
+    await MainActor.run {
         model.beginCanvasGesture(at: CGPoint(x: 400, y: 300), modifiers: [])
         model.updateCanvasGesture(from: CGPoint(x: 400, y: 300), to: CGPoint(x: 520, y: 360), in: canvasSize)
         model.endCanvasGesture(in: canvasSize)
     }
     let movedCenter = await MainActor.run { model.canvasCenter }
-    #expect(movedCenter != initialCenter)
+    #expect(movedCenter != scrolledCenter)
 
     let initialZoom = await MainActor.run { model.zoom }
     await MainActor.run {
@@ -152,7 +159,7 @@ import Testing
         model.newDocument()
         let rootID = model.selectedCardID ?? 0
         model.updateSelectedCardShape(4)
-        model.updateSelectedCardSize(210)
+        model.updateSelectedCardSizeStep(5)
         model.updateSelectedCardImagePath("/tmp/example.png")
         model.updateSelectedCardVideoPath("clips/demo.mov")
         model.updateSelectedCardDrawing("line 0.1 0.2 0.9 0.8 color=FF0000\nrect 0.2 0.2 0.7 0.6 fill=00FF00")
@@ -182,6 +189,99 @@ import Testing
     #expect(results.5)
     #expect(results.6.contains("Center"))
     #expect(results.6.contains("|nop"))
+}
+
+@Test func browserArrangeModesMatchMacExpectations() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let results = await MainActor.run { () -> (Bool, Bool, Int) in
+        model.newDocument()
+        let rootID = model.selectedCardID ?? 0
+        let childA = model.document.addCard(title: "Alpha", linkedFrom: rootID)
+        let childB = model.document.addCard(title: "Beta", linkedFrom: rootID)
+        let childC = model.document.addCard(title: "Gamma", linkedFrom: childA)
+        model.selectedCardID = rootID
+        model.selectedCardIDs = [rootID]
+        model.browserCanvasSize = CGSize(width: 1200, height: 800)
+
+        model.arrangeMode = "Matrix"
+        model.arrangeCards()
+        for _ in 0..<6 {
+            model.applyBrowserAutoArrangeStepIfNeeded()
+        }
+        let matrixEnabled = model.browserAutoArrangeEnabled
+        let matrixChanged = [rootID, childA, childB, childC].contains { id in
+            guard let card = model.document.card(withID: id) else { return false }
+            return card.position != .zero
+        }
+
+        model.arrangeMode = "Tree"
+        model.arrangeCards()
+        for _ in 0..<4 {
+            model.applyBrowserAutoArrangeStepIfNeeded()
+        }
+        let treeEnabled = model.browserAutoArrangeEnabled
+
+        model.browserAutoArrangeEnabled = false
+        return (matrixEnabled && matrixChanged, treeEnabled, model.document.cards.count)
+    }
+
+    #expect(results.0)
+    #expect(results.1)
+    #expect(results.2 >= 4)
+}
+
+@Test func inspectorVisibilityPersistsWhenToggled() async throws {
+    let settings = await MainActor.run { AppSettings(userDefaults: UserDefaults(suiteName: "FrieveEditorMacTests.inspectorToggle")!) }
+    let model = await MainActor.run { WorkspaceViewModel(settings: settings) }
+
+    let states = await MainActor.run { () -> (Bool, Bool) in
+        model.showInspector = false
+        let hidden = model.settings.showInspector
+        model.showInspector = true
+        let shown = model.settings.showInspector
+        return (hidden, shown)
+    }
+
+    #expect(states.0 == false)
+    #expect(states.1 == true)
+}
+
+@Test func browserCardSizeStepMappingMatchesWindowsRange() async throws {
+    #expect(browserCardStoredSize(forStep: -8) == 25)
+    #expect(browserCardStoredSize(forStep: 0) == 100)
+    #expect(browserCardStoredSize(forStep: 8) == 400)
+    #expect(browserCardSizeStep(forStoredSize: 25) == -8)
+    #expect(browserCardSizeStep(forStoredSize: 100) == 0)
+    #expect(browserCardSizeStep(forStoredSize: 400) == 8)
+}
+
+@Test func browserTitleOnlyCardsSizeToFitTitle() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let sizes = await MainActor.run { () -> (CGSize, CGSize) in
+        model.newDocument()
+        let rootID = model.document.sortedCards.first?.id ?? 0
+        model.document.updateCard(rootID) { card in
+            card.title = "Short"
+            card.size = browserCardStoredSize(forStep: -4)
+        }
+        model.invalidateDocumentCaches()
+        let shortSize = model.cardCanvasSize(for: model.document.card(withID: rootID)!)
+
+        model.document.updateCard(rootID) { card in
+            card.title = "A much longer browser card title that should wrap across multiple lines"
+            card.size = browserCardStoredSize(forStep: 4)
+        }
+        model.invalidateDocumentCaches()
+        let longSize = model.cardCanvasSize(for: model.document.card(withID: rootID)!)
+        return (shortSize, longSize)
+    }
+
+    #expect(sizes.0.width < 120)
+    #expect(sizes.0.height <= 60)
+    #expect(sizes.1.width >= sizes.0.width)
+    #expect(sizes.1.height >= sizes.0.height)
 }
 
 @Test func browserLinkSnapshotUsesWorldCoordinatesForMetalRenderer() async throws {

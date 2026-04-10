@@ -32,8 +32,11 @@ extension WorkspaceViewModel {
 
     func bindingForSelectedSize() -> Binding<Double> {
         Binding(
-            get: { [weak self] in Double(self?.selectedCard?.size ?? 100) },
-            set: { [weak self] newValue in self?.updateSelectedCardSize(Int(newValue.rounded())) }
+            get: { [weak self] in
+                guard let self, let size = self.selectedCard?.size else { return 0 }
+                return Double(browserCardSizeStep(forStoredSize: size))
+            },
+            set: { [weak self] newValue in self?.updateSelectedCardSizeStep(Int(newValue.rounded())) }
         )
     }
 

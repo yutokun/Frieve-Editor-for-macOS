@@ -124,13 +124,14 @@ struct InspectorPaneView: View {
                 .pickerStyle(.menu)
 
                 VStack(alignment: .leading, spacing: 4) {
+                    let sizeStep = browserCardSizeStep(forStoredSize: card.size)
                     HStack {
                         Text("Card Size")
                         Spacer()
-                        Text("\(card.size)")
+                        Text("\(sizeStep)")
                             .foregroundStyle(.secondary)
                     }
-                    Slider(value: viewModel.bindingForSelectedSize(), in: 80 ... 320, step: 10)
+                    Slider(value: viewModel.bindingForSelectedSize(), in: -8 ... 8, step: 1)
                 }
 
                 TextField("Image path", text: viewModel.bindingForSelectedImagePath())

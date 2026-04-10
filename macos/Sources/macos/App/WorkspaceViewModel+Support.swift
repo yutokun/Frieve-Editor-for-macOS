@@ -2,6 +2,42 @@ import SwiftUI
 import AppKit
 import ImageIO
 
+private let browserCardBaseTitlePointSize: CGFloat = 17
+private let browserCardBaseContentPadding: CGFloat = 12
+private let browserCardBaseMaximumTextWidth: CGFloat = 220
+
+func browserCardStoredSize(forStep step: Int) -> Int {
+    let clampedStep = max(-8, min(step, 8))
+    let divisor = 8.0 / log(4.0)
+    return Int(100 * exp(Double(clampedStep) / divisor) + 100) - 100
+}
+
+func browserCardSizeStep(forStoredSize size: Int) -> Int {
+    let clampedSize = max(25, min(size, 400))
+    let scaled = log(Double(clampedSize) / 100.0) * (8.0 / log(4.0))
+    return max(-8, min(Int(scaled + 100.5) - 100, 8))
+}
+
+func browserCardScale(for card: FrieveCard) -> CGFloat {
+    CGFloat(max(25, min(card.size, 400))) / 100
+}
+
+func browserCardTitlePointSize(for card: FrieveCard) -> CGFloat {
+    browserCardBaseTitlePointSize * browserCardScale(for: card)
+}
+
+func browserCardContentPadding(for card: FrieveCard) -> CGFloat {
+    max(4, ceil(browserCardBaseContentPadding * browserCardScale(for: card)))
+}
+
+func browserCardMaximumTextWidth(for card: FrieveCard) -> CGFloat {
+    max(60, ceil(browserCardBaseMaximumTextWidth * browserCardScale(for: card)))
+}
+
+func browserCardTitleNSFont(for card: FrieveCard) -> NSFont {
+    NSFont.systemFont(ofSize: browserCardTitlePointSize(for: card), weight: .semibold)
+}
+
 extension WorkspaceViewModel {
     func persistDocument(to url: URL, isAutomatic: Bool) {
         do {
@@ -423,24 +459,23 @@ extension WorkspaceViewModel {
     }
 
     func buildCardCanvasSize(for card: FrieveCard, summaryText: String, labelLine: String, badges: [String], detailSummary: String) -> CGSize {
-        let baseWidth = CGFloat(max(180, min(card.size + 120, 320)))
-        var height = CGFloat(max(120, min(card.size + 24, 260)))
-        if card.hasMedia {
-            height += 80
-        }
-        if !card.isFolded {
-            height += CGFloat(min(summaryText.count / 24, 3)) * 18
-        }
-        if !labelLine.isEmpty {
-            height += 22
-        }
-        if !detailSummary.isEmpty {
-            height += 16
-        }
-        if !badges.isEmpty {
-            height += 24
-        }
-        return CGSize(width: baseWidth, height: min(max(height, 130), 360))
+        let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : card.title
+        let font = browserCardTitleNSFont(for: card)
+        let maxTextWidth = browserCardMaximumTextWidth(for: card)
+        let padding = browserCardContentPadding(for: card)
+        let maxTextHeight = ceil((font.ascender - font.descender + font.leading) * 3)
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font
+        ]
+        let textBounds = NSAttributedString(string: title, attributes: attributes).boundingRect(
+            with: CGSize(width: maxTextWidth, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading]
+        )
+        let textWidth = min(ceil(textBounds.width), maxTextWidth)
+        let textHeight = min(ceil(textBounds.height), maxTextHeight)
+        let width = max(padding * 2, textWidth + padding * 2)
+        let height = max(padding * 2, textHeight + padding * 2)
+        return CGSize(width: width, height: height)
     }
 
     func browserCardDetailLevel() -> BrowserCardDetailLevel {

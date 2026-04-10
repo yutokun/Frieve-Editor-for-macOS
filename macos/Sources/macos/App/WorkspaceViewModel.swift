@@ -241,7 +241,24 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var showInspector: Bool = true {
         didSet { settings.showInspector = showInspector }
     }
-    @Published var arrangeMode: String = "Link"
+    @Published var arrangeMode: String = "Link" {
+        didSet {
+            if arrangeMode != oldValue {
+                resetBrowserArrangeTransientState()
+            }
+            if arrangeMode != "Link" && arrangeMode != "Matrix" && arrangeMode != "Tree" && browserAutoArrangeEnabled {
+                browserAutoArrangeEnabled = false
+            }
+        }
+    }
+    @Published var browserAutoArrangeEnabled: Bool = false {
+        didSet {
+            if !browserAutoArrangeEnabled {
+                browserActiveArrangeMode = nil
+                resetBrowserArrangeTransientState()
+            }
+        }
+    }
     @Published var selectedDrawingTool: String = "Cursor"
     @Published var recentFiles: [URL] = []
     @Published var globalSearchResults: [FrieveCard] = []
@@ -283,6 +300,10 @@ final class WorkspaceViewModel: ObservableObject {
     var browserPerformance = BrowserPerformanceSnapshot()
     var browserLastPresentedFrameAt: CFTimeInterval = 0
     var browserPerformanceLastPublishedAt: CFTimeInterval = 0
+    var browserCanvasSize: CGSize = .zero
+    var browserMatrixTargetByCardID: [Int: FrievePoint] = [:]
+    var browserMatrixSpeedByCardID: [Int: Double] = [:]
+    var browserActiveArrangeMode: String?
 
     var documentCacheVersion: Int = 0
     var cachedDocumentCacheVersion: Int = -1

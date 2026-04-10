@@ -74,13 +74,18 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
 }
 
 @MainActor
+private final class BrowserOverlayHostView: NSView {
+    override var isFlipped: Bool { true }
+}
+
+@MainActor
 final class BrowserSurfaceNSView: BrowserInteractionNSView {
     weak var viewModel: WorkspaceViewModel? {
         didSet { renderer.viewModel = viewModel }
     }
 
     private let metalView: MTKView
-    private let overlayView = NSView(frame: .zero)
+    private let overlayView = BrowserOverlayHostView(frame: .zero)
     private let selectionOverlayLayer = CAShapeLayer()
     private let marqueeOverlayLayer = CAShapeLayer()
     private let linkPreviewLayer = CAShapeLayer()
@@ -303,10 +308,6 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
             overlayView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
 
-        selectionOverlayLayer.fillColor = NSColor.controlAccentColor.withAlphaComponent(0.06).cgColor
-        selectionOverlayLayer.strokeColor = NSColor.controlAccentColor.withAlphaComponent(0.7).cgColor
-        selectionOverlayLayer.lineDashPattern = [7, 4]
-
         marqueeOverlayLayer.fillColor = NSColor.controlAccentColor.withAlphaComponent(0.10).cgColor
         marqueeOverlayLayer.strokeColor = NSColor.controlAccentColor.withAlphaComponent(0.9).cgColor
         marqueeOverlayLayer.lineDashPattern = [6, 4]
@@ -316,7 +317,6 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         linkPreviewLayer.lineDashPattern = [8, 5]
         linkPreviewLayer.lineWidth = 2
 
-        overlayView.layer?.addSublayer(selectionOverlayLayer)
         overlayView.layer?.addSublayer(marqueeOverlayLayer)
         overlayView.layer?.addSublayer(linkPreviewLayer)
     }
@@ -340,13 +340,8 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     }
 
     private func applyOverlay(_ overlay: BrowserOverlaySnapshot) {
-        if let selectionFrame = overlay.selectionFrame {
-            selectionOverlayLayer.path = CGPath(roundedRect: selectionFrame.insetBy(dx: -9, dy: -9), cornerWidth: 18, cornerHeight: 18, transform: nil)
-            selectionOverlayLayer.isHidden = false
-        } else {
-            selectionOverlayLayer.path = nil
-            selectionOverlayLayer.isHidden = true
-        }
+        selectionOverlayLayer.path = nil
+        selectionOverlayLayer.isHidden = true
 
         if let marqueeRect = overlay.marqueeRect {
             marqueeOverlayLayer.path = CGPath(rect: marqueeRect, transform: nil)

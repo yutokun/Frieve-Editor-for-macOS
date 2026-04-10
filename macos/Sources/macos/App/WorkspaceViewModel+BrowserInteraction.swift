@@ -111,8 +111,8 @@ extension WorkspaceViewModel {
         let scale = browserScale(in: size)
         let horizontalDelta = modifiers.contains(.shift) && deltaX == 0 ? deltaY : deltaX
         canvasCenter = FrievePoint(
-            x: canvasCenter.x + Double(horizontalDelta) / scale,
-            y: canvasCenter.y + Double(deltaY) / scale
+            x: canvasCenter.x - Double(horizontalDelta) / scale,
+            y: canvasCenter.y - Double(deltaY) / scale
         )
         markBrowserSurfaceViewportDirty()
     }

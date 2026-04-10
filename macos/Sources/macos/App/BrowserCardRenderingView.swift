@@ -50,121 +50,17 @@ struct BrowserCardRasterContentView: View {
     let drawingPreviewImage: NSImage?
 
     var body: some View {
-        let labelLine = detailLevel == .thumbnail ? "" : metadata.labelLine
-        let detailSummary = detailLevel == .thumbnail ? "" : metadata.detailSummary
-        let badges = detailLevel == .full ? metadata.badges : Array(metadata.badges.prefix(2))
-        let summaryLineLimit = detailLevel == .compact ? 2 : 3
-
-        VStack(alignment: .leading, spacing: detailLevel == .thumbnail ? 6 : 8) {
-            if let previewImage {
-                Image(nsImage: previewImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: detailLevel == .thumbnail ? 58 : 72)
-                    .clipped()
-                    .overlay(alignment: .bottomTrailing) {
-                        if detailLevel != .thumbnail {
-                            Label(metadata.mediaBadgeText, systemImage: "photo")
-                                .font(.caption2)
-                                .padding(6)
-                                .background(.ultraThinMaterial, in: Capsule())
-                                .padding(6)
-                        }
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
-
-            HStack(alignment: .top, spacing: 8) {
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Image(systemName: card.shapeSymbolName)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(card.title)
-                            .font(detailLevel == .thumbnail ? .subheadline.weight(.semibold) : .headline)
-                            .lineLimit(1)
-                    }
-
-                    if detailLevel != .thumbnail {
-                        if card.isFolded {
-                            Label("Folded", systemImage: "chevron.right")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        } else {
-                            Text(metadata.summaryText)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(summaryLineLimit)
-                        }
-                    }
-                }
-                Spacer(minLength: 0)
-                VStack(alignment: .trailing, spacing: 4) {
-                    if card.isFixed && detailLevel != .thumbnail {
-                        Image(systemName: "pin.fill")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Text("#\(card.id)")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            if !labelLine.isEmpty {
-                Text(labelLine)
-                    .font(.caption2)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Capsule().fill(Color.accentColor.opacity(0.15)))
-            }
-
-            if !detailSummary.isEmpty {
-                Text(detailSummary)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            if !badges.isEmpty {
-                HStack(spacing: 6) {
-                    ForEach(badges, id: \.self) { badge in
-                        Text(badge)
-                            .font(.caption2.weight(.medium))
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(Color.white.opacity(0.35)))
-                    }
-                }
-            }
-
-            HStack(spacing: 10) {
-                Label("\(metadata.linkCount)", systemImage: "point.3.connected.trianglepath.dotted")
-                Label(card.score.formatted(.number.precision(.fractionLength(1))), systemImage: "chart.bar")
-                if detailLevel != .thumbnail {
-                    Label(card.shapeName, systemImage: card.shapeSymbolName)
-                }
-            }
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-
-            if let drawingPreviewImage, detailLevel == .full {
-                HStack {
-                    Spacer(minLength: 0)
-                    Image(nsImage: drawingPreviewImage)
-                        .resizable()
-                        .interpolation(.medium)
-                        .scaledToFit()
-                        .frame(width: 96, height: 72)
-                    Spacer(minLength: 0)
-                }
-            }
-        }
-        .padding(detailLevel == .thumbnail ? 10 : 12)
-        .frame(width: metadata.canvasSize.width, height: metadata.canvasSize.height, alignment: .topLeading)
-        .background(BrowserCardShape(shapeIndex: card.shape).fill(fillColor))
-        .clipShape(BrowserCardShape(shapeIndex: card.shape))
+        Text(card.title)
+            .font(.system(size: browserCardTitlePointSize(for: card), weight: .semibold))
+            .foregroundStyle(.primary)
+            .multilineTextAlignment(.leading)
+            .lineLimit(3)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(browserCardContentPadding(for: card))
+            .frame(width: metadata.canvasSize.width, height: metadata.canvasSize.height, alignment: .topLeading)
+            .background(BrowserCardShape(shapeIndex: card.shape).fill(fillColor))
+            .clipShape(BrowserCardShape(shapeIndex: card.shape))
     }
 }
 

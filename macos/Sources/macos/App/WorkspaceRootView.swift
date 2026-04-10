@@ -39,10 +39,9 @@ struct WorkspaceRootView: View {
                 Picker("Arrange", selection: $viewModel.arrangeMode) {
                     Text("Link").tag("Link")
                     Text("Matrix").tag("Matrix")
-                    Text("Radial").tag("Radial")
                     Text("Tree").tag("Tree")
                 }
-                .frame(width: 160)
+                .frame(width: 140)
 
                 Button("Arrange") { viewModel.arrangeCards() }
                 Button("Shuffle") { viewModel.shuffleLayout() }
@@ -68,6 +67,11 @@ struct WorkspaceRootView: View {
                 }
                 Toggle("Auto Zoom", isOn: $viewModel.autoZoom)
                 Toggle("Overview", isOn: $viewModel.showOverview)
+                Button {
+                    viewModel.showInspector.toggle()
+                } label: {
+                    Label("Inspector", systemImage: "sidebar.right")
+                }
             }
         }
     }
@@ -151,15 +155,11 @@ private struct CardListPane: View {
                     }
                 })) {
                     ForEach(viewModel.filteredCards) { card in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(card.title)
-                                .fontWeight(viewModel.selectedCardIDs.contains(card.id) ? .semibold : .regular)
-                            Text(card.summary)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                        }
-                        .tag(card.id)
+                        Text(card.title)
+                            .fontWeight(viewModel.selectedCardIDs.contains(card.id) ? .semibold : .regular)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .tag(card.id)
                     }
                 }
                 .listStyle(.inset)
@@ -174,6 +174,7 @@ private struct CardListPane: View {
 private struct WorkspaceContentView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
     private let maintenanceTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
+    private let autoArrangeTimer = Timer.publish(every: 1.0 / 30.0, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -218,5 +219,19 @@ private struct WorkspaceContentView: View {
         .onReceive(maintenanceTimer) { now in
             viewModel.performAutomaticMaintenance(now: now)
         }
+        .onReceive(autoArrangeTimer) { _ in
+            viewModel.applyBrowserAutoArrangeStepIfNeeded()
+        }
+        .background(
+            GeometryReader { geometry in
+                Color.clear
+                    .onAppear {
+                        viewModel.browserCanvasSize = geometry.size
+                    }
+                    .onChange(of: geometry.size) { newSize in
+                        viewModel.browserCanvasSize = newSize
+                    }
+            }
+        )
     }
 }

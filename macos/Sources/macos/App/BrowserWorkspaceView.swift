@@ -55,21 +55,11 @@ private struct BrowserLayerSurfaceView: View {
                     Spacer()
                     HStack(alignment: .bottom) {
                         if let hoverCard = viewModel.browserHoverCard {
-                            VStack(alignment: .leading, spacing: 5) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: hoverCard.shapeSymbolName)
-                                        .foregroundStyle(Color.accentColor)
-                                    Text(hoverCard.title)
-                                        .font(.caption.weight(.semibold))
-                                }
-                                Text(viewModel.cardDisplaySummary(for: hoverCard))
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 8)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            Text(hoverCard.title)
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
                         Spacer()
                         Text(viewModel.browserViewportSummary(in: canvasSize))
