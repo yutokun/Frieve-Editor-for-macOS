@@ -255,8 +255,8 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     func updateScene(_ scene: BrowserSurfaceSceneSnapshot, canvasSize: CGSize) {
         let updateStart = CACurrentMediaTime()
         layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
-        layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.18).cgColor
-        layer?.borderWidth = 1
+        layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.10).cgColor
+        layer?.borderWidth = 0.5
         currentHitRegions = scene.hitRegions
 
         renderer.updateScene(scene)
@@ -273,7 +273,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         wantsLayer = true
         let rootLayer = CALayer()
         rootLayer.masksToBounds = true
-        rootLayer.cornerRadius = 12
+        rootLayer.cornerRadius = 10
         layer = rootLayer
 
         metalView.clearColor = MTLClearColor(color: NSColor.textBackgroundColor)
@@ -429,6 +429,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         solidDescriptor.vertexFunction = library.makeFunction(name: "browserColorVertex")
         solidDescriptor.fragmentFunction = library.makeFunction(name: "browserColorFragment")
         solidDescriptor.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
+        BrowserMetalRenderer.configureAlphaBlending(for: solidDescriptor.colorAttachments[0])
         let solidVertexDescriptor = MTLVertexDescriptor()
         solidVertexDescriptor.attributes[0].format = .float2
         solidVertexDescriptor.attributes[0].offset = 0
@@ -445,6 +446,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         linkDescriptor.vertexFunction = library.makeFunction(name: "browserLinkVertex")
         linkDescriptor.fragmentFunction = library.makeFunction(name: "browserLinkFragment")
         linkDescriptor.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
+        BrowserMetalRenderer.configureAlphaBlending(for: linkDescriptor.colorAttachments[0])
         linkPipeline = try! device.makeRenderPipelineState(descriptor: linkDescriptor)
 
         let cardDescriptor = MTLRenderPipelineDescriptor()
@@ -452,6 +454,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         cardDescriptor.vertexFunction = library.makeFunction(name: "browserCardVertex")
         cardDescriptor.fragmentFunction = library.makeFunction(name: "browserCardFragment")
         cardDescriptor.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
+        BrowserMetalRenderer.configureAlphaBlending(for: cardDescriptor.colorAttachments[0])
         cardPipeline = try! device.makeRenderPipelineState(descriptor: cardDescriptor)
 
         let textDescriptor = MTLRenderPipelineDescriptor()
@@ -459,6 +462,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         textDescriptor.vertexFunction = library.makeFunction(name: "browserTextVertex")
         textDescriptor.fragmentFunction = library.makeFunction(name: "browserTextFragment")
         textDescriptor.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
+        BrowserMetalRenderer.configureAlphaBlending(for: textDescriptor.colorAttachments[0])
         textPipeline = try! device.makeRenderPipelineState(descriptor: textDescriptor)
 
         let samplerDescriptor = MTLSamplerDescriptor()
@@ -971,6 +975,17 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         return device.makeTexture(descriptor: descriptor)!
     }
 
+    private static func configureAlphaBlending(for attachment: MTLRenderPipelineColorAttachmentDescriptor?) {
+        guard let attachment else { return }
+        attachment.isBlendingEnabled = true
+        attachment.rgbBlendOperation = .add
+        attachment.alphaBlendOperation = .add
+        attachment.sourceRGBBlendFactor = .sourceAlpha
+        attachment.sourceAlphaBlendFactor = .sourceAlpha
+        attachment.destinationRGBBlendFactor = .oneMinusSourceAlpha
+        attachment.destinationAlphaBlendFactor = .oneMinusSourceAlpha
+    }
+
     private static func rgbaBytes(for image: CGImage) -> Data? {
         let width = image.width
         let height = image.height
@@ -1294,8 +1309,68 @@ private extension NSColor {
 
 private extension NSImage {
     var browserCGImage: CGImage? {
-        var rect = CGRect(origin: .zero, size: size)
-        return cgImage(forProposedRect: &rect, context: nil, hints: nil)
+        let imageSize = CGSize(width: max(size.width, 1), height: max(size.height, 1))
+        var rect = CGRect(origin: .zero, size: imageSize)
+        if let cgImage = cgImage(forProposedRect: &rect, context: nil, hints: nil) {
+            return cgImage
+        }
+        if let cgImage = representations.compactMap({ ($0 as? NSBitmapImageRep)?.cgImage }).first {
+            return cgImage
+        }
+        if let tiffRepresentation,
+           let bitmap = NSBitmapImageRep(data: tiffRepresentation),
+           let cgImage = bitmap.cgImage {
+            return cgImage
+        }
+
+        let scale = representations
+            .compactMap { rep -> CGFloat? in
+                guard rep.size.width > 0,
+                      rep.size.height > 0,
+                      rep.pixelsWide > 0,
+                      rep.pixelsHigh > 0 else {
+                    return nil
+                }
+                return max(
+                    CGFloat(rep.pixelsWide) / rep.size.width,
+                    CGFloat(rep.pixelsHigh) / rep.size.height
+                )
+            }
+            .max() ?? (NSScreen.main?.backingScaleFactor ?? 2)
+        let pixelWidth = max(Int(ceil(imageSize.width * scale)), 1)
+        let pixelHeight = max(Int(ceil(imageSize.height * scale)), 1)
+        guard let bitmap = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: pixelWidth,
+            pixelsHigh: pixelHeight,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ) else {
+            return nil
+        }
+
+        bitmap.size = imageSize
+        NSGraphicsContext.saveGraphicsState()
+        guard let context = NSGraphicsContext(bitmapImageRep: bitmap) else {
+            NSGraphicsContext.restoreGraphicsState()
+            return nil
+        }
+        NSGraphicsContext.current = context
+        context.imageInterpolation = .high
+        draw(
+            in: CGRect(origin: .zero, size: imageSize),
+            from: CGRect(origin: .zero, size: imageSize),
+            operation: .copy,
+            fraction: 1
+        )
+        context.flushGraphics()
+        NSGraphicsContext.restoreGraphicsState()
+        return bitmap.cgImage
     }
 }
 

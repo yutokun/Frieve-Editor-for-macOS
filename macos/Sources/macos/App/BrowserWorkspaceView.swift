@@ -32,7 +32,6 @@ private struct BrowserLayerSurfaceView: View {
             let canvasSize = proxy.size
             ZStack {
                 BrowserSurfaceRepresentable(viewModel: viewModel, canvasSize: canvasSize)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
 
                 if let editingCard = viewModel.browserInlineEditorCard {
                     if let connector = viewModel.inlineEditorConnectorPoints(for: editingCard, in: canvasSize) {

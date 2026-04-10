@@ -235,7 +235,7 @@ fragment float4 browserTextFragment(
     if (in.hasTexture < 0.5f) {
         discard_fragment();
     }
-    float4 sampled = atlasTexture.sample(textureSampler, float2(in.textureUV.x, 1.0f - in.textureUV.y));
+    float4 sampled = atlasTexture.sample(textureSampler, in.textureUV);
     float alpha = sampled.a * in.tintColor.a;
     if (alpha < 0.001f) {
         discard_fragment();
@@ -338,7 +338,7 @@ fragment float4 browserCardFragment(
     if (in.hasTexture > 0.5f) {
         float2 textureUV = clamp((contentPoint + halfContent) / max(in.contentSize, float2(1.0f)), 0.0f, 1.0f);
         float2 atlasUV = in.atlasUVOrigin + in.atlasUVSize * textureUV;
-        float4 sampled = cardTexture.sample(textureSampler, float2(atlasUV.x, 1.0f - atlasUV.y));
+        float4 sampled = cardTexture.sample(textureSampler, atlasUV);
         base = mix(in.fillColor, sampled, sampled.a);
     }
 
