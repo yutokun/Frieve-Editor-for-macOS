@@ -84,14 +84,6 @@ private struct SidebarView: View {
                         }
                     }
                 }
-
-                Section("Actions") {
-                    Button("New Root Card") { viewModel.addRootCard() }
-                    Button("New Child Card") { viewModel.addChildCard() }
-                    Button("New Sibling Card") { viewModel.addSiblingCard() }
-                    Button("Link to Root") { viewModel.addLinkBetweenSelectionAndRoot() }
-                    Button("Delete Selected") { viewModel.deleteSelectedCard() }
-                }
             }
             .listStyle(.sidebar)
 
