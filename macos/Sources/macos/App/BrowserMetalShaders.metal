@@ -71,7 +71,8 @@ struct BrowserMetalCardInstance {
     float shadowRadius;
     int shapeIndex;
     float hasTexture;
-    float3 padding;
+    float cornerRadius;
+    float2 padding;
 };
 
 struct BrowserMetalCardOut {
@@ -90,6 +91,7 @@ struct BrowserMetalCardOut {
     float shadowRadius;
     int shapeIndex;
     float hasTexture;
+    float cornerRadius;
 };
 
 static float2 browserViewportTransform(float2 pixelPoint, float2 viewportSize) {
@@ -275,6 +277,7 @@ vertex BrowserMetalCardOut browserCardVertex(
     out.shadowRadius = card.shadowRadius;
     out.shapeIndex = card.shapeIndex;
     out.hasTexture = card.hasTexture;
+    out.cornerRadius = card.cornerRadius;
     return out;
 }
 
@@ -300,18 +303,18 @@ static float browserSignedDistanceHexagon(float2 p, float2 halfSize) {
     return length(q) * sign(q.y);
 }
 
-static float browserSignedDistance(float2 p, float2 halfSize, int shapeIndex) {
+static float browserSignedDistance(float2 p, float2 halfSize, int shapeIndex, float cornerRadius) {
     switch ((shapeIndex % 6 + 6) % 6) {
         case 1:
             return browserSignedDistanceCircle(p, halfSize);
         case 2:
-            return browserSignedDistanceRect(p, halfSize, min(halfSize.x, halfSize.y) * 0.18f);
+            return browserSignedDistanceRect(p, halfSize, min(cornerRadius * 1.5f, min(halfSize.x, halfSize.y)));
         case 3:
             return browserSignedDistanceDiamond(p, halfSize);
         case 4:
             return browserSignedDistanceHexagon(p, halfSize);
         default:
-            return browserSignedDistanceRect(p, halfSize, min(halfSize.x, halfSize.y) * 0.12f);
+            return browserSignedDistanceRect(p, halfSize, min(cornerRadius, min(halfSize.x, halfSize.y)));
     }
 }
 
@@ -326,8 +329,8 @@ fragment float4 browserCardFragment(
     float2 contentPoint = in.localPoint;
     float2 shadowPoint = contentPoint - in.shadowOffset;
 
-    float distance = browserSignedDistance(contentPoint, halfContent, in.shapeIndex);
-    float shadowDistance = browserSignedDistance(shadowPoint, halfContent, in.shapeIndex);
+    float distance = browserSignedDistance(contentPoint, halfContent, in.shapeIndex, in.cornerRadius);
+    float shadowDistance = browserSignedDistance(shadowPoint, halfContent, in.shapeIndex, in.cornerRadius);
 
     float edgeAA = 0.5f;
     float fillAlpha = 1.0f - smoothstep(-edgeAA, edgeAA, distance);

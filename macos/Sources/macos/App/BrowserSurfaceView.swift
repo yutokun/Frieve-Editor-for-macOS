@@ -836,7 +836,8 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
                     shadowRadius: shadowRadius,
                     shapeIndex: Int32(browserCardVisualShapeIndex(for: snapshot.card)),
                     hasTexture: atlasEntry == nil ? 0 : 1,
-                    padding: SIMD3<Float>(repeating: 0)
+                    cornerRadius: Float(min(14, min(snapshot.metadata.canvasSize.width, snapshot.metadata.canvasSize.height) * 0.35)),
+                    padding: .zero
                 )
             )
         }
@@ -1225,7 +1226,8 @@ private struct BrowserMetalCardInstance {
     var shadowRadius: Float
     var shapeIndex: Int32
     var hasTexture: Float
-    var padding: SIMD3<Float>
+    var cornerRadius: Float
+    var padding: SIMD2<Float>
 }
 
 private extension BrowserMetalRenderer {
