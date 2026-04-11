@@ -511,36 +511,7 @@ extension WorkspaceViewModel {
     }
 
     func browserBackgroundGuideCGPath(in size: CGSize) -> CGPath {
-        let visible = visibleWorldRect(in: size)
         let path = CGMutablePath()
-        let center = canvasPoint(for: canvasCenter, in: size)
-        path.move(to: CGPoint(x: center.x, y: 0))
-        path.addLine(to: CGPoint(x: center.x, y: size.height))
-        path.move(to: CGPoint(x: 0, y: center.y))
-        path.addLine(to: CGPoint(x: size.width, y: center.y))
-
-        let majorStep = adaptiveBrowserGridStep(in: size)
-        let startX = floor(visible.minX / majorStep) * majorStep
-        let endX = ceil(visible.maxX / majorStep) * majorStep
-        var x = startX
-        while x <= endX {
-            let top = canvasPoint(for: FrievePoint(x: x, y: visible.minY), in: size)
-            let bottom = canvasPoint(for: FrievePoint(x: x, y: visible.maxY), in: size)
-            path.move(to: top)
-            path.addLine(to: bottom)
-            x += majorStep
-        }
-
-        let startY = floor(visible.minY / majorStep) * majorStep
-        let endY = ceil(visible.maxY / majorStep) * majorStep
-        var y = startY
-        while y <= endY {
-            let left = canvasPoint(for: FrievePoint(x: visible.minX, y: y), in: size)
-            let right = canvasPoint(for: FrievePoint(x: visible.maxX, y: y), in: size)
-            path.move(to: left)
-            path.addLine(to: right)
-            y += majorStep
-        }
         return path
     }
 
