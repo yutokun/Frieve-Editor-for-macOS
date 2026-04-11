@@ -2,6 +2,14 @@ import SwiftUI
 import AppKit
 
 extension WorkspaceViewModel {
+    func browserGaussianRandom(using randomUnit: () -> Double = { Double.random(in: 0 ... 1) }) -> Double {
+        var total = 0.0
+        for _ in 0..<12 {
+            total += randomUnit()
+        }
+        return total - 6.0
+    }
+
     func newDocument() {
         document = .placeholder()
         selectedCardID = document.focusedCardID
@@ -263,9 +271,18 @@ extension WorkspaceViewModel {
         noteDocumentMutation()
     }
 
-    func shuffleLayout() {
-        for card in document.cards {
-            document.moveCard(card.id, dx: Double.random(in: -0.2 ... 0.2), dy: Double.random(in: -0.2 ... 0.2))
+    func shuffleLayout(using randomUnit: () -> Double = { Double.random(in: 0 ... 1) }) {
+        for card in document.cards where !card.isFixed {
+            document.updateCard(card.id) { targetCard in
+                targetCard.position = FrievePoint(
+                    x: browserGaussianRandom(using: randomUnit) * 0.21 + 0.5,
+                    y: browserGaussianRandom(using: randomUnit) * 0.21 + 0.5
+                )
+                targetCard.updated = isoTimestamp()
+            }
+        }
+        if autoZoom {
+            requestBrowserFit()
         }
         noteDocumentMutation(status: "Shuffled card positions")
     }

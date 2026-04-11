@@ -278,7 +278,7 @@ import Testing
         model.browserCanvasSize = CGSize(width: 1200, height: 800)
 
         model.arrangeMode = "Matrix"
-        model.arrangeCards()
+        model.browserAutoArrangeEnabled = true
         for _ in 0..<6 {
             model.applyBrowserAutoArrangeStepIfNeeded()
         }
@@ -289,7 +289,7 @@ import Testing
         }
 
         model.arrangeMode = "Tree"
-        model.arrangeCards()
+        model.browserAutoArrangeEnabled = true
         for _ in 0..<4 {
             model.applyBrowserAutoArrangeStepIfNeeded()
         }
@@ -302,6 +302,59 @@ import Testing
     #expect(results.0)
     #expect(results.1)
     #expect(results.2 >= 4)
+}
+
+@Test func shuffleLayoutRepositionsWholeBrowserLayoutInOnePass() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let results = await MainActor.run { () -> (FrievePoint, FrievePoint, FrievePoint, Int, Bool) in
+        model.newDocument()
+        let rootID = model.document.sortedCards.first?.id ?? 0
+        let secondID = model.document.addCard(title: "Second", linkedFrom: rootID)
+        let fixedID = model.document.addCard(title: "Fixed", linkedFrom: rootID)
+
+        model.document.updateCard(rootID) { card in
+            card.position = FrievePoint(x: 5.0, y: 5.0)
+        }
+        model.document.updateCard(secondID) { card in
+            card.position = FrievePoint(x: -3.0, y: 8.0)
+        }
+        model.document.updateCard(fixedID) { card in
+            card.position = FrievePoint(x: 9.0, y: 9.0)
+            card.isFixed = true
+        }
+
+        let randomValues =
+            Array(repeating: 1.0, count: 12) +
+            Array(repeating: 0.0, count: 12) +
+            Array(repeating: 0.5, count: 12) +
+            Array(repeating: 1.0, count: 6) +
+            Array(repeating: 0.0, count: 6)
+        var index = 0
+        let viewportBefore = model.browserViewportRevision
+
+        model.shuffleLayout {
+            let value = randomValues[index]
+            index += 1
+            return value
+        }
+
+        return (
+            model.document.card(withID: rootID)!.position,
+            model.document.card(withID: secondID)!.position,
+            model.document.card(withID: fixedID)!.position,
+            model.browserViewportRevision - viewportBefore,
+            model.hasUnsavedChanges
+        )
+    }
+
+    #expect(abs(results.0.x - 1.76) < 0.0001)
+    #expect(abs(results.0.y + 0.76) < 0.0001)
+    #expect(abs(results.1.x - 0.5) < 0.0001)
+    #expect(abs(results.1.y - 0.5) < 0.0001)
+    #expect(results.2 == FrievePoint(x: 9.0, y: 9.0))
+    #expect(results.3 == 1)
+    #expect(results.4)
 }
 
 @Test func inspectorVisibilityPersistsWhenToggled() async throws {
