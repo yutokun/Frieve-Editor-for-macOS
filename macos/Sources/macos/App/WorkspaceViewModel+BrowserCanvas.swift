@@ -41,6 +41,13 @@ extension WorkspaceViewModel {
         markBrowserSurfacePresentationDirty()
     }
 
+    func setBrowserLabelRectanglesVisible(_ isVisible: Bool) {
+        guard labelRectanglesVisible != isVisible else { return }
+        labelRectanglesVisible = isVisible
+        markBrowserSurfaceContentDirty()
+        markBrowserSurfacePresentationDirty()
+    }
+
     func resetCanvasToFit(in size: CGSize) {
         let bounds = browserDocumentBounds()
         canvasCenter = FrievePoint(x: bounds.midX, y: bounds.midY)
@@ -264,12 +271,16 @@ extension WorkspaceViewModel {
         let hitRegions = visibleCards.map { BrowserCardHitRegion(cardID: $0.id, frame: cardFrame(for: $0, in: size)) }
         let visibleCardIDs = Set(cards.map { $0.id })
         let links = visibleLinkLayerSnapshots(in: size, visibleCardIDs: visibleCardIDs)
+        let labelGroups = labelRectanglesVisible
+            ? visibleBrowserLabelGroupSnapshots(in: size, visibleWorldRect: paddedVisible)
+            : []
         let entry = BrowserSurfaceContentCacheEntry(
             coverageRect: paddedVisible,
             cards: cards,
             cardSnapshotSignature: browserCardSnapshotSignature(cards),
             links: links,
             linkSnapshotSignature: browserLinkSnapshotSignature(links),
+            labelGroups: labelGroups,
             hitRegions: hitRegions
         )
         cachedBrowserSurfaceContentKey = key
@@ -317,6 +328,7 @@ extension WorkspaceViewModel {
             cardSnapshotSignature: browserCardSnapshotSignature(cards),
             links: links,
             linkSnapshotSignature: browserLinkSnapshotSignature(links),
+            labelGroups: content.labelGroups,
             hitRegions: content.hitRegions,
             overlay: overlay,
             overlaySignature: browserOverlaySignature(overlay),
@@ -408,6 +420,32 @@ extension WorkspaceViewModel {
                 labelPoint: buildLinkLabelPoint(for: link, start: start, end: end, baseScale: CGFloat(scale)),
                 labelText: showsLabels ? link.name.trimmed.nilIfEmpty : nil,
                 isHighlighted: selectedCardIDs.contains(link.fromCardID) || selectedCardIDs.contains(link.toCardID)
+            )
+        }
+    }
+
+    func visibleBrowserLabelGroupSnapshots(in size: CGSize, visibleWorldRect: CGRect? = nil) -> [BrowserLabelGroupLayerSnapshot] {
+        let clipRect = visibleWorldRect ?? self.visibleWorldRect(in: size)
+        let cards = visibleSortedCards()
+        guard !cards.isEmpty else { return [] }
+
+        return document.cardLabels.compactMap { label in
+            guard label.enabled, !label.fold else { return nil }
+
+            var worldBounds: CGRect?
+            for card in cards where card.labelIDs.contains(label.id) {
+                let frame = cardWorldFrame(for: card, in: size)
+                worldBounds = worldBounds.map { $0.union(frame) } ?? frame
+            }
+
+            guard let worldBounds, clipRect.intersects(worldBounds) else { return nil }
+            return BrowserLabelGroupLayerSnapshot(
+                id: label.id,
+                name: label.name.trimmed.nilIfEmpty ?? "Label \(label.id)",
+                color: label.color,
+                worldRect: worldBounds,
+                labelSize: label.size,
+                prefersNameAbove: worldBounds.minY < 0.4
             )
         }
     }

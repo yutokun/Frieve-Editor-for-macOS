@@ -33,6 +33,10 @@ struct FrieveEditorCommands: Commands {
             Button("Shuffle") { viewModel.shuffleLayout() }
             Toggle("Show Overview", isOn: $viewModel.showOverview)
             Toggle("Show Link Labels", isOn: $viewModel.linkLabelsVisible)
+            Toggle("Show Label Rectangles", isOn: Binding(
+                get: { viewModel.labelRectanglesVisible },
+                set: { viewModel.setBrowserLabelRectanglesVisible($0) }
+            ))
             Toggle("Show File List", isOn: $viewModel.showFileList)
             Toggle("Show Card List", isOn: $viewModel.showCardList)
             Toggle("Show Inspector", isOn: $viewModel.showInspector)

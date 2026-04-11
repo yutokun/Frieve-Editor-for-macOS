@@ -347,6 +347,44 @@ import Testing
     #expect(abs(results.1.y - results.3.y) > 1)
 }
 
+@Test func browserLabelRectanglesEncloseAllCardsForSameLabel() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+    let canvasSize = CGSize(width: 1280, height: 840)
+
+    let results = await MainActor.run { () -> (CGRect, CGRect, String) in
+        model.newDocument()
+        let rootID = model.document.sortedCards.first?.id ?? 0
+        let secondID = model.document.addCard(title: "Second", linkedFrom: rootID)
+        let thirdID = model.document.addCard(title: "Third", linkedFrom: rootID)
+
+        model.document.updateCard(rootID) { card in
+            card.position = FrievePoint(x: 0.22, y: 0.24)
+            card.labelIDs = [1]
+        }
+        model.document.updateCard(secondID) { card in
+            card.position = FrievePoint(x: 0.38, y: 0.34)
+            card.labelIDs = [1]
+        }
+        model.document.updateCard(thirdID) { card in
+            card.position = FrievePoint(x: 0.82, y: 0.72)
+            card.labelIDs = []
+        }
+
+        model.markBrowserSurfaceContentDirty()
+        let scene = model.browserSurfaceScene(in: canvasSize)
+        let labelGroup = try! #require(scene.labelGroups.first { $0.id == 1 })
+        let firstFrame = model.cardWorldFrame(for: model.document.card(withID: rootID)!, in: canvasSize)
+        let secondFrame = model.cardWorldFrame(for: model.document.card(withID: secondID)!, in: canvasSize)
+        return (labelGroup.worldRect, firstFrame.union(secondFrame), labelGroup.name)
+    }
+
+    #expect(abs(results.0.minX - results.1.minX) < 0.0001)
+    #expect(abs(results.0.minY - results.1.minY) < 0.0001)
+    #expect(abs(results.0.maxX - results.1.maxX) < 0.0001)
+    #expect(abs(results.0.maxY - results.1.maxY) < 0.0001)
+    #expect(results.2 == "Overview")
+}
+
 @Test func legacyHelpFileLoadsAsDocument() async throws {
     let helpURL = URL(fileURLWithPath: "/Users/yuto/SoftwareProjects/Frieve-Editor/windows/resource/help.fip")
     let document = try DocumentFileCodec.load(url: helpURL)

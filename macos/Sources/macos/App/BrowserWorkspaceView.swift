@@ -174,6 +174,11 @@ private struct BrowserCanvasHUD: View {
                     set: { viewModel.setBrowserLinkLabelsVisible($0) }
                 ))
                     .toggleStyle(.checkbox)
+                Toggle("Label Rects", isOn: Binding(
+                    get: { viewModel.labelRectanglesVisible },
+                    set: { viewModel.setBrowserLabelRectanglesVisible($0) }
+                ))
+                    .toggleStyle(.checkbox)
                 Toggle("Overview", isOn: $viewModel.showOverview)
                     .toggleStyle(.checkbox)
             }

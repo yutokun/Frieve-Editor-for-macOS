@@ -14,6 +14,7 @@ struct BrowserSurfaceState: Equatable {
     let linkPreviewSourceCardID: Int?
     let linkPreviewCanvasPoint: CGPoint?
     let linkLabelsVisible: Bool
+    let labelRectanglesVisible: Bool
     let canvasCenter: FrievePoint
     let zoom: Double
     let viewportSummary: String
@@ -43,6 +44,7 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
             linkPreviewSourceCardID: viewModel.linkPreviewSourceCardID,
             linkPreviewCanvasPoint: viewModel.linkPreviewCanvasPoint,
             linkLabelsVisible: viewModel.linkLabelsVisible,
+            labelRectanglesVisible: viewModel.labelRectanglesVisible,
             canvasCenter: viewModel.canvasCenter,
             zoom: viewModel.zoom,
             viewportSummary: viewModel.browserViewportSummary(in: canvasSize)
@@ -89,6 +91,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     private let selectionOverlayLayer = CAShapeLayer()
     private let marqueeOverlayLayer = CAShapeLayer()
     private let linkPreviewLayer = CAShapeLayer()
+    private let labelGroupOverlayLayer = CALayer()
     private let renderer: BrowserMetalRenderer
     private var trackingAreaRef: NSTrackingArea?
     private var mouseDownPoint: CGPoint?
@@ -99,6 +102,8 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     private var lastOverlaySignature: Int?
     private var lastSurfaceState: BrowserSurfaceState?
     private var lastCanvasSize: CGSize = .zero
+    private var labelGroupShapeLayers: [Int: CAShapeLayer] = [:]
+    private var labelGroupTextFields: [Int: NSTextField] = [:]
 
     override init(frame frameRect: NSRect) {
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -246,6 +251,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
             $0.linkPreviewSourceCardID != state.linkPreviewSourceCardID ||
             $0.linkPreviewCanvasPoint != state.linkPreviewCanvasPoint ||
             $0.linkLabelsVisible != state.linkLabelsVisible ||
+            $0.labelRectanglesVisible != state.labelRectanglesVisible ||
             $0.canvasCenter != state.canvasCenter ||
             $0.zoom != state.zoom ||
             $0.viewportSummary != state.viewportSummary
@@ -271,6 +277,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
             applyOverlay(scene.overlay)
             lastOverlaySignature = scene.overlaySignature
         }
+        applyLabelGroups(scene.labelGroups, transform: scene.worldToCanvasTransform)
         viewModel?.recordPerformanceMetric(updateStart, keyPath: \BrowserPerformanceSnapshot.surfaceApply)
     }
 
@@ -317,6 +324,9 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         linkPreviewLayer.lineDashPattern = [8, 5]
         linkPreviewLayer.lineWidth = 2
 
+        labelGroupOverlayLayer.masksToBounds = false
+
+        overlayView.layer?.addSublayer(labelGroupOverlayLayer)
         overlayView.layer?.addSublayer(marqueeOverlayLayer)
         overlayView.layer?.addSublayer(linkPreviewLayer)
     }
@@ -360,6 +370,87 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         } else {
             linkPreviewLayer.path = nil
             linkPreviewLayer.isHidden = true
+        }
+    }
+
+    private func applyLabelGroups(_ groups: [BrowserLabelGroupLayerSnapshot], transform: CGAffineTransform) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
+
+        labelGroupOverlayLayer.frame = overlayView.bounds
+
+        let activeIDs = Set(groups.map(\.id))
+        for (id, layer) in labelGroupShapeLayers where !activeIDs.contains(id) {
+            layer.removeFromSuperlayer()
+            labelGroupShapeLayers.removeValue(forKey: id)
+        }
+        for (id, field) in labelGroupTextFields where !activeIDs.contains(id) {
+            field.removeFromSuperview()
+            labelGroupTextFields.removeValue(forKey: id)
+        }
+
+        for snapshot in groups {
+            let strokeColor = NSColor(Color(frieveRGB: snapshot.color)).withAlphaComponent(0.72)
+            let canvasRect = snapshot.worldRect
+                .applying(transform)
+                .insetBy(dx: -14, dy: -14)
+                .integral
+            let cornerRadius = min(14, min(canvasRect.width, canvasRect.height) * 0.12)
+            let path = CGPath(
+                roundedRect: canvasRect,
+                cornerWidth: cornerRadius,
+                cornerHeight: cornerRadius,
+                transform: nil
+            )
+
+            let shapeLayer = labelGroupShapeLayers[snapshot.id] ?? {
+                let layer = CAShapeLayer()
+                layer.fillColor = nil
+                layer.lineJoin = .round
+                layer.lineCap = .round
+                layer.contentsScale = windowBackingScale
+                labelGroupOverlayLayer.addSublayer(layer)
+                labelGroupShapeLayers[snapshot.id] = layer
+                return layer
+            }()
+            shapeLayer.strokeColor = strokeColor.cgColor
+            shapeLayer.lineWidth = 3
+            shapeLayer.path = path
+            shapeLayer.isHidden = false
+
+            let pointSize = max(10, min(CGFloat(snapshot.labelSize) * 0.12, 22))
+            let textField = labelGroupTextFields[snapshot.id] ?? {
+                let field = NSTextField(labelWithString: "")
+                field.isBezeled = false
+                field.isBordered = false
+                field.isEditable = false
+                field.isSelectable = false
+                field.drawsBackground = false
+                field.backgroundColor = .clear
+                field.lineBreakMode = .byClipping
+                field.maximumNumberOfLines = 1
+                overlayView.addSubview(field)
+                labelGroupTextFields[snapshot.id] = field
+                return field
+            }()
+            textField.stringValue = snapshot.name
+            textField.textColor = strokeColor
+            textField.font = NSFont.systemFont(ofSize: pointSize, weight: .semibold)
+            textField.alignment = .center
+            textField.sizeToFit()
+
+            let fitting = textField.fittingSize
+            let originY = snapshot.prefersNameAbove
+                ? canvasRect.minY - fitting.height - 8
+                : canvasRect.maxY + 8
+            textField.frame = CGRect(
+                x: canvasRect.midX - fitting.width * 0.5,
+                y: originY,
+                width: fitting.width,
+                height: fitting.height
+            ).integral
+            textField.isHidden = false
         }
     }
 }

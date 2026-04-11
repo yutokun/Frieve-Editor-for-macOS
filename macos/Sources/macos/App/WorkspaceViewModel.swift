@@ -115,6 +115,15 @@ struct BrowserLinkLayerSnapshot: Identifiable {
     let isHighlighted: Bool
 }
 
+struct BrowserLabelGroupLayerSnapshot: Identifiable, Hashable {
+    let id: Int
+    let name: String
+    let color: Int
+    let worldRect: CGRect
+    let labelSize: Int
+    let prefersNameAbove: Bool
+}
+
 struct BrowserOverlaySnapshot {
     let selectionFrame: CGRect?
     let marqueeRect: CGRect?
@@ -134,6 +143,7 @@ struct BrowserSurfaceSceneSnapshot {
     let cardSnapshotSignature: Int
     let links: [BrowserLinkLayerSnapshot]
     let linkSnapshotSignature: Int
+    let labelGroups: [BrowserLabelGroupLayerSnapshot]
     let hitRegions: [BrowserCardHitRegion]
     let overlay: BrowserOverlaySnapshot
     let overlaySignature: Int
@@ -205,6 +215,7 @@ struct BrowserSurfaceContentCacheEntry {
     let cardSnapshotSignature: Int
     let links: [BrowserLinkLayerSnapshot]
     let linkSnapshotSignature: Int
+    let labelGroups: [BrowserLabelGroupLayerSnapshot]
     let hitRegions: [BrowserCardHitRegion]
 }
 
@@ -226,6 +237,7 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var autoScroll: Bool = false
     @Published var autoZoom: Bool = true
     @Published var linkLabelsVisible: Bool = true
+    @Published var labelRectanglesVisible: Bool = true
     @Published var showOverview: Bool = true {
         didSet { settings.showOverview = showOverview }
     }
