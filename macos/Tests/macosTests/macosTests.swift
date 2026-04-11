@@ -668,3 +668,56 @@ import Testing
     #expect(document.cardCount > 0)
     #expect(document.focusedCardID != nil)
 }
+
+@Test func browserAutoArrangeStepScaleUsesStableFixedScaleAt60Hz() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    await MainActor.run {
+        #expect(abs(model.browserAutoArrangeStepScale() - 0.5) < 0.0001)
+    }
+}
+
+@Test func draggingSelectionOnlyInvalidatesBrowserPresentation() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+    let canvasSize = CGSize(width: 1200, height: 800)
+
+    await MainActor.run {
+        model.newDocument()
+        model.addChildCard()
+        let draggedID = model.selectedCardID ?? 0
+        let beforeContentRevision = model.browserSurfaceContentRevision
+        let beforePresentationRevision = model.browserSurfacePresentationRevision
+        let startPoint = CGPoint(x: 400, y: 300)
+        let currentPoint = CGPoint(x: 460, y: 340)
+
+        model.beginCardInteraction(cardID: draggedID, modifiers: [])
+        model.updateCardInteraction(
+            cardID: draggedID,
+            from: startPoint,
+            to: currentPoint,
+            in: canvasSize,
+            modifiers: []
+        )
+
+        #expect(model.browserSurfaceContentRevision == beforeContentRevision)
+        #expect(model.browserSurfacePresentationRevision > beforePresentationRevision)
+        #expect(model.currentDragTranslation != nil)
+        let draggedCard = try! #require(model.document.card(withID: draggedID))
+        #expect(model.currentPosition(for: draggedCard) != draggedCard.position)
+    }
+}
+
+@Test func browserChromeRefreshIsDeferredDuringActiveGesture() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    await MainActor.run {
+        let beforeRevision = model.browserChromeRevision
+        model.beginCanvasGesture(at: CGPoint(x: 10, y: 10), modifiers: [])
+        model.scheduleBrowserChromeRefresh(minimumInterval: 0)
+        #expect(model.browserChromeRevision == beforeRevision)
+
+        model.endCanvasGesture(in: CGSize(width: 1200, height: 800))
+        model.scheduleBrowserChromeRefresh(immediate: true)
+        #expect(model.browserChromeRevision > beforeRevision)
+    }
+}

@@ -6,6 +6,8 @@ struct BrowserSurfaceState: Equatable {
     let contentRevision: Int
     let viewportRevision: Int
     let presentationRevision: Int
+    let dragTranslation: FrievePoint?
+    let draggedCardIDs: Set<Int>
     let hoverCardID: Int?
     let selectedCardIDs: Set<Int>
     let inlineEditorCardID: Int?
@@ -36,6 +38,8 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
             contentRevision: viewModel.browserSurfaceContentRevision,
             viewportRevision: viewModel.browserSurfaceViewportRevision,
             presentationRevision: viewModel.browserSurfacePresentationRevision,
+            dragTranslation: viewModel.currentDragTranslation,
+            draggedCardIDs: Set(viewModel.dragOriginByCardID.keys),
             hoverCardID: viewModel.browserHoverCardID,
             selectedCardIDs: viewModel.selectedCardIDs,
             inlineEditorCardID: viewModel.browserInlineEditorCardID,
@@ -95,6 +99,7 @@ private final class BrowserOverlayHostView: NSView {
 
 private enum BrowserSceneUpdateMode {
     case full
+    case viewportOnly
     case cardsOnly
     case cardsLinksAndText
 }
@@ -279,6 +284,9 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         } ?? true
         let hoverChanged = lastState.map { $0.hoverCardID != state.hoverCardID } ?? true
         let selectionChanged = lastState.map { $0.selectedCardIDs != state.selectedCardIDs } ?? true
+        let dragChanged = lastState.map {
+            $0.dragTranslation != state.dragTranslation || $0.draggedCardIDs != state.draggedCardIDs
+        } ?? true
         let inlineEditorChanged = lastState.map { $0.inlineEditorCardID != state.inlineEditorCardID } ?? true
         let presentationChanged = lastState.map { $0.presentationRevision != state.presentationRevision } ?? true
         let sizeChanged = lastCanvasSize != canvasSize
@@ -286,10 +294,25 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         lastCanvasSize = canvasSize
         guard contentChanged || viewportChanged || presentationChanged || sizeChanged || hoverChanged || selectionChanged || inlineEditorChanged else { return }
 
-        if contentChanged || viewportChanged || sizeChanged || lastSceneSnapshot == nil {
+        if contentChanged || sizeChanged || lastSceneSnapshot == nil {
             let scene = viewModel.browserSurfaceScene(in: canvasSize)
             lastSceneSnapshot = scene
             updateScene(scene, canvasSize: canvasSize, mode: .full)
+            return
+        }
+
+        if viewportChanged, let scene = lastSceneSnapshot {
+            let refreshedScene = viewModel.browserSurfaceScene(in: canvasSize)
+            lastSceneSnapshot = refreshedScene
+            let contentIsStable =
+                refreshedScene.cardSnapshotSignature == scene.cardSnapshotSignature &&
+                refreshedScene.linkSnapshotSignature == scene.linkSnapshotSignature &&
+                refreshedScene.labelGroups == scene.labelGroups
+            updateScene(
+                refreshedScene,
+                canvasSize: canvasSize,
+                mode: contentIsStable ? .viewportOnly : .full
+            )
             return
         }
 
@@ -297,11 +320,11 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
             let updatedScene = presentationScene(
                 from: scene,
                 state: state,
-                updateCards: hoverChanged || selectionChanged,
-                updateLinks: selectionChanged
+                updateCards: hoverChanged || selectionChanged || dragChanged,
+                updateLinks: selectionChanged || dragChanged
             )
             lastSceneSnapshot = updatedScene
-            if selectionChanged {
+            if selectionChanged || dragChanged {
                 updateScene(updatedScene, canvasSize: canvasSize, mode: .cardsLinksAndText)
             } else if hoverChanged {
                 updateScene(updatedScene, canvasSize: canvasSize, mode: .cardsOnly)
@@ -317,6 +340,8 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
             contentRevision: viewModel.browserSurfaceContentRevision,
             viewportRevision: viewModel.browserSurfaceViewportRevision,
             presentationRevision: viewModel.browserSurfacePresentationRevision,
+            dragTranslation: viewModel.currentDragTranslation,
+            draggedCardIDs: Set(viewModel.dragOriginByCardID.keys),
             hoverCardID: viewModel.browserHoverCardID,
             selectedCardIDs: viewModel.selectedCardIDs,
             inlineEditorCardID: viewModel.browserInlineEditorCardID,
@@ -343,11 +368,11 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         renderer.updateScene(scene, mode: mode)
         metalView.draw()
 
-        if mode == .full, lastOverlaySignature != scene.overlaySignature {
+        if (mode == .full || mode == .viewportOnly), lastOverlaySignature != scene.overlaySignature {
             applyOverlay(scene.overlay)
             lastOverlaySignature = scene.overlaySignature
         }
-        if mode == .full {
+        if mode == .full || mode == .viewportOnly {
             applyLabelGroups(scene.labelGroups, transform: scene.worldToCanvasTransform)
         }
         viewModel?.recordPerformanceMetric(updateStart, keyPath: \BrowserPerformanceSnapshot.surfaceApply)
@@ -522,26 +547,47 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     ) -> BrowserSurfaceSceneSnapshot {
         guard let viewModel else { return scene }
         let selectedCardIDs = state.selectedCardIDs
+        let isDraggingSelection = state.dragTranslation != nil && !state.draggedCardIDs.isEmpty
         let cards = updateCards ? scene.cards.map { snapshot in
-            BrowserCardLayerSnapshot(
+            let position = isDraggingSelection ? viewModel.currentPosition(for: snapshot.card) : snapshot.position
+            return BrowserCardLayerSnapshot(
                 card: snapshot.card,
-                position: snapshot.position,
+                position: position,
                 metadata: snapshot.metadata,
                 isSelected: selectedCardIDs.contains(snapshot.id),
                 isHovered: state.hoverCardID == snapshot.id,
                 detailLevel: snapshot.detailLevel
             )
         } : scene.cards
+        let linkBaseScale = CGFloat(max(viewModel.browserScale(in: scene.canvasSize), 1))
         let links = updateLinks ? scene.links.map { snapshot in
-            BrowserLinkLayerSnapshot(
+            let startPoint = viewModel.cardByID(snapshot.fromCardID).map {
+                let point = viewModel.currentPosition(for: $0)
+                return CGPoint(x: point.x, y: point.y)
+            } ?? snapshot.startPoint
+            let endPoint = viewModel.cardByID(snapshot.toCardID).map {
+                let point = viewModel.currentPosition(for: $0)
+                return CGPoint(x: point.x, y: point.y)
+            } ?? snapshot.endPoint
+            let labelPoint: CGPoint?
+            if snapshot.labelText != nil {
+                let verticalOffset = 8 / max(linkBaseScale, 0.0001)
+                labelPoint = CGPoint(
+                    x: (startPoint.x + endPoint.x) / 2,
+                    y: (startPoint.y + endPoint.y) / 2 - verticalOffset
+                )
+            } else {
+                labelPoint = nil
+            }
+            return BrowserLinkLayerSnapshot(
                 id: snapshot.id,
                 fromCardID: snapshot.fromCardID,
                 toCardID: snapshot.toCardID,
-                startPoint: snapshot.startPoint,
-                endPoint: snapshot.endPoint,
+                startPoint: startPoint,
+                endPoint: endPoint,
                 shapeIndex: snapshot.shapeIndex,
                 directionVisible: snapshot.directionVisible,
-                labelPoint: snapshot.labelPoint,
+                labelPoint: labelPoint,
                 labelText: snapshot.labelText,
                 isHighlighted: selectedCardIDs.contains(snapshot.fromCardID) || selectedCardIDs.contains(snapshot.toCardID)
             )
@@ -690,6 +736,8 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         switch mode {
         case .full:
             rebuildResources()
+        case .viewportOnly:
+            break
         case .cardsOnly:
             rebuildCardResources(for: scene)
         case .cardsLinksAndText:
@@ -730,7 +778,11 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         }
         renderEncoder.label = "Browser Metal Encoder"
 
-        var viewport = BrowserMetalViewportUniforms(viewportSize: SIMD2(Float(scene.canvasSize.width), Float(scene.canvasSize.height)))
+        var viewport = BrowserMetalViewportUniforms(
+            viewportSize: SIMD2(Float(scene.canvasSize.width), Float(scene.canvasSize.height)),
+            worldScale: SIMD2(Float(scene.worldToCanvasTransform.a), Float(scene.worldToCanvasTransform.d)),
+            worldOffset: SIMD2(Float(scene.worldToCanvasTransform.tx), Float(scene.worldToCanvasTransform.ty))
+        )
         if let solidVertexBuffer, !solidVertices.isEmpty {
             renderEncoder.setRenderPipelineState(solidPipeline)
             renderEncoder.setVertexBuffer(solidVertexBuffer, offset: 0, index: 0)
@@ -834,15 +886,14 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     }
 
     private func buildLabelGroupInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalLabelGroupInstance] {
-        let transform = scene.worldToCanvasTransform
         return scene.labelGroups.map { snapshot in
-            let canvasRect = snapshot.worldRect.applying(transform).insetBy(dx: -14, dy: -14).integral
+            let worldRect = snapshot.worldRect.insetBy(dx: -14, dy: -14)
             return BrowserMetalLabelGroupInstance(
-                center: SIMD2(Float(canvasRect.midX), Float(canvasRect.midY)),
-                halfSize: SIMD2(Float(canvasRect.width / 2), Float(canvasRect.height / 2)),
+                center: SIMD2(Float(worldRect.midX), Float(worldRect.midY)),
+                halfSize: SIMD2(Float(worldRect.width / 2), Float(worldRect.height / 2)),
                 color: NSColor(Color(frieveRGB: snapshot.color)).withAlphaComponent(0.72).rgbaVector,
                 strokeWidth: 3,
-                cornerRadius: Float(min(14, min(canvasRect.width, canvasRect.height) * 0.12)),
+                cornerRadius: 14,
                 padding: .zero
             )
         }
@@ -917,18 +968,15 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     }
 
     private func buildLinkInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalLinkInstance] {
-        let transform = scene.worldToCanvasTransform
         let canvasBackground = NSColor.textBackgroundColor
         return scene.links.flatMap { snapshot -> [BrowserMetalLinkInstance] in
-            let startPoint = snapshot.startPoint.applying(transform)
-            let endPoint = snapshot.endPoint.applying(transform)
             let color = (snapshot.isHighlighted
                 ? NSColor.controlAccentColor.browserOpaqueComposite(over: canvasBackground, opacity: 0.85, darkModeLift: 0.04)
                 : NSColor.secondaryLabelColor.browserOpaqueComposite(over: canvasBackground, opacity: 0.42, darkModeLift: 0.10)).rgbaVector
             let width: Float = snapshot.isHighlighted ? 3 : 2
             var instances = makeLinkSegmentInstances(
-                start: startPoint,
-                end: endPoint,
+                start: snapshot.startPoint,
+                end: snapshot.endPoint,
                 shapeIndex: snapshot.shapeIndex,
                 lineWidth: width,
                 color: color
@@ -936,8 +984,8 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             if snapshot.directionVisible {
                 instances.append(
                     contentsOf: makeArrowInstances(
-                        start: startPoint,
-                        end: endPoint,
+                        start: snapshot.startPoint,
+                        end: snapshot.endPoint,
                         shapeIndex: snapshot.shapeIndex,
                         lineWidth: width,
                         color: color
@@ -956,19 +1004,18 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             pendingAtlasUploadKeys.removeAll(keepingCapacity: true)
             return []
         }
-
         let transform = scene.worldToCanvasTransform
         var instances: [BrowserMetalCardInstance] = []
         instances.reserveCapacity(scene.cards.count)
 
         for snapshot in scene.cards {
-            let center = CGPoint(x: snapshot.position.x, y: snapshot.position.y).applying(transform)
+            let center = CGPoint(x: snapshot.position.x, y: snapshot.position.y)
             let rasterKey = viewModel.browserCardRasterKey(for: snapshot)
             let rasterImage = viewModel.browserCardRasterIfReady(for: snapshot, cacheKey: rasterKey)
             if rasterImage != nil {
                 desiredAtlasKeys.insert(rasterKey)
             }
-            let priority = atlasPriority(for: snapshot, center: center, canvasSize: scene.canvasSize)
+            let priority = atlasPriority(for: snapshot, center: center.applying(transform), canvasSize: scene.canvasSize)
             let atlasEntry = atlasEntry(for: rasterKey, image: rasterImage, priority: priority)
             let fillColor = NSColor(viewModel.color(for: snapshot.card)).rgbaVector
             let strokeColor = NSColor(viewModel.browserCardStrokeColor(for: snapshot.card, isSelected: snapshot.isSelected, isHovered: snapshot.isHovered)).rgbaVector
@@ -1328,6 +1375,8 @@ private struct BrowserMetalPendingUpload {
 
 private struct BrowserMetalViewportUniforms {
     var viewportSize: SIMD2<Float>
+    var worldScale: SIMD2<Float>
+    var worldOffset: SIMD2<Float>
 }
 
 private struct BrowserMetalColorVertex {
@@ -1417,7 +1466,7 @@ private extension BrowserMetalRenderer {
             let size = labelImage.size
             instances.append(
                 BrowserMetalTextInstance(
-                    center: SIMD2(Float(canvasPoint.x), Float(canvasPoint.y - size.height * 0.5 - 2)),
+                    center: SIMD2(Float(labelPoint.x), Float(labelPoint.y)),
                     size: SIMD2(Float(size.width), Float(size.height)),
                     atlasUVOrigin: atlasEntry?.uvOrigin ?? .zero,
                     atlasUVSize: atlasEntry?.uvSize ?? .zero,
@@ -1477,7 +1526,7 @@ private extension BrowserMetalRenderer {
                 makeLinkBodyInstance(start: start, end: elbowA, shapeIndex: shapeIndex, lineWidth: lineWidth, color: color),
                 makeLinkBodyInstance(start: elbowA, end: elbowB, shapeIndex: shapeIndex, lineWidth: lineWidth, color: color),
                 makeLinkBodyInstance(start: elbowB, end: end, shapeIndex: shapeIndex, lineWidth: lineWidth, color: color)
-            ].filter { distanceSquared(from: $0.start, to: $0.end) > 0.25 }
+            ].filter { distanceSquared(from: $0.start, to: $0.end) > 0.00000001 }
         default:
             return [makeLinkBodyInstance(start: start, end: end, shapeIndex: shapeIndex, lineWidth: lineWidth, color: color)]
         }
@@ -1490,16 +1539,37 @@ private extension BrowserMetalRenderer {
         lineWidth: Float,
         color: SIMD4<Float>
     ) -> [BrowserMetalLinkInstance] {
-        guard let geometry = browserLinkArrowGeometry(shapeIndex: shapeIndex, start: start, end: end) else {
+        let arrowLineWidth = max(lineWidth * 1.4, lineWidth + 1)
+        let arrowStart: CGPoint
+        let arrowEnd: CGPoint
+        switch abs(shapeIndex % 6) {
+        case 2, 4:
+            let midX = (start.x + end.x) / 2
+            arrowStart = CGPoint(x: midX, y: end.y)
+            arrowEnd = end
+        default:
+            arrowStart = start
+            arrowEnd = end
+        }
+        guard distanceSquared(
+            from: SIMD2(Float(arrowStart.x), Float(arrowStart.y)),
+            to: SIMD2(Float(arrowEnd.x), Float(arrowEnd.y))
+        ) > 0.00000001 else {
             return []
         }
-        let arrowLineWidth = max(lineWidth * 1.4, lineWidth + 1)
-        let trimDistance = CGFloat(arrowLineWidth) * 0.5
-        let leftTip = browserTrimmedSegmentEnd(start: geometry.leftWing, end: geometry.tip, trimDistance: trimDistance)
-        let rightTip = browserTrimmedSegmentEnd(start: geometry.rightWing, end: geometry.tip, trimDistance: trimDistance)
         return [
-            makeLinkBodyInstance(start: geometry.leftWing, end: leftTip, shapeIndex: 0, lineWidth: arrowLineWidth, color: color),
-            makeLinkBodyInstance(start: geometry.rightWing, end: rightTip, shapeIndex: 0, lineWidth: arrowLineWidth, color: color)
+            BrowserMetalLinkInstance(
+                start: SIMD2(Float(arrowStart.x), Float(arrowStart.y)),
+                end: SIMD2(Float(arrowEnd.x), Float(arrowEnd.y)),
+                control1: .zero,
+                control2: .zero,
+                color: color,
+                lineWidth: arrowLineWidth,
+                shapeIndex: Int32(shapeIndex),
+                isArrow: 1,
+                curveOffset: 0,
+                padding: .zero
+            )
         ]
     }
 

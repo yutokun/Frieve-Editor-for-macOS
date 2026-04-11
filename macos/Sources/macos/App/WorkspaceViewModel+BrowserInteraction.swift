@@ -264,7 +264,6 @@ extension WorkspaceViewModel {
                 x: Double(currentPoint.x - startPoint.x) / scale,
                 y: Double(currentPoint.y - startPoint.y) / scale
             )
-            markBrowserSurfaceContentDirty()
             markBrowserSurfacePresentationDirty()
         case .creatingLink:
             linkPreviewCanvasPoint = currentPoint
@@ -326,8 +325,6 @@ extension WorkspaceViewModel {
         dragOriginByCardID.removeAll()
         currentDragTranslation = nil
         suspendBrowserAutoScroll()
-        markBrowserSurfaceContentDirty()
-        markBrowserSurfacePresentationDirty()
         clearCanvasTransientState()
     }
 

@@ -229,7 +229,10 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var selectedCardID: Int?
     @Published var selectedCardIDs: Set<Int> = []
     @Published var selectedTab: WorkspaceTab = .browser {
-        didSet { syncDocumentMetadataFromSettings() }
+        didSet {
+            syncDocumentMetadataFromSettings()
+            updateBrowserAutoArrangeTimerState()
+        }
     }
     @Published var searchQuery: String = ""
 @Published var statusMessage: String = "Ready"
@@ -268,6 +271,7 @@ final class WorkspaceViewModel: ObservableObject {
                 browserAutoArrangeEnabled = true
                 browserActiveArrangeMode = arrangeMode
             }
+            updateBrowserAutoArrangeTimerState()
         }
     }
     @Published var browserAutoArrangeEnabled: Bool = false {
@@ -276,6 +280,7 @@ final class WorkspaceViewModel: ObservableObject {
                 browserActiveArrangeMode = nil
                 resetBrowserArrangeTransientState()
             }
+            updateBrowserAutoArrangeTimerState()
         }
     }
     @Published var statisticsKey: StatisticsGroupingKey = .label {
@@ -330,6 +335,7 @@ final class WorkspaceViewModel: ObservableObject {
     var browserMatrixTargetByCardID: [Int: FrievePoint] = [:]
     var browserMatrixSpeedByCardID: [Int: Double] = [:]
     var browserActiveArrangeMode: String?
+    var browserAutoArrangeTimer: Timer?
     var browserAutoScrollStartCenter: FrievePoint?
     var browserAutoScrollTargetCenter: FrievePoint?
     var browserAutoScrollStartedAt: CFTimeInterval?

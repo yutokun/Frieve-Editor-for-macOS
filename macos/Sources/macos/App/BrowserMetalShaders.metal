@@ -3,6 +3,8 @@ using namespace metal;
 
 struct BrowserMetalViewportUniforms {
     float2 viewportSize;
+    float2 worldScale;
+    float2 worldOffset;
 };
 
 struct BrowserMetalColorVertex {
@@ -101,6 +103,10 @@ static float2 browserViewportTransform(float2 pixelPoint, float2 viewportSize) {
     );
 }
 
+static float2 browserWorldToPixel(float2 worldPoint, constant BrowserMetalViewportUniforms &viewport) {
+    return worldPoint * viewport.worldScale + viewport.worldOffset;
+}
+
 vertex BrowserMetalColorOut browserColorVertex(
     const device BrowserMetalColorVertex *vertices [[buffer(0)]],
     constant BrowserMetalViewportUniforms &viewport [[buffer(1)]],
@@ -136,8 +142,8 @@ vertex BrowserMetalLinkOut browserLinkVertex(
     };
 
     BrowserMetalLinkInstance link = links[instanceID];
-    float2 start = link.start;
-    float2 end = link.end;
+    float2 start = browserWorldToPixel(link.start, viewport);
+    float2 end = browserWorldToPixel(link.end, viewport);
     float2 delta = end - start;
     float segmentLength = max(length(delta), 0.001f);
     float2 direction = delta / segmentLength;
@@ -217,7 +223,9 @@ vertex BrowserMetalTextOut browserTextVertex(
 
     BrowserMetalTextInstance text = texts[instanceID];
     float2 offset = corners[vertexID] * (text.size * 0.5f);
-    float2 pixelPoint = text.center + offset;
+    float2 pixelCenter = browserWorldToPixel(text.center, viewport);
+    pixelCenter.y -= text.size.y * 0.5f + 2.0f;
+    float2 pixelPoint = pixelCenter + offset;
 
     BrowserMetalTextOut out;
     out.position = float4(browserViewportTransform(pixelPoint, viewport.viewportSize), 0.0f, 1.0f);
@@ -261,7 +269,7 @@ vertex BrowserMetalCardOut browserCardVertex(
     BrowserMetalCardInstance card = cards[instanceID];
     BrowserMetalCardOut out;
     float2 offset = corners[vertexID] * (card.paddedSize * 0.5f);
-    float2 pixelPoint = card.center + offset;
+    float2 pixelPoint = browserWorldToPixel(card.center, viewport) + offset;
     out.position = float4(browserViewportTransform(pixelPoint, viewport.viewportSize), 0.0f, 1.0f);
     out.localPoint = offset;
     out.atlasUVOrigin = card.atlasUVOrigin;
@@ -392,12 +400,13 @@ vertex BrowserMetalLabelGroupOut browserLabelGroupVertex(
         float2( 1.0f,  1.0f)
     };
     BrowserMetalLabelGroupInstance g = groups[instanceID];
+    float2 pixelHalfSize = abs(g.halfSize * viewport.worldScale);
     float margin = g.strokeWidth * 0.5f + 1.5f;
-    float2 offset = corners[vertexID] * (g.halfSize + margin);
+    float2 offset = corners[vertexID] * (pixelHalfSize + margin);
     BrowserMetalLabelGroupOut out;
-    out.position = float4(browserViewportTransform(g.center + offset, viewport.viewportSize), 0.0f, 1.0f);
+    out.position = float4(browserViewportTransform(browserWorldToPixel(g.center, viewport) + offset, viewport.viewportSize), 0.0f, 1.0f);
     out.localPoint = offset;
-    out.halfSize = g.halfSize;
+    out.halfSize = pixelHalfSize;
     out.color = g.color;
     out.strokeWidth = g.strokeWidth;
     out.cornerRadius = g.cornerRadius;

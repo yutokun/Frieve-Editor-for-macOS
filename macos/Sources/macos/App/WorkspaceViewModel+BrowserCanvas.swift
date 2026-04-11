@@ -2,7 +2,39 @@ import SwiftUI
 import AppKit
 
 extension WorkspaceViewModel {
+    private var browserAutoArrangeFrameInterval: CFTimeInterval { 1.0 / 60.0 }
+    private var browserAutoArrangeBaselineInterval: CFTimeInterval { 1.0 / 30.0 }
+    private var browserAutoArrangeFrameScale: Double { browserAutoArrangeFrameInterval / browserAutoArrangeBaselineInterval }
     private var browserAutoScrollDuration: CFTimeInterval { 0.28 }
+
+    func ensureBrowserAutoArrangeTimer() {
+        guard browserAutoArrangeTimer == nil else { return }
+        let timer = Timer(timeInterval: browserAutoArrangeFrameInterval, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor in
+                self.applyBrowserAutoArrangeStepIfNeeded()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        browserAutoArrangeTimer = timer
+    }
+
+    func stopBrowserAutoArrangeTimer(resetClock: Bool = true) {
+        browserAutoArrangeTimer?.invalidate()
+        browserAutoArrangeTimer = nil
+    }
+
+    func updateBrowserAutoArrangeTimerState() {
+        guard browserAutoArrangeEnabled, selectedTab == .browser else {
+            stopBrowserAutoArrangeTimer()
+            return
+        }
+        ensureBrowserAutoArrangeTimer()
+    }
+
+    func browserAutoArrangeStepScale() -> Double {
+        browserAutoArrangeFrameScale
+    }
 
     func ensureBrowserAutoScrollTimer() {
         guard browserAutoScrollTimer == nil else { return }
@@ -164,6 +196,11 @@ extension WorkspaceViewModel {
     }
 
     func scheduleBrowserChromeRefresh(immediate: Bool = false, minimumInterval: CFTimeInterval? = nil) {
+        if hasActiveBrowserGesture && !immediate {
+            browserPendingChromeRefreshWorkItem?.cancel()
+            browserPendingChromeRefreshWorkItem = nil
+            return
+        }
         browserPendingChromeRefreshWorkItem?.cancel()
         let now = CACurrentMediaTime()
         let resolvedMinimumInterval = minimumInterval ?? (browserInteractionModeEnabled ? 1.0 / 6.0 : 1.0 / 12.0)
@@ -186,6 +223,8 @@ extension WorkspaceViewModel {
     func markBrowserInteractionActivity(duration: CFTimeInterval = 0.18) {
         if !browserInteractionModeEnabled {
             browserInteractionModeEnabled = true
+            browserPendingChromeRefreshWorkItem?.cancel()
+            browserPendingChromeRefreshWorkItem = nil
             browserInteractionModeRefreshHandler?(true)
         }
         browserInteractionModeWorkItem?.cancel()

@@ -300,16 +300,17 @@ extension WorkspaceViewModel {
     func applyBrowserAutoArrangeStepIfNeeded(force: Bool = false) {
         guard selectedTab == .browser else { return }
         guard browserAutoArrangeEnabled || force else { return }
+        let stepScale = browserAutoArrangeStepScale()
 
         switch arrangeMode {
         case "Link":
-            applyBrowserLinkAutoArrangeStep()
+            applyBrowserLinkAutoArrangeStep(stepScale: stepScale)
         case "Link(Soft)":
-            applyBrowserLinkAutoArrangeStep(ratio: 0.33)
+            applyBrowserLinkAutoArrangeStep(ratio: 0.33, stepScale: stepScale)
         case "Matrix":
-            applyBrowserMatrixAutoArrangeStep()
+            applyBrowserMatrixAutoArrangeStep(stepScale: stepScale)
         case "Tree":
-            applyBrowserTreeAutoArrangeStep()
+            applyBrowserTreeAutoArrangeStep(stepScale: stepScale)
         default:
             break
         }
@@ -339,7 +340,7 @@ extension WorkspaceViewModel {
         browserMatrixSpeedByCardID.removeAll(keepingCapacity: true)
     }
 
-    func applyBrowserLinkAutoArrangeStep(ratio: Double = 1.0) {
+    func applyBrowserLinkAutoArrangeStep(ratio: Double = 1.0, stepScale: Double = 1.0) {
         let visibleCards = visibleSortedCards()
         guard visibleCards.count > 1 else { return }
         let freezeSelectedCards = hasActiveBrowserGesture
@@ -351,7 +352,8 @@ extension WorkspaceViewModel {
         }
 
         let repulsionRatio = 0.5
-        let linkRatio = ratio * 0.66 * 0.3
+        let baseLinkRatio = ratio * 0.66 * 0.3
+        let linkRatio = 1 - pow(max(1 - baseLinkRatio, 0.0001), stepScale)
         var nextPositions = positions
 
         for card in visibleCards where !card.isFixed && !(freezeSelectedCards && selectedCardIDs.contains(card.id)) {
@@ -381,7 +383,7 @@ extension WorkspaceViewModel {
             }
 
             if repelWeight > 0, repelCount > 0 {
-                let weight = repelWeight / Double(repelCount * repelCount) / 5.0 * repulsionRatio
+                let weight = repelWeight / Double(repelCount * repelCount) / 5.0 * repulsionRatio * stepScale
                 nextPositions[card.id] = FrievePoint(
                     x: original.x + repelX * weight,
                     y: original.y + repelY * weight
@@ -427,7 +429,7 @@ extension WorkspaceViewModel {
         normalizeAndApplyBrowserAutoArrangePositions(nextPositions, targetIDs: targetIDs)
     }
 
-    func applyBrowserMatrixAutoArrangeStep() {
+    func applyBrowserMatrixAutoArrangeStep(stepScale: Double = 1.0) {
         let visibleCards = browserVisibleCardsInDocumentOrder()
         guard !visibleCards.isEmpty else { return }
 
@@ -449,11 +451,12 @@ extension WorkspaceViewModel {
                 continue
             }
 
-            let speed = min((browserMatrixSpeedByCardID[card.id] ?? 0.0) + 0.1, 0.5)
+            let speed = min((browserMatrixSpeedByCardID[card.id] ?? 0.0) + 0.1 * stepScale, 0.5)
             browserMatrixSpeedByCardID[card.id] = speed
+            let blend = 1 - pow(max(1 - speed, 0.0001), stepScale)
             let next = FrievePoint(
-                x: card.position.x * (1 - speed) + target.x * speed,
-                y: card.position.y * (1 - speed) + target.y * speed
+                x: card.position.x * (1 - blend) + target.x * blend,
+                y: card.position.y * (1 - blend) + target.y * blend
             )
             if next != card.position {
                 changed = true
@@ -472,7 +475,7 @@ extension WorkspaceViewModel {
         finalizeBrowserAutoArrangeMutation()
     }
 
-    func applyBrowserTreeAutoArrangeStep(ratio: Double = 1.0) {
+    func applyBrowserTreeAutoArrangeStep(stepScale: Double = 1.0, ratio: Double = 1.0) {
         let visibleCards = browserVisibleCardsInDocumentOrder()
         guard !visibleCards.isEmpty else { return }
 
@@ -480,6 +483,7 @@ extension WorkspaceViewModel {
         guard !targetPositions.isEmpty else { return }
 
         let draggedTargetID = hasActiveBrowserGesture ? selectedCardID : nil
+        let blend = 1 - pow(0.5, stepScale)
         var changed = false
         for card in visibleCards {
             guard let target = targetPositions[card.id] else { continue }
@@ -489,8 +493,8 @@ extension WorkspaceViewModel {
                 next = card.position
             } else {
                 next = FrievePoint(
-                    x: (target.x + card.position.x) * 0.5,
-                    y: (target.y + card.position.y) * 0.5
+                    x: card.position.x * (1 - blend) + target.x * blend,
+                    y: card.position.y * (1 - blend) + target.y * blend
                 )
             }
 
@@ -1038,7 +1042,6 @@ extension WorkspaceViewModel {
         lastMutationAt = Date()
         syncDocumentMetadataFromSettings()
         markBrowserSurfaceContentDirty()
-        markBrowserSurfacePresentationDirty()
     }
 
 func browseHelp() {

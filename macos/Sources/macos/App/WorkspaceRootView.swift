@@ -154,7 +154,6 @@ private struct CardListPane: View {
 private struct WorkspaceContentView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
     private let maintenanceTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
-    private let autoArrangeTimer = Timer.publish(every: 1.0 / 30.0, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -177,9 +176,6 @@ private struct WorkspaceContentView: View {
         }
         .onReceive(maintenanceTimer) { now in
             viewModel.performAutomaticMaintenance(now: now)
-        }
-        .onReceive(autoArrangeTimer) { _ in
-            viewModel.applyBrowserAutoArrangeStepIfNeeded()
         }
         .background(
             GeometryReader { geometry in
