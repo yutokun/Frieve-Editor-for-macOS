@@ -127,6 +127,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     private var lastSurfaceState: BrowserSurfaceState?
     private var lastSceneSnapshot: BrowserSurfaceSceneSnapshot?
     private var lastCanvasSize: CGSize = .zero
+    private var labelGroupOutlineLayers: [Int: CAShapeLayer] = [:]
     private var labelGroupTextFields: [Int: NSTextField] = [:]
 
     override init(frame frameRect: NSRect) {
@@ -492,6 +493,10 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         defer { CATransaction.commit() }
 
         let activeIDs = Set(groups.map(\.id))
+        for (id, layer) in labelGroupOutlineLayers where !activeIDs.contains(id) {
+            layer.removeFromSuperlayer()
+            labelGroupOutlineLayers.removeValue(forKey: id)
+        }
         for (id, field) in labelGroupTextFields where !activeIDs.contains(id) {
             field.removeFromSuperview()
             labelGroupTextFields.removeValue(forKey: id)
@@ -503,6 +508,25 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
                 .applying(transform)
                 .insetBy(dx: -14, dy: -14)
                 .integral
+
+            let outlineLayer = labelGroupOutlineLayers[snapshot.id] ?? {
+                let layer = CAShapeLayer()
+                layer.fillColor = NSColor.clear.cgColor
+                layer.lineJoin = .round
+                layer.lineWidth = 3
+                overlayView.layer?.addSublayer(layer)
+                labelGroupOutlineLayers[snapshot.id] = layer
+                return layer
+            }()
+            outlineLayer.frame = overlayView.bounds
+            outlineLayer.strokeColor = strokeColor.cgColor
+            outlineLayer.path = CGPath(
+                roundedRect: canvasRect,
+                cornerWidth: 14,
+                cornerHeight: 14,
+                transform: nil
+            )
+            outlineLayer.isHidden = false
 
             let pointSize = max(10, min(CGFloat(snapshot.labelSize) * 0.12, 22))
             let textField = labelGroupTextFields[snapshot.id] ?? {
