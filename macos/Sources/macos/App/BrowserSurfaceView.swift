@@ -329,6 +329,8 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
                 updateScene(updatedScene, canvasSize: canvasSize, mode: .cardsLinksAndText)
             } else if hoverChanged {
                 updateScene(updatedScene, canvasSize: canvasSize, mode: .cardsOnly)
+            } else {
+                updateScene(updatedScene, canvasSize: canvasSize, mode: .cardsOnly)
             }
         }
     }
