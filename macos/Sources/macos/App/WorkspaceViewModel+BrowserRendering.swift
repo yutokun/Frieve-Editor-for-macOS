@@ -199,23 +199,31 @@ extension WorkspaceViewModel {
 
     func color(for card: FrieveCard) -> Color {
         if let labelColor = metadata(for: card).primaryLabelColor {
-            return Color(frieveRGB: labelColor)
+            return browserCardFillColor(from: Color(frieveRGB: labelColor))
         }
 
         if card.isTop {
-            return Color.accentColor.opacity(0.20)
+            return browserCardFillColor(from: .accentColor)
         }
 
         let normalizedScore = max(min(card.score, 5.0), -5.0)
         if normalizedScore >= 0 {
-            return Color(red: 0.96 - normalizedScore * 0.03,
-                         green: 0.96,
-                         blue: 0.96 - normalizedScore * 0.08)
+            return browserCardFillColor(
+                from: Color(
+                    red: 0.56 - normalizedScore * 0.03,
+                    green: 0.67,
+                    blue: 0.56 - normalizedScore * 0.05
+                )
+            )
         }
 
-        return Color(red: 0.96,
-                     green: 0.95 + normalizedScore * 0.02,
-                     blue: 0.96 + normalizedScore * 0.05)
+        return browserCardFillColor(
+            from: Color(
+                red: 0.64,
+                green: 0.60 + normalizedScore * 0.02,
+                blue: 0.72 + normalizedScore * 0.05
+            )
+        )
     }
 
     func drawingColor(rawValue: Int?, fallback: Color) -> Color {
@@ -240,9 +248,22 @@ extension WorkspaceViewModel {
 
 extension Color {
     init(frieveRGB value: Int) {
-        let red = Double((value >> 16) & 0xFF) / 255.0
+        let red = Double(value & 0xFF) / 255.0
         let green = Double((value >> 8) & 0xFF) / 255.0
-        let blue = Double(value & 0xFF) / 255.0
+        let blue = Double((value >> 16) & 0xFF) / 255.0
         self.init(red: red, green: green, blue: blue)
     }
+}
+
+private func browserCardFillColor(from accent: Color) -> Color {
+    let accentRGB = (NSColor(accent).usingColorSpace(.deviceRGB) ?? NSColor(accent))
+    let referenceBackground = NSColor(
+        calibratedRed: 0.96,
+        green: 0.96,
+        blue: 0.95,
+        alpha: 1
+    )
+    let outlineLikeColor = accentRGB.blended(withFraction: 0.33, of: referenceBackground) ?? accentRGB
+    let fillColor = outlineLikeColor.blended(withFraction: 0.5, of: referenceBackground) ?? outlineLikeColor
+    return Color(nsColor: fillColor)
 }

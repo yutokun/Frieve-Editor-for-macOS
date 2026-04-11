@@ -326,7 +326,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
 
         labelGroupOverlayLayer.masksToBounds = false
 
-        overlayView.layer?.addSublayer(labelGroupOverlayLayer)
+        layer?.addSublayer(labelGroupOverlayLayer)
         overlayView.layer?.addSublayer(marqueeOverlayLayer)
         overlayView.layer?.addSublayer(linkPreviewLayer)
     }
@@ -378,13 +378,14 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         CATransaction.setDisableActions(true)
         defer { CATransaction.commit() }
 
-        labelGroupOverlayLayer.frame = overlayView.bounds
+        labelGroupOverlayLayer.frame = bounds
+
+        for (_, layer) in labelGroupShapeLayers {
+            layer.removeFromSuperlayer()
+        }
+        labelGroupShapeLayers.removeAll(keepingCapacity: true)
 
         let activeIDs = Set(groups.map(\.id))
-        for (id, layer) in labelGroupShapeLayers where !activeIDs.contains(id) {
-            layer.removeFromSuperlayer()
-            labelGroupShapeLayers.removeValue(forKey: id)
-        }
         for (id, field) in labelGroupTextFields where !activeIDs.contains(id) {
             field.removeFromSuperview()
             labelGroupTextFields.removeValue(forKey: id)
@@ -396,28 +397,6 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
                 .applying(transform)
                 .insetBy(dx: -14, dy: -14)
                 .integral
-            let cornerRadius = min(14, min(canvasRect.width, canvasRect.height) * 0.12)
-            let path = CGPath(
-                roundedRect: canvasRect,
-                cornerWidth: cornerRadius,
-                cornerHeight: cornerRadius,
-                transform: nil
-            )
-
-            let shapeLayer = labelGroupShapeLayers[snapshot.id] ?? {
-                let layer = CAShapeLayer()
-                layer.fillColor = nil
-                layer.lineJoin = .round
-                layer.lineCap = .round
-                layer.contentsScale = windowBackingScale
-                labelGroupOverlayLayer.addSublayer(layer)
-                labelGroupShapeLayers[snapshot.id] = layer
-                return layer
-            }()
-            shapeLayer.strokeColor = strokeColor.cgColor
-            shapeLayer.lineWidth = 3
-            shapeLayer.path = path
-            shapeLayer.isHidden = false
 
             let pointSize = max(10, min(CGFloat(snapshot.labelSize) * 0.12, 22))
             let textField = labelGroupTextFields[snapshot.id] ?? {
@@ -709,6 +688,22 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             width: 0.7,
             into: &vertices
         )
+        let transform = scene.worldToCanvasTransform
+        for snapshot in scene.labelGroups {
+            let strokeColor = NSColor(Color(frieveRGB: snapshot.color)).withAlphaComponent(0.72).rgbaVector
+            let canvasRect = snapshot.worldRect
+                .applying(transform)
+                .insetBy(dx: -14, dy: -14)
+                .integral
+            let cornerRadius = min(14, min(canvasRect.width, canvasRect.height) * 0.12)
+            let path = CGPath(
+                roundedRect: canvasRect,
+                cornerWidth: cornerRadius,
+                cornerHeight: cornerRadius,
+                transform: nil
+            )
+            appendStrokedPath(path, color: strokeColor, width: 3, into: &vertices)
+        }
         return vertices
     }
 
@@ -770,9 +765,9 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             let strokeColor = NSColor(viewModel.browserCardStrokeColor(for: snapshot.card, isSelected: snapshot.isSelected, isHovered: snapshot.isHovered)).rgbaVector
             let glowColor = NSColor(viewModel.browserCardGlow(for: snapshot.card, isSelected: snapshot.isSelected)).rgbaVector
             let shadowColor = NSColor(viewModel.browserCardShadow(for: snapshot.card, isSelected: snapshot.isSelected, isHovered: snapshot.isHovered)).rgbaVector
-            let shadowRadius: Float = snapshot.isSelected ? 12 : (snapshot.isHovered ? 10 : 8)
-            let shadowOffset = SIMD2<Float>(0, 3)
-            let padding = max(shadowRadius * 2 + abs(shadowOffset.y), 20)
+            let shadowRadius: Float = 0
+            let shadowOffset = SIMD2<Float>(0, 0)
+            let padding: Float = 6
             instances.append(
                 BrowserMetalCardInstance(
                     center: SIMD2(Float(center.x), Float(center.y)),
@@ -785,10 +780,10 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
                     strokeColor: strokeColor,
                     glowColor: glowColor,
                     shadowColor: shadowColor,
-                    strokeWidth: snapshot.isSelected ? 3 : (snapshot.isHovered ? 2 : 1),
-                    glowRadius: snapshot.isSelected ? 14 : (snapshot.card.hasMedia ? 9 : 6),
+                    strokeWidth: 1,
+                    glowRadius: 0,
                     shadowRadius: shadowRadius,
-                    shapeIndex: Int32(snapshot.card.normalizedShapeIndex),
+                    shapeIndex: Int32(browserCardVisualShapeIndex(for: snapshot.card)),
                     hasTexture: atlasEntry == nil ? 0 : 1,
                     padding: SIMD3<Float>(repeating: 0)
                 )
@@ -993,7 +988,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     }
 
     private func appendStrokedPath(_ path: CGPath, color: SIMD4<Float>, width: CGFloat, into vertices: inout [BrowserMetalColorVertex]) {
-        for polyline in path.flattenedPolylines() where polyline.count >= 2 {
+        for polyline in path.flattenedPolylines(includeClosedSubpaths: true) where polyline.count >= 2 {
             for (start, end) in zip(polyline, polyline.dropFirst()) {
                 appendSegment(from: start, to: end, width: width, color: color, into: &vertices)
             }

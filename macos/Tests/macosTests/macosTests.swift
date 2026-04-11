@@ -1,4 +1,6 @@
 import Foundation
+import AppKit
+import SwiftUI
 import Testing
 @testable import macos
 
@@ -31,6 +33,18 @@ import Testing
     #expect(decoded.card(withID: childID)?.score == 2.75)
     #expect(decoded.metadata["Language"] == "Japanese")
     #expect(decoded.metadata["Title"] == decoded.title)
+}
+
+@Test func windowsBGRColorValuesRenderWithExpectedChannels() async throws {
+    let red = NSColor(Color(frieveRGB: 0x0000FF)).usingColorSpace(.deviceRGB) ?? .black
+    #expect(red.redComponent > 0.99)
+    #expect(red.greenComponent < 0.01)
+    #expect(red.blueComponent < 0.01)
+
+    let blue = NSColor(Color(frieveRGB: 0xFF0000)).usingColorSpace(.deviceRGB) ?? .black
+    #expect(blue.redComponent < 0.01)
+    #expect(blue.greenComponent < 0.01)
+    #expect(blue.blueComponent > 0.99)
 }
 
 @Test func hierarchicalAndHTMLExportsContainCardContent() async throws {

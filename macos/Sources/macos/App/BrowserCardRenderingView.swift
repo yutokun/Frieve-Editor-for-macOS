@@ -50,8 +50,9 @@ struct BrowserCardRasterContentView: View {
     let drawingPreviewImage: NSImage?
 
     var body: some View {
+        let _ = (metadata, detailLevel, fillColor, previewImage, drawingPreviewImage)
         Text(card.title)
-            .font(.system(size: browserCardTitlePointSize(for: card), weight: .semibold))
+            .font(.system(size: browserCardTitlePointSize(for: card), weight: .medium))
             .foregroundStyle(.primary)
             .multilineTextAlignment(.leading)
             .lineLimit(3)
@@ -59,8 +60,6 @@ struct BrowserCardRasterContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(browserCardContentPadding(for: card))
             .frame(width: metadata.canvasSize.width, height: metadata.canvasSize.height, alignment: .topLeading)
-            .background(BrowserCardShape(shapeIndex: card.shape).fill(fillColor))
-            .clipShape(BrowserCardShape(shapeIndex: card.shape))
     }
 }
 

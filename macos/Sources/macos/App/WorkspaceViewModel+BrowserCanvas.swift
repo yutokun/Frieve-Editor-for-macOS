@@ -473,32 +473,25 @@ extension WorkspaceViewModel {
         if isSelected {
             return .accentColor
         }
-        if isHovered {
-            return .accentColor.opacity(0.55)
-        }
         if let labelColor = metadata(for: card).primaryLabelColor {
-            return Color(frieveRGB: labelColor).opacity(0.65)
+            return Color(frieveRGB: labelColor)
         }
-        return Color.secondary.opacity(0.2)
+        if card.isTop {
+            return isHovered ? .accentColor : .accentColor.opacity(0.85)
+        }
+        if isHovered {
+            return Color.secondary.opacity(0.55)
+        }
+        return Color.secondary.opacity(0.35)
     }
 
     func browserCardShadow(for card: FrieveCard, isSelected: Bool, isHovered: Bool) -> Color {
-        if isSelected {
-            return .black.opacity(0.18)
-        }
-        if isHovered || card.hasMedia {
-            return .black.opacity(0.12)
-        }
-        return .black.opacity(0.08)
+        _ = (card, isSelected, isHovered)
+        return .clear
     }
 
     func browserCardGlow(for card: FrieveCard, isSelected: Bool) -> Color {
-        if isSelected {
-            return .accentColor.opacity(0.12)
-        }
-        if cardHasDrawingPreview(card) {
-            return .accentColor.opacity(0.06)
-        }
+        _ = (card, isSelected)
         return .clear
     }
 

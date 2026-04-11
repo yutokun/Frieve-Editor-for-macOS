@@ -589,7 +589,7 @@ struct FrieveDocument: Codable, Hashable {
                 FrieveLabel(
                     id: 1,
                     name: "Overview",
-                    color: 0x2ECC71,
+                    color: 0x71CC2E,
                     enabled: true,
                     show: true,
                     hide: false,

@@ -2,9 +2,9 @@ import SwiftUI
 import AppKit
 import ImageIO
 
-private let browserCardBaseTitlePointSize: CGFloat = 17
-private let browserCardBaseContentPadding: CGFloat = 12
-private let browserCardBaseMaximumTextWidth: CGFloat = 220
+private let browserCardBaseTitlePointSize: CGFloat = 13
+private let browserCardBaseContentPadding: CGFloat = 8
+private let browserCardBaseMaximumTextWidth: CGFloat = 200
 
 func browserCardStoredSize(forStep step: Int) -> Int {
     let clampedStep = max(-8, min(step, 8))
@@ -35,7 +35,12 @@ func browserCardMaximumTextWidth(for card: FrieveCard) -> CGFloat {
 }
 
 func browserCardTitleNSFont(for card: FrieveCard) -> NSFont {
-    NSFont.systemFont(ofSize: browserCardTitlePointSize(for: card), weight: .semibold)
+    NSFont.systemFont(ofSize: browserCardTitlePointSize(for: card), weight: .medium)
+}
+
+func browserCardVisualShapeIndex(for card: FrieveCard) -> Int {
+    _ = card
+    return 0
 }
 
 extension WorkspaceViewModel {

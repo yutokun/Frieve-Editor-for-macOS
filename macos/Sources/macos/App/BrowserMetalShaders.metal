@@ -329,8 +329,10 @@ fragment float4 browserCardFragment(
     float distance = browserSignedDistance(contentPoint, halfContent, in.shapeIndex);
     float shadowDistance = browserSignedDistance(shadowPoint, halfContent, in.shapeIndex);
 
-    float fillAlpha = 1.0f - smoothstep(0.0f, 1.5f, distance);
-    float strokeBand = smoothstep(in.strokeWidth + 1.5f, in.strokeWidth, abs(distance));
+    float edgeAA = 0.5f;
+    float fillAlpha = 1.0f - smoothstep(-edgeAA, edgeAA, distance);
+    float strokeHalfWidth = max(in.strokeWidth * 0.5f, 0.5f);
+    float strokeBand = 1.0f - smoothstep(strokeHalfWidth - edgeAA, strokeHalfWidth + edgeAA, abs(distance));
     float glowBand = smoothstep(in.glowRadius + 1.5f, in.glowRadius * 0.35f, abs(distance));
     float shadowAlpha = (1.0f - smoothstep(in.shadowRadius, in.shadowRadius + 6.0f, shadowDistance)) * in.shadowColor.a;
 
@@ -339,7 +341,8 @@ fragment float4 browserCardFragment(
         float2 textureUV = clamp((contentPoint + halfContent) / max(in.contentSize, float2(1.0f)), 0.0f, 1.0f);
         float2 atlasUV = in.atlasUVOrigin + in.atlasUVSize * textureUV;
         float4 sampled = cardTexture.sample(textureSampler, atlasUV);
-        base = mix(in.fillColor, sampled, sampled.a);
+        base.rgb = mix(in.fillColor.rgb, sampled.rgb, sampled.a);
+        base.a = in.fillColor.a;
     }
 
     float4 color = float4(0.0f);
