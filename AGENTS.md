@@ -1,20 +1,19 @@
 # AGENTS.md
 
-!IMPORTANT!
-Since we are working on a project to port the Windows version to a Mac, do not edit the Windows version at all, just refer to it to make the Mac version.
-!IMPORTANT!
+This file provides guidance to AI coding agents when working with code in this repository.
 
-## Purpose
+## Important Rule
 
-This repository contains two platform-specific Frieve Editor implementations plus a shared file-format specification. Use this guide as the first stop before making changes.
+**Do not edit the Windows version.** This project is porting Windows → macOS. The `windows/` directory is reference-only.
 
-## Repository layout
+## Repository Structure
 
-- `windows/`: primary Windows application implemented with Embarcadero C++Builder / VCL.
-- `macos/`: macOS application implemented as a Swift Package with SwiftUI.
-- `shared/`: shared specifications and other cross-platform reference material.
+- `windows/` — Original Windows app (C++Builder / VCL). Reference only.
+- `macos/` — macOS port (Swift 6, SwiftUI, SwiftPM). Active development target.
+- `shared/` — Cross-platform format specs and sample documents.
+- `plans/` — Architecture and migration planning documents.
 
-## File organization and refactor direction
+## File Organization and Refactor Direction
 
 - Make file-organization decisions platform-first: prefer placing code under `windows/` or `macos/` based on the implementation that owns the behavior, and only use `shared/` for truly cross-platform specifications or reference material.
 - Use responsibility-based file ownership: each file or unit should have a narrow, durable reason to change, with document, session, settings, browser, timer, codec, and UI concerns owned by distinct files once they are non-trivial.
@@ -23,7 +22,7 @@ This repository contains two platform-specific Frieve Editor implementations plu
 - For Windows, keep VCL forms thin and focused on wiring and presentation. Move timer handling, document lifecycle, session state, browser integration, settings, and similar logic into dedicated units as they grow, rather than continuing to expand the main form files.
 - These organization rules do not relax the format-change requirements: any document format or serialization change still has to be coordinated across the shared spec and both platform implementations.
 
-## Where to start reading
+## Where to Start Reading
 
 ### Windows
 
@@ -41,12 +40,12 @@ This repository contains two platform-specific Frieve Editor implementations plu
 - Settings persistence: `macos/Sources/macos/App/AppSettings.swift`
 - File loading/saving codecs: `macos/Sources/macos/Model/DocumentCodecs.swift`
 
-### Shared format
+### Shared Format
 
 - Canonical shared FIP2 spec: `shared/format-specs/FIP2_FORMAT_SPEC.md`
 - Bundled macOS copy of the same spec: `macos/Sources/macos/Resources/FIP2_FORMAT_SPEC.md`
 
-## Platform-specific build and test workflow
+## Build & Test
 
 ### Windows
 
@@ -58,33 +57,60 @@ This repository contains two platform-specific Frieve Editor implementations plu
 
 ### macOS
 
-- Build and test from the `macos/` directory with SwiftPM.
-- Expected commands:
-  - `swift build`
-  - `swift test`
-- The package requires macOS 13+ and Swift tools 6.3 / Swift language mode 6.
+All commands run from the `macos/` directory:
 
-## Format-change rules
+```bash
+cd macos
+swift build          # Build the project
+swift run            # Run the app
+swift test           # Run all tests
+```
 
-If you change the FIP2 format or anything that affects document serialization, update all related locations together:
+Requires macOS 13+, Swift tools 6.3, Swift language mode 6.
 
+## Architecture (macOS)
+
+**App layer** (`macos/Sources/macos/App/`):
+- `FrieveEditorMacApp.swift` — App entry point
+- `WorkspaceViewModel.swift` — Central state management, split across extensions:
+  - `+DocumentActions` — File open/save/export
+  - `+BrowserInteraction` — Pan, zoom, drag, selection in the browser
+  - `+BrowserCanvas` — Coordinate transforms, viewport management
+  - `+BrowserRendering` — Card/link rendering pipeline
+  - `+Selection` — Card selection logic
+  - `+Support` — Utility helpers
+- `BrowserSurfaceView.swift` / `BrowserWorkspaceView.swift` — AppKit bridge views for the card browser (NSViewRepresentable)
+- `BrowserCardRenderingView.swift` — Card rendering within the browser
+- `BrowserMetalShaders.metal` — GPU shaders for browser rendering
+- `WorkspaceRootView.swift` — Main SwiftUI workspace layout
+- `WorkspacePanels.swift` — Side panel UI
+- `AppSettings.swift` — UserDefaults-backed settings persistence
+
+**Model layer** (`macos/Sources/macos/Model/`):
+- `FrieveDocument.swift` — Core document model
+- `DocumentCodecs.swift` / `DocumentFileCodec.swift` — Codec protocol and registration
+- `FIP2Codec.swift` — Current FIP2 format reader/writer
+- `LegacyFIPCodec.swift` — Legacy format support
+
+## Format-Change Rules
+
+When changing the FIP2 format or document serialization, update **all** of these together:
 1. `shared/format-specs/FIP2_FORMAT_SPEC.md`
 2. `macos/Sources/macos/Resources/FIP2_FORMAT_SPEC.md`
-3. `macos/Sources/macos/Model/DocumentCodecs.swift`
+3. `macos/Sources/macos/Model/` codec implementations
 4. Windows document parsing/saving code under `windows/src/utils/`
-5. Relevant macOS tests under `macos/Tests/`
+5. Relevant tests in `macos/Tests/macosTests/`
 
 Do not update only the spec or only one platform implementation.
 
-## Runtime behavior to remember while testing
+## Key Design Patterns
 
-- Windows has timer-driven auto-reload for externally modified files.
-- Windows also has auto-save based on idle time and minimum interval.
-- macOS stores equivalent defaults for auto-save and auto-reload in app settings.
+- The browser view uses AppKit (NSView) bridged into SwiftUI via NSViewRepresentable, with Metal shaders for rendering.
+- `WorkspaceViewModel` is the central @Observable state object, deliberately split across multiple extension files by responsibility.
+- Settings use `UserDefaults` via `AppSettings` (not a settings file).
+- The app supports auto-save and auto-reload; keep this in mind when testing document operations.
 
-When validating editing behavior, keep in mind that documents may reload or save automatically.
-
-## Configuration and localization
+## Configuration and Localization
 
 ### Windows
 
@@ -97,14 +123,14 @@ When validating editing behavior, keep in mind that documents may reload or save
 - User settings are stored in `UserDefaults` through `AppSettings`.
 - Recent files, GPT settings, language, and auto-save / auto-reload defaults are persisted there.
 
-## Environment and tooling caveats
+## Environment and Tooling Caveats
 
 - `windows/readme.md` says to open `src/feditor.cbprpj`, but the actual project file is `windows/src/feditor.cbproj`.
 - macOS tests include an absolute-path dependency on `/Users/yuto/SoftwareProjects/Frieve-Editor/windows/resource/help.fip`; this is environment-specific and may fail on other machines or CI.
 - `.vscode/` C/C++ settings are helpful for navigation, but they depend on Embarcadero include paths and should not be treated as the source of truth for the build.
 - `.vscode/settings.json` disables C/C++ error squiggles, so editor diagnostics alone are not reliable proof that the Windows code is clean.
 
-## Practical working rules for agents
+## Practical Working Rules
 
 1. Identify the target platform first. Windows and macOS are separate implementations, not a single shared codebase.
 2. Prefer changing existing files over inventing new structure.
