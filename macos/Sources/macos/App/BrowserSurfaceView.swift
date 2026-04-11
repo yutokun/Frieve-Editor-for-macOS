@@ -54,6 +54,9 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
 
     private func configure(_ view: BrowserSurfaceNSView) {
         view.viewModel = viewModel
+        viewModel.browserSurfaceViewportRefreshHandler = { [weak view] in
+            view?.refreshFromViewModel()
+        }
         view.onScroll = { deltaX, deltaY, location, modifiers in
             viewModel.handleScrollWheel(deltaX: deltaX, deltaY: deltaY, modifiers: modifiers, at: location, in: canvasSize)
         }
@@ -82,6 +85,7 @@ private final class BrowserOverlayHostView: NSView {
 
 @MainActor
 final class BrowserSurfaceNSView: BrowserInteractionNSView {
+    private let pointerDragActivationDistance: CGFloat = 4
     weak var viewModel: WorkspaceViewModel? {
         didSet { renderer.viewModel = viewModel }
     }
@@ -194,9 +198,11 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     override func mouseDragged(with event: NSEvent) {
         guard let viewModel, let mouseDownPoint else { return }
         let point = browserEventPoint(from: event)
-        if hypot(point.x - mouseDownPoint.x, point.y - mouseDownPoint.y) > 1 {
-            interactionDidDrag = true
+        let dragDistance = hypot(point.x - mouseDownPoint.x, point.y - mouseDownPoint.y)
+        if dragDistance < pointerDragActivationDistance {
+            return
         }
+        interactionDidDrag = true
 
         if let mouseDownCardID {
             viewModel.updateCardInteraction(cardID: mouseDownCardID, from: mouseDownPoint, to: point, in: bounds.size, modifiers: mouseDownModifiers)
@@ -261,6 +267,30 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         lastCanvasSize = canvasSize
         guard needsScene || sizeChanged else { return }
         updateScene(viewModel.browserSurfaceScene(in: canvasSize), canvasSize: canvasSize)
+    }
+
+    func refreshFromViewModel() {
+        guard let viewModel else { return }
+        let canvasSize = bounds.size
+        guard canvasSize.width > 0, canvasSize.height > 0 else { return }
+        let state = BrowserSurfaceState(
+            contentRevision: viewModel.browserSurfaceContentRevision,
+            viewportRevision: viewModel.browserSurfaceViewportRevision,
+            presentationRevision: viewModel.browserSurfacePresentationRevision,
+            hoverCardID: viewModel.browserHoverCardID,
+            selectedCardIDs: viewModel.selectedCardIDs,
+            inlineEditorCardID: viewModel.browserInlineEditorCardID,
+            marqueeStartPoint: viewModel.marqueeStartPoint,
+            marqueeCurrentPoint: viewModel.marqueeCurrentPoint,
+            linkPreviewSourceCardID: viewModel.linkPreviewSourceCardID,
+            linkPreviewCanvasPoint: viewModel.linkPreviewCanvasPoint,
+            linkLabelsVisible: viewModel.linkLabelsVisible,
+            labelRectanglesVisible: viewModel.labelRectanglesVisible,
+            canvasCenter: viewModel.canvasCenter,
+            zoom: viewModel.zoom,
+            viewportSummary: viewModel.browserViewportSummary(in: canvasSize)
+        )
+        updateSceneIfNeeded(state: state, canvasSize: canvasSize)
     }
 
     func updateScene(_ scene: BrowserSurfaceSceneSnapshot, canvasSize: CGSize) {

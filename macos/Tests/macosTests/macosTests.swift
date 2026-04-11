@@ -527,6 +527,39 @@ import Testing
     #expect(sizes.1.height >= sizes.0.height)
 }
 
+@Test func browserAutoScrollMovesCanvasTowardSelectedCard() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let result = await MainActor.run { () -> (FrievePoint, FrievePoint, FrievePoint) in
+        model.newDocument()
+        let rootID = model.document.sortedCards.first?.id ?? 0
+        let childID = model.document.addCard(title: "Child", linkedFrom: rootID)
+
+        model.document.updateCard(rootID) { card in
+            card.position = FrievePoint(x: 0.18, y: 0.22)
+        }
+        model.document.updateCard(childID) { card in
+            card.position = FrievePoint(x: 0.84, y: 0.76)
+        }
+        model.invalidateDocumentCaches()
+
+        model.canvasCenter = FrievePoint(x: 0.18, y: 0.22)
+        model.autoScroll = true
+        model.selectCard(childID)
+        let steppedCenter = model.canvasCenter
+        model.applyBrowserAutoScrollStepIfNeeded(at: CACurrentMediaTime() + 1.0)
+        let completedCenter = model.canvasCenter
+        let target = model.cardByID(childID)!.position
+        model.resetBrowserAutoScrollAnimation()
+        return (steppedCenter, completedCenter, target)
+    }
+
+    #expect(result.0.x > 0.18)
+    #expect(result.0.y > 0.22)
+    #expect(abs(result.1.x - result.2.x) < 0.0001)
+    #expect(abs(result.1.y - result.2.y) < 0.0001)
+}
+
 @Test func browserLinkSnapshotUsesWorldCoordinatesForMetalRenderer() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
     let canvasSize = CGSize(width: 1280, height: 840)

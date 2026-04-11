@@ -212,6 +212,7 @@ extension WorkspaceViewModel {
         browserGestureMode = nil
         marqueeStartPoint = nil
         marqueeCurrentPoint = nil
+        suspendBrowserAutoScroll()
     }
 
     func beginCardInteraction(cardID: Int, modifiers: NSEvent.ModifierFlags) {
@@ -285,6 +286,7 @@ extension WorkspaceViewModel {
             x: canvasCenter.x - Double(horizontalDelta) / scale,
             y: canvasCenter.y - Double(deltaY) / scale
         )
+        suspendBrowserAutoScroll()
         markBrowserSurfaceViewportDirty()
     }
 
@@ -320,6 +322,7 @@ extension WorkspaceViewModel {
 
         dragOriginByCardID.removeAll()
         currentDragTranslation = nil
+        suspendBrowserAutoScroll()
         markBrowserSurfaceContentDirty()
         markBrowserSurfacePresentationDirty()
         clearCanvasTransientState()

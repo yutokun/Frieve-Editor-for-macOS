@@ -87,8 +87,7 @@ extension WorkspaceViewModel {
         document.focusedCardID = selectedCardID
         document.touchFocusedCard()
         if autoScroll, let card = cardByID(selectedCardID) {
-            canvasCenter = card.position
-            markBrowserSurfaceViewportDirty()
+            startBrowserAutoScroll(toward: card.position)
         }
         markBrowserSurfacePresentationDirty()
     }
@@ -98,6 +97,7 @@ extension WorkspaceViewModel {
         selectedCardID = nil
         browserInlineEditorCardID = nil
         document.focusedCardID = nil
+        resetBrowserAutoScrollAnimation()
         markBrowserSurfacePresentationDirty()
     }
 
@@ -154,8 +154,12 @@ extension WorkspaceViewModel {
 
     func focusBrowser(on cardID: Int) {
         guard let card = cardByID(cardID) else { return }
-        canvasCenter = card.position
-        markBrowserSurfaceViewportDirty()
+        if autoScroll {
+            startBrowserAutoScroll(toward: card.position)
+        } else {
+            canvasCenter = card.position
+            markBrowserSurfaceViewportDirty()
+        }
         statusMessage = "Centered browser on \(card.title)"
     }
 }

@@ -2,6 +2,128 @@ import SwiftUI
 import AppKit
 
 extension WorkspaceViewModel {
+    private var browserAutoScrollDuration: CFTimeInterval { 0.28 }
+
+    func ensureBrowserAutoScrollTimer() {
+        guard browserAutoScrollTimer == nil else { return }
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor in
+                self.applyBrowserAutoScrollStepIfNeeded()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        browserAutoScrollTimer = timer
+    }
+
+    func stopBrowserAutoScrollTimer() {
+        browserAutoScrollTimer?.invalidate()
+        browserAutoScrollTimer = nil
+    }
+
+    func startBrowserAutoScroll(toward targetCenter: FrievePoint) {
+        let now = CACurrentMediaTime()
+        browserAutoScrollStartCenter = canvasCenter
+        browserAutoScrollTargetCenter = targetCenter
+        browserAutoScrollStartedAt = now - (1.0 / 60.0)
+        browserAutoScrollSuspendedUntil = 0
+        ensureBrowserAutoScrollTimer()
+        applyBrowserAutoScrollStepIfNeeded(at: now)
+        markBrowserSurfaceViewportDirty()
+    }
+
+    func prepareBrowserAutoScrollForSelectionChange() {
+        if let selectedCard {
+            startBrowserAutoScroll(toward: selectedCard.position)
+        } else {
+            resetBrowserAutoScrollAnimation()
+        }
+    }
+
+    func resetBrowserAutoScrollAnimation() {
+        browserAutoScrollStartCenter = nil
+        browserAutoScrollTargetCenter = nil
+        browserAutoScrollStartedAt = nil
+        browserAutoScrollSuspendedUntil = 0
+        stopBrowserAutoScrollTimer()
+    }
+
+    func suspendBrowserAutoScroll(for duration: CFTimeInterval = 0.5, at timestamp: CFTimeInterval = CACurrentMediaTime()) {
+        browserAutoScrollStartCenter = nil
+        browserAutoScrollTargetCenter = nil
+        browserAutoScrollStartedAt = nil
+        browserAutoScrollSuspendedUntil = max(browserAutoScrollSuspendedUntil, timestamp + duration)
+        if autoScroll {
+            ensureBrowserAutoScrollTimer()
+        }
+    }
+
+    func applyBrowserAutoScrollStepIfNeeded(at timestamp: CFTimeInterval = CACurrentMediaTime()) {
+        guard selectedTab == .browser else {
+            resetBrowserAutoScrollAnimation()
+            return
+        }
+        guard autoScroll, let selectedCard else {
+            resetBrowserAutoScrollAnimation()
+            return
+        }
+        guard !hasActiveBrowserGesture else {
+            browserAutoScrollStartCenter = nil
+            browserAutoScrollTargetCenter = nil
+            browserAutoScrollStartedAt = nil
+            return
+        }
+        guard timestamp >= browserAutoScrollSuspendedUntil else { return }
+
+        let selectedTargetCenter = selectedCard.position
+        if browserAutoScrollTargetCenter != selectedTargetCenter || browserAutoScrollStartCenter == nil || browserAutoScrollStartedAt == nil {
+            browserAutoScrollStartCenter = canvasCenter
+            browserAutoScrollTargetCenter = selectedTargetCenter
+            browserAutoScrollStartedAt = timestamp - (1.0 / 60.0)
+        }
+        guard let startCenter = browserAutoScrollStartCenter,
+              let targetCenter = browserAutoScrollTargetCenter,
+              let startedAt = browserAutoScrollStartedAt else {
+            return
+        }
+
+        let deltaX = targetCenter.x - startCenter.x
+        let deltaY = targetCenter.y - startCenter.y
+        let distanceSquared = deltaX * deltaX + deltaY * deltaY
+        if distanceSquared <= 0.00000025 {
+            if canvasCenter != targetCenter {
+                canvasCenter = targetCenter
+                markBrowserSurfaceViewportDirty()
+            }
+            browserAutoScrollStartCenter = nil
+            browserAutoScrollStartedAt = nil
+            if !browserAutoArrangeEnabled {
+                stopBrowserAutoScrollTimer()
+            }
+            return
+        }
+
+        let rawProgress = min(max((timestamp - startedAt) / browserAutoScrollDuration, 0), 1)
+        let easedProgress = 1 - pow(1 - rawProgress, 3)
+        let nextCenter = FrievePoint(
+            x: startCenter.x + deltaX * easedProgress,
+            y: startCenter.y + deltaY * easedProgress
+        )
+        if canvasCenter != nextCenter {
+            canvasCenter = nextCenter
+        }
+        markBrowserSurfaceViewportDirty()
+
+        if rawProgress >= 1 {
+            canvasCenter = targetCenter
+            browserAutoScrollStartCenter = nil
+            browserAutoScrollStartedAt = nil
+            if !browserAutoArrangeEnabled {
+                stopBrowserAutoScrollTimer()
+            }
+        }
+    }
+
     func performAutomaticMaintenance(now: Date = Date()) {
         if settings.autoReloadDefault {
             reloadDocumentFromDiskIfNeeded(now: now)
@@ -32,6 +154,7 @@ extension WorkspaceViewModel {
 
     func markBrowserSurfaceViewportDirty() {
         browserSurfaceViewportRevision &+= 1
+        browserSurfaceViewportRefreshHandler?()
     }
 
     func setBrowserLinkLabelsVisible(_ isVisible: Bool) {
@@ -58,6 +181,7 @@ extension WorkspaceViewModel {
         let minDimension = max(min(size.width, size.height), 1)
         browserBaseScaleFactor = max(Double(fittedScale) / Double(minDimension), 0.05)
         zoom = 1.0
+        suspendBrowserAutoScroll()
         markBrowserSurfaceViewportDirty()
         clearCanvasTransientState()
     }
@@ -643,6 +767,7 @@ extension WorkspaceViewModel {
             x: bounds.minX + Double(location.x / max(overviewSize.width, 1)) * bounds.width,
             y: bounds.minY + Double(location.y / max(overviewSize.height, 1)) * bounds.height
         )
+        suspendBrowserAutoScroll()
         markBrowserSurfaceViewportDirty()
     }
 
@@ -659,6 +784,7 @@ extension WorkspaceViewModel {
         let minDimension = max(min(size.width, size.height), 1)
         browserBaseScaleFactor = max(Double(fittedScale) / Double(minDimension), 0.05)
         zoom = 1.0
+        suspendBrowserAutoScroll()
         markBrowserSurfaceViewportDirty()
     }
 
@@ -671,6 +797,7 @@ extension WorkspaceViewModel {
             x: worldAnchor.x - Double(anchorPoint.x - size.width / 2) / scale,
             y: worldAnchor.y - Double(anchorPoint.y - size.height / 2) / scale
         )
+        suspendBrowserAutoScroll()
         markBrowserSurfaceViewportDirty()
     }
 
@@ -684,6 +811,7 @@ extension WorkspaceViewModel {
             gestureZoomStart = zoom
         }
         zoom = min(max((gestureZoomStart ?? 1.0) * Double(value), 0.2), 6.0)
+        suspendBrowserAutoScroll()
         markBrowserSurfaceViewportDirty()
     }
 

@@ -234,7 +234,15 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var searchQuery: String = ""
 @Published var statusMessage: String = "Ready"
     @Published var zoom: Double = 1.0
-    @Published var autoScroll: Bool = false
+    @Published var autoScroll: Bool = false {
+        didSet {
+            if autoScroll {
+                prepareBrowserAutoScrollForSelectionChange()
+            } else {
+                resetBrowserAutoScrollAnimation()
+            }
+        }
+    }
     @Published var autoZoom: Bool = true
     @Published var linkLabelsVisible: Bool = true
     @Published var labelRectanglesVisible: Bool = true
@@ -322,6 +330,12 @@ final class WorkspaceViewModel: ObservableObject {
     var browserMatrixTargetByCardID: [Int: FrievePoint] = [:]
     var browserMatrixSpeedByCardID: [Int: Double] = [:]
     var browserActiveArrangeMode: String?
+    var browserAutoScrollStartCenter: FrievePoint?
+    var browserAutoScrollTargetCenter: FrievePoint?
+    var browserAutoScrollStartedAt: CFTimeInterval?
+    var browserAutoScrollSuspendedUntil: CFTimeInterval = 0
+    var browserAutoScrollTimer: Timer?
+    var browserSurfaceViewportRefreshHandler: (() -> Void)?
 
     var documentCacheVersion: Int = 0
     var cachedDocumentCacheVersion: Int = -1
