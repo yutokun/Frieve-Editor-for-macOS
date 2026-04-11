@@ -29,6 +29,7 @@ private struct BrowserLayerSurfaceView: View {
     var body: some View {
         GeometryReader { proxy in
             let canvasSize = proxy.size
+            let _ = viewModel.browserChromeRevision
             ZStack {
                 BrowserSurfaceRepresentable(viewModel: viewModel, canvasSize: canvasSize)
 
@@ -84,9 +85,6 @@ private struct BrowserLayerSurfaceView: View {
             }
             .onChange(of: viewModel.browserViewportRevision) { _ in
                 viewModel.resetCanvasToFit(in: canvasSize)
-            }
-            .onChange(of: viewModel.browserSurfaceViewportRevision) { _ in
-                browserFocused = browserFocused || viewModel.selectedTab == .browser
             }
         }
     }

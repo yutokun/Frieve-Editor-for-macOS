@@ -140,21 +140,64 @@ extension WorkspaceViewModel {
 
     func requestBrowserFit() {
         browserViewportRevision += 1
+        scheduleBrowserChromeRefresh(immediate: true)
     }
 
     func markBrowserSurfaceContentDirty() {
         browserSurfaceContentRevision &+= 1
         cachedBrowserSurfaceContentKey = nil
         cachedBrowserSurfaceContent = nil
+        browserSurfaceContentRefreshHandler?()
+        scheduleBrowserChromeRefresh()
     }
 
     func markBrowserSurfacePresentationDirty() {
         browserSurfacePresentationRevision &+= 1
+        browserSurfacePresentationRefreshHandler?()
+        scheduleBrowserChromeRefresh()
     }
 
     func markBrowserSurfaceViewportDirty() {
         browserSurfaceViewportRevision &+= 1
         browserSurfaceViewportRefreshHandler?()
+        scheduleBrowserChromeRefresh()
+    }
+
+    func scheduleBrowserChromeRefresh(immediate: Bool = false, minimumInterval: CFTimeInterval? = nil) {
+        browserPendingChromeRefreshWorkItem?.cancel()
+        let now = CACurrentMediaTime()
+        let resolvedMinimumInterval = minimumInterval ?? (browserInteractionModeEnabled ? 1.0 / 6.0 : 1.0 / 12.0)
+        let publish: () -> Void = { [weak self] in
+            guard let self else { return }
+            self.browserLastChromeRefreshAt = CACurrentMediaTime()
+            self.browserChromeRevision &+= 1
+            self.browserPendingChromeRefreshWorkItem = nil
+        }
+        if immediate || now - browserLastChromeRefreshAt >= resolvedMinimumInterval {
+            publish()
+            return
+        }
+        let delay = resolvedMinimumInterval - (now - browserLastChromeRefreshAt)
+        let workItem = DispatchWorkItem(block: publish)
+        browserPendingChromeRefreshWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)
+    }
+
+    func markBrowserInteractionActivity(duration: CFTimeInterval = 0.18) {
+        if !browserInteractionModeEnabled {
+            browserInteractionModeEnabled = true
+            browserInteractionModeRefreshHandler?(true)
+        }
+        browserInteractionModeWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.browserInteractionModeEnabled = false
+            self.browserInteractionModeWorkItem = nil
+            self.browserInteractionModeRefreshHandler?(false)
+            self.scheduleBrowserChromeRefresh(immediate: true)
+        }
+        browserInteractionModeWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: workItem)
     }
 
     func setBrowserLinkLabelsVisible(_ isVisible: Bool) {
@@ -379,24 +422,53 @@ extension WorkspaceViewModel {
             dx: -Double(canvasPadding) / sceneScale,
             dy: -Double(canvasPadding) / sceneScale
         )
-        let visibleCards = visibleSortedCards().filter { card in
-            paddedVisible.intersects(cardWorldFrame(for: card, in: size))
-        }
-        let cards = visibleCards.map { card in
-            BrowserCardLayerSnapshot(
-                card: card,
-                position: currentPosition(for: card),
-                metadata: metadata(for: card),
-                isSelected: selectedCardIDs.contains(card.id),
-                isHovered: browserHoverCardID == card.id,
-                detailLevel: detailLevel
+        var visibleCards: [FrieveCard] = []
+        visibleCards.reserveCapacity(64)
+        var cards: [BrowserCardLayerSnapshot] = []
+        cards.reserveCapacity(64)
+        var hitRegions: [BrowserCardHitRegion] = []
+        hitRegions.reserveCapacity(64)
+        var visibleCardWorldFrames: [Int: CGRect] = [:]
+        visibleCardWorldFrames.reserveCapacity(64)
+
+        for card in visibleSortedCards() {
+            let position = currentPosition(for: card)
+            let metadata = metadata(for: card)
+            let worldFrame = browserWorldFrame(position: position, canvasSize: metadata.canvasSize, scale: sceneScale)
+            guard paddedVisible.intersects(worldFrame) else { continue }
+            visibleCards.append(card)
+            visibleCardWorldFrames[card.id] = worldFrame
+            cards.append(
+                BrowserCardLayerSnapshot(
+                    card: card,
+                    position: position,
+                    metadata: metadata,
+                    isSelected: selectedCardIDs.contains(card.id),
+                    isHovered: browserHoverCardID == card.id,
+                    detailLevel: detailLevel
+                )
+            )
+            let center = canvasPoint(for: position, in: size)
+            hitRegions.append(
+                BrowserCardHitRegion(
+                    cardID: card.id,
+                    frame: CGRect(
+                        x: center.x - metadata.canvasSize.width / 2,
+                        y: center.y - metadata.canvasSize.height / 2,
+                        width: metadata.canvasSize.width,
+                        height: metadata.canvasSize.height
+                    )
+                )
             )
         }
-        let hitRegions = visibleCards.map { BrowserCardHitRegion(cardID: $0.id, frame: cardFrame(for: $0, in: size)) }
         let visibleCardIDs = Set(cards.map { $0.id })
         let links = visibleLinkLayerSnapshots(in: size, visibleCardIDs: visibleCardIDs)
         let labelGroups = labelRectanglesVisible
-            ? visibleBrowserLabelGroupSnapshots(in: size, visibleWorldRect: paddedVisible)
+            ? visibleBrowserLabelGroupSnapshots(
+                visibleCards: visibleCards,
+                visibleCardWorldFrames: visibleCardWorldFrames,
+                clipRect: paddedVisible
+            )
             : []
         let entry = BrowserSurfaceContentCacheEntry(
             coverageRect: paddedVisible,
@@ -548,17 +620,19 @@ extension WorkspaceViewModel {
         }
     }
 
-    func visibleBrowserLabelGroupSnapshots(in size: CGSize, visibleWorldRect: CGRect? = nil) -> [BrowserLabelGroupLayerSnapshot] {
-        let clipRect = visibleWorldRect ?? self.visibleWorldRect(in: size)
-        let cards = visibleSortedCards()
-        guard !cards.isEmpty else { return [] }
+    func visibleBrowserLabelGroupSnapshots(
+        visibleCards: [FrieveCard],
+        visibleCardWorldFrames: [Int: CGRect],
+        clipRect: CGRect
+    ) -> [BrowserLabelGroupLayerSnapshot] {
+        guard !visibleCards.isEmpty else { return [] }
 
         return document.cardLabels.compactMap { label in
             guard label.enabled, !label.fold else { return nil }
 
             var worldBounds: CGRect?
-            for card in cards where card.labelIDs.contains(label.id) {
-                let frame = cardWorldFrame(for: card, in: size)
+            for card in visibleCards where card.labelIDs.contains(label.id) {
+                guard let frame = visibleCardWorldFrames[card.id] else { continue }
                 worldBounds = worldBounds.map { $0.union(frame) } ?? frame
             }
 
@@ -582,6 +656,17 @@ extension WorkspaceViewModel {
             y: center.y - cardSize.height / 2,
             width: cardSize.width,
             height: cardSize.height
+        )
+    }
+
+    private func browserWorldFrame(position: FrievePoint, canvasSize: CGSize, scale: Double) -> CGRect {
+        let worldWidth = Double(canvasSize.width) / scale
+        let worldHeight = Double(canvasSize.height) / scale
+        return CGRect(
+            x: position.x - worldWidth / 2,
+            y: position.y - worldHeight / 2,
+            width: worldWidth,
+            height: worldHeight
         )
     }
 

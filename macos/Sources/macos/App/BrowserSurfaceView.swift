@@ -54,6 +54,16 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
 
     private func configure(_ view: BrowserSurfaceNSView) {
         view.viewModel = viewModel
+        view.updateInteractionMode(viewModel.browserInteractionModeEnabled)
+        viewModel.browserInteractionModeRefreshHandler = { [weak view] isEnabled in
+            view?.updateInteractionMode(isEnabled)
+        }
+        viewModel.browserSurfaceContentRefreshHandler = { [weak view] in
+            view?.refreshFromViewModel()
+        }
+        viewModel.browserSurfacePresentationRefreshHandler = { [weak view] in
+            view?.refreshFromViewModel()
+        }
         viewModel.browserSurfaceViewportRefreshHandler = { [weak view] in
             view?.refreshFromViewModel()
         }
@@ -83,6 +93,12 @@ private final class BrowserOverlayHostView: NSView {
     override var isFlipped: Bool { true }
 }
 
+private enum BrowserSceneUpdateMode {
+    case full
+    case cardsOnly
+    case cardsLinksAndText
+}
+
 @MainActor
 final class BrowserSurfaceNSView: BrowserInteractionNSView {
     private let pointerDragActivationDistance: CGFloat = 4
@@ -104,6 +120,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     private var currentHitRegions: [BrowserCardHitRegion] = []
     private var lastOverlaySignature: Int?
     private var lastSurfaceState: BrowserSurfaceState?
+    private var lastSceneSnapshot: BrowserSurfaceSceneSnapshot?
     private var lastCanvasSize: CGSize = .zero
     private var labelGroupTextFields: [Int: NSTextField] = [:]
 
@@ -168,7 +185,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     override func mouseMoved(with event: NSEvent) {
         guard let viewModel else { return }
         let point = browserEventPoint(from: event)
-        viewModel.setBrowserHoverCard(cardID(atCanvasPoint: point) ?? viewModel.hitTestCard(at: point, in: bounds.size)?.id)
+        viewModel.setBrowserHoverCard(cardID(atCanvasPoint: point))
     }
 
     override func mouseExited(with event: NSEvent) {
@@ -180,7 +197,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         let point = browserEventPoint(from: event)
         mouseDownPoint = point
         mouseDownModifiers = event.modifierFlags
-        mouseDownCardID = cardID(atCanvasPoint: point) ?? viewModel?.hitTestCard(at: point, in: bounds.size)?.id
+        mouseDownCardID = cardID(atCanvasPoint: point)
         interactionDidDrag = false
 
         if event.clickCount == 2 {
@@ -230,12 +247,13 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         }
 
         if !interactionDidDrag {
-            viewModel.setBrowserHoverCard(cardID(atCanvasPoint: point) ?? viewModel.hitTestCard(at: point, in: bounds.size)?.id)
+            viewModel.setBrowserHoverCard(cardID(atCanvasPoint: point))
         }
     }
 
     override func magnify(with event: NSEvent) {
         guard let viewModel else { return }
+        viewModel.markBrowserInteractionActivity()
         let location = browserEventPoint(from: event)
         let factor = max(0.2, 1.0 + event.magnification)
         viewModel.zoom(by: factor, anchor: location, in: bounds.size)
@@ -243,28 +261,52 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
 
     func updateSceneIfNeeded(state: BrowserSurfaceState, canvasSize: CGSize) {
         guard let viewModel else { return }
-        let needsScene = lastSurfaceState.map {
+        let lastState = lastSurfaceState
+        let contentChanged = lastState.map {
             $0.contentRevision != state.contentRevision ||
+            $0.linkLabelsVisible != state.linkLabelsVisible ||
+            $0.labelRectanglesVisible != state.labelRectanglesVisible
+        } ?? true
+        let viewportChanged = lastState.map {
             $0.viewportRevision != state.viewportRevision ||
-            $0.presentationRevision != state.presentationRevision ||
-            $0.hoverCardID != state.hoverCardID ||
-            $0.selectedCardIDs != state.selectedCardIDs ||
-            $0.inlineEditorCardID != state.inlineEditorCardID ||
             $0.marqueeStartPoint != state.marqueeStartPoint ||
             $0.marqueeCurrentPoint != state.marqueeCurrentPoint ||
             $0.linkPreviewSourceCardID != state.linkPreviewSourceCardID ||
             $0.linkPreviewCanvasPoint != state.linkPreviewCanvasPoint ||
-            $0.linkLabelsVisible != state.linkLabelsVisible ||
-            $0.labelRectanglesVisible != state.labelRectanglesVisible ||
             $0.canvasCenter != state.canvasCenter ||
             $0.zoom != state.zoom ||
             $0.viewportSummary != state.viewportSummary
         } ?? true
+        let hoverChanged = lastState.map { $0.hoverCardID != state.hoverCardID } ?? true
+        let selectionChanged = lastState.map { $0.selectedCardIDs != state.selectedCardIDs } ?? true
+        let inlineEditorChanged = lastState.map { $0.inlineEditorCardID != state.inlineEditorCardID } ?? true
+        let presentationChanged = lastState.map { $0.presentationRevision != state.presentationRevision } ?? true
         let sizeChanged = lastCanvasSize != canvasSize
         lastSurfaceState = state
         lastCanvasSize = canvasSize
-        guard needsScene || sizeChanged else { return }
-        updateScene(viewModel.browserSurfaceScene(in: canvasSize), canvasSize: canvasSize)
+        guard contentChanged || viewportChanged || presentationChanged || sizeChanged || hoverChanged || selectionChanged || inlineEditorChanged else { return }
+
+        if contentChanged || viewportChanged || sizeChanged || lastSceneSnapshot == nil {
+            let scene = viewModel.browserSurfaceScene(in: canvasSize)
+            lastSceneSnapshot = scene
+            updateScene(scene, canvasSize: canvasSize, mode: .full)
+            return
+        }
+
+        if presentationChanged, let scene = lastSceneSnapshot {
+            let updatedScene = presentationScene(
+                from: scene,
+                state: state,
+                updateCards: hoverChanged || selectionChanged,
+                updateLinks: selectionChanged
+            )
+            lastSceneSnapshot = updatedScene
+            if selectionChanged {
+                updateScene(updatedScene, canvasSize: canvasSize, mode: .cardsLinksAndText)
+            } else if hoverChanged {
+                updateScene(updatedScene, canvasSize: canvasSize, mode: .cardsOnly)
+            }
+        }
     }
 
     func refreshFromViewModel() {
@@ -291,21 +333,23 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         updateSceneIfNeeded(state: state, canvasSize: canvasSize)
     }
 
-    func updateScene(_ scene: BrowserSurfaceSceneSnapshot, canvasSize: CGSize) {
+    private func updateScene(_ scene: BrowserSurfaceSceneSnapshot, canvasSize: CGSize, mode: BrowserSceneUpdateMode) {
         let updateStart = CACurrentMediaTime()
         layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
         layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.10).cgColor
         layer?.borderWidth = 0.5
         currentHitRegions = scene.hitRegions
 
-        renderer.updateScene(scene)
+        renderer.updateScene(scene, mode: mode)
         metalView.draw()
 
-        if lastOverlaySignature != scene.overlaySignature {
+        if mode == .full, lastOverlaySignature != scene.overlaySignature {
             applyOverlay(scene.overlay)
             lastOverlaySignature = scene.overlaySignature
         }
-        applyLabelGroups(scene.labelGroups, transform: scene.worldToCanvasTransform)
+        if mode == .full {
+            applyLabelGroups(scene.labelGroups, transform: scene.worldToCanvasTransform)
+        }
         viewModel?.recordPerformanceMetric(updateStart, keyPath: \BrowserPerformanceSnapshot.surfaceApply)
     }
 
@@ -354,6 +398,25 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
 
         overlayView.layer?.addSublayer(marqueeOverlayLayer)
         overlayView.layer?.addSublayer(linkPreviewLayer)
+    }
+
+    func updateInteractionMode(_ isEnabled: Bool) {
+        if isEnabled {
+            if metalView.enableSetNeedsDisplay {
+                metalView.enableSetNeedsDisplay = false
+            }
+            if metalView.isPaused {
+                metalView.isPaused = false
+            }
+        } else {
+            if !metalView.enableSetNeedsDisplay {
+                metalView.enableSetNeedsDisplay = true
+            }
+            if !metalView.isPaused {
+                metalView.isPaused = true
+            }
+            metalView.draw()
+        }
     }
 
     private var windowBackingScale: CGFloat {
@@ -449,6 +512,54 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
             ).integral
             textField.isHidden = false
         }
+    }
+
+    private func presentationScene(
+        from scene: BrowserSurfaceSceneSnapshot,
+        state: BrowserSurfaceState,
+        updateCards: Bool,
+        updateLinks: Bool
+    ) -> BrowserSurfaceSceneSnapshot {
+        guard let viewModel else { return scene }
+        let selectedCardIDs = state.selectedCardIDs
+        let cards = updateCards ? scene.cards.map { snapshot in
+            BrowserCardLayerSnapshot(
+                card: snapshot.card,
+                position: snapshot.position,
+                metadata: snapshot.metadata,
+                isSelected: selectedCardIDs.contains(snapshot.id),
+                isHovered: state.hoverCardID == snapshot.id,
+                detailLevel: snapshot.detailLevel
+            )
+        } : scene.cards
+        let links = updateLinks ? scene.links.map { snapshot in
+            BrowserLinkLayerSnapshot(
+                id: snapshot.id,
+                fromCardID: snapshot.fromCardID,
+                toCardID: snapshot.toCardID,
+                startPoint: snapshot.startPoint,
+                endPoint: snapshot.endPoint,
+                shapeIndex: snapshot.shapeIndex,
+                directionVisible: snapshot.directionVisible,
+                labelPoint: snapshot.labelPoint,
+                labelText: snapshot.labelText,
+                isHighlighted: selectedCardIDs.contains(snapshot.fromCardID) || selectedCardIDs.contains(snapshot.toCardID)
+            )
+        } : scene.links
+        return BrowserSurfaceSceneSnapshot(
+            canvasSize: scene.canvasSize,
+            worldToCanvasTransform: scene.worldToCanvasTransform,
+            backgroundGuidePath: scene.backgroundGuidePath,
+            cards: cards,
+            cardSnapshotSignature: updateCards ? viewModel.browserCardSnapshotSignature(cards) : scene.cardSnapshotSignature,
+            links: links,
+            linkSnapshotSignature: updateLinks ? viewModel.browserLinkSnapshotSignature(links) : scene.linkSnapshotSignature,
+            labelGroups: scene.labelGroups,
+            hitRegions: scene.hitRegions,
+            overlay: scene.overlay,
+            overlaySignature: scene.overlaySignature,
+            viewportSummary: scene.viewportSummary
+        )
     }
 }
 
@@ -574,9 +685,18 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         metalView.delegate = self
     }
 
-    func updateScene(_ scene: BrowserSurfaceSceneSnapshot) {
+    fileprivate func updateScene(_ scene: BrowserSurfaceSceneSnapshot, mode: BrowserSceneUpdateMode) {
         self.scene = scene
-        rebuildResources()
+        switch mode {
+        case .full:
+            rebuildResources()
+        case .cardsOnly:
+            rebuildCardResources(for: scene)
+        case .cardsLinksAndText:
+            rebuildLinkResources(for: scene)
+            rebuildCardResources(for: scene)
+            rebuildTextResources(for: scene)
+        }
     }
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -685,7 +805,11 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         if solidVertices.isEmpty {
             solidVertexBuffer = nil
         } else {
-            solidVertexBuffer = device.makeBuffer(bytes: solidVertices, length: MemoryLayout<BrowserMetalColorVertex>.stride * solidVertices.count)
+            updateBuffer(
+                &solidVertexBuffer,
+                with: solidVertices,
+                minimumLength: MemoryLayout<BrowserMetalColorVertex>.stride * solidVertices.count
+            )
         }
         desiredAtlasKeys.removeAll(keepingCapacity: true)
         rebuildLabelGroupResources(for: scene)
@@ -701,7 +825,11 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         if labelGroupInstances.isEmpty {
             labelGroupInstanceBuffer = nil
         } else {
-            labelGroupInstanceBuffer = device.makeBuffer(bytes: labelGroupInstances, length: MemoryLayout<BrowserMetalLabelGroupInstance>.stride * labelGroupInstances.count)
+            updateBuffer(
+                &labelGroupInstanceBuffer,
+                with: labelGroupInstances,
+                minimumLength: MemoryLayout<BrowserMetalLabelGroupInstance>.stride * labelGroupInstances.count
+            )
         }
     }
 
@@ -725,7 +853,11 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         if linkInstances.isEmpty {
             linkInstanceBuffer = nil
         } else {
-            linkInstanceBuffer = device.makeBuffer(bytes: linkInstances, length: MemoryLayout<BrowserMetalLinkInstance>.stride * linkInstances.count)
+            updateBuffer(
+                &linkInstanceBuffer,
+                with: linkInstances,
+                minimumLength: MemoryLayout<BrowserMetalLinkInstance>.stride * linkInstances.count
+            )
         }
     }
 
@@ -734,7 +866,11 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         if cardInstances.isEmpty {
             cardInstanceBuffer = nil
         } else {
-            cardInstanceBuffer = device.makeBuffer(bytes: cardInstances, length: MemoryLayout<BrowserMetalCardInstance>.stride * cardInstances.count)
+            updateBuffer(
+                &cardInstanceBuffer,
+                with: cardInstances,
+                minimumLength: MemoryLayout<BrowserMetalCardInstance>.stride * cardInstances.count
+            )
         }
     }
 
@@ -743,7 +879,29 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         if textInstances.isEmpty {
             textInstanceBuffer = nil
         } else {
-            textInstanceBuffer = device.makeBuffer(bytes: textInstances, length: MemoryLayout<BrowserMetalTextInstance>.stride * textInstances.count)
+            updateBuffer(
+                &textInstanceBuffer,
+                with: textInstances,
+                minimumLength: MemoryLayout<BrowserMetalTextInstance>.stride * textInstances.count
+            )
+        }
+    }
+
+    private func updateBuffer<Element>(_ buffer: inout MTLBuffer?, with values: [Element], minimumLength: Int) {
+        guard minimumLength > 0 else {
+            buffer = nil
+            return
+        }
+        if buffer == nil || buffer!.length < minimumLength {
+            let currentLength = buffer?.length ?? 0
+            var newLength = max(minimumLength, max(currentLength * 2, 4096))
+            newLength = ((newLength + 255) / 256) * 256
+            buffer = device.makeBuffer(length: newLength, options: .storageModeShared)
+        }
+        guard let buffer else { return }
+        values.withUnsafeBufferPointer { rawBuffer in
+            guard let baseAddress = rawBuffer.baseAddress else { return }
+            memcpy(buffer.contents(), baseAddress, minimumLength)
         }
     }
 

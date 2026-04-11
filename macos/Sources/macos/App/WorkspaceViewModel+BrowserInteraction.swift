@@ -188,6 +188,7 @@ extension WorkspaceViewModel {
     }
 
     func updateCanvasGesture(from start: CGPoint, to current: CGPoint, in size: CGSize) {
+        markBrowserInteractionActivity()
         switch browserGestureMode {
         case let .panning(originCenter):
             let scale = browserScale(in: size)
@@ -251,6 +252,7 @@ extension WorkspaceViewModel {
 
     func updateCardInteraction(cardID: Int, from startPoint: CGPoint, to currentPoint: CGPoint, in size: CGSize, modifiers: NSEvent.ModifierFlags) {
         let start = CACurrentMediaTime()
+        markBrowserInteractionActivity()
         if browserGestureMode == nil {
             beginCardInteraction(cardID: cardID, modifiers: modifiers)
         }
@@ -274,6 +276,7 @@ extension WorkspaceViewModel {
     }
 
     func handleScrollWheel(deltaX: CGFloat, deltaY: CGFloat, modifiers: NSEvent.ModifierFlags, at location: CGPoint, in size: CGSize) {
+        markBrowserInteractionActivity()
         if modifiers.contains(.command) {
             let factor = exp(Double(deltaY) / 240.0)
             zoom(by: factor, anchor: location, in: size)

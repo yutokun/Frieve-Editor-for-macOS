@@ -350,10 +350,6 @@ extension WorkspaceViewModel {
             browserPerformance[keyPath: \BrowserPerformanceSnapshot.frameInterval].record(max((timestamp - browserLastPresentedFrameAt) * 1000, 0))
         }
         browserLastPresentedFrameAt = timestamp
-
-        guard timestamp - browserPerformanceLastPublishedAt >= 0.25 else { return }
-        browserPerformanceLastPublishedAt = timestamp
-        objectWillChange.send()
     }
 
     func recordBrowserCardRasterMetric(_ milliseconds: Double) {

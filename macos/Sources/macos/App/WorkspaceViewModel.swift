@@ -233,7 +233,7 @@ final class WorkspaceViewModel: ObservableObject {
     }
     @Published var searchQuery: String = ""
 @Published var statusMessage: String = "Ready"
-    @Published var zoom: Double = 1.0
+    var zoom: Double = 1.0
     @Published var autoScroll: Bool = false {
         didSet {
             if autoScroll {
@@ -290,16 +290,17 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var recentFiles: [URL] = []
 @Published var lastGPTPrompt: String = ""
     @Published var browserViewportRevision: Int = 0
-    @Published var browserSurfaceContentRevision: Int = 0
-    @Published var browserSurfaceViewportRevision: Int = 0
-    @Published var browserSurfacePresentationRevision: Int = 0
-    @Published var canvasCenter: FrievePoint = .zero
-    @Published var marqueeStartPoint: CGPoint?
-    @Published var marqueeCurrentPoint: CGPoint?
-    @Published var linkPreviewSourceCardID: Int?
-    @Published var linkPreviewCanvasPoint: CGPoint?
-    @Published var browserInlineEditorCardID: Int?
-    @Published var browserHoverCardID: Int?
+    @Published var browserChromeRevision: Int = 0
+    var browserSurfaceContentRevision: Int = 0
+    var browserSurfaceViewportRevision: Int = 0
+    var browserSurfacePresentationRevision: Int = 0
+    var canvasCenter: FrievePoint = .zero
+    var marqueeStartPoint: CGPoint?
+    var marqueeCurrentPoint: CGPoint?
+    var linkPreviewSourceCardID: Int?
+    var linkPreviewCanvasPoint: CGPoint?
+    var browserInlineEditorCardID: Int?
+    var browserHoverCardID: Int?
 
     var dragOriginByCardID: [Int: FrievePoint] = [:]
     var currentDragTranslation: FrievePoint?
@@ -325,7 +326,6 @@ final class WorkspaceViewModel: ObservableObject {
     var pendingBrowserCardRasterKeys: Set<String> = []
     var browserPerformance = BrowserPerformanceSnapshot()
     var browserLastPresentedFrameAt: CFTimeInterval = 0
-    var browserPerformanceLastPublishedAt: CFTimeInterval = 0
     var browserCanvasSize: CGSize = .zero
     var browserMatrixTargetByCardID: [Int: FrievePoint] = [:]
     var browserMatrixSpeedByCardID: [Int: Double] = [:]
@@ -335,7 +335,14 @@ final class WorkspaceViewModel: ObservableObject {
     var browserAutoScrollStartedAt: CFTimeInterval?
     var browserAutoScrollSuspendedUntil: CFTimeInterval = 0
     var browserAutoScrollTimer: Timer?
+    var browserInteractionModeEnabled: Bool = false
+    var browserInteractionModeWorkItem: DispatchWorkItem?
+    var browserInteractionModeRefreshHandler: ((Bool) -> Void)?
+    var browserSurfaceContentRefreshHandler: (() -> Void)?
+    var browserSurfacePresentationRefreshHandler: (() -> Void)?
     var browserSurfaceViewportRefreshHandler: (() -> Void)?
+    var browserLastChromeRefreshAt: CFTimeInterval = 0
+    var browserPendingChromeRefreshWorkItem: DispatchWorkItem?
 
     var documentCacheVersion: Int = 0
     var cachedDocumentCacheVersion: Int = -1

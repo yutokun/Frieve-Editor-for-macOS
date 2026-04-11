@@ -101,34 +101,18 @@ extension WorkspaceViewModel {
         return nil
     }
 
-    func browserCardRasterCacheKey(for snapshot: BrowserCardLayerSnapshot, previewReady: Bool, drawingPreviewReady: Bool) -> String {
+    func browserCardRasterCacheKey(for snapshot: BrowserCardLayerSnapshot) -> String {
         [
             String(snapshot.card.id),
             String(snapshot.detailLevel.rawValue),
             snapshot.card.updated,
             snapshot.card.title,
-            snapshot.metadata.summaryText,
-            snapshot.metadata.labelLine,
-            snapshot.metadata.detailSummary,
-            snapshot.metadata.badges.joined(separator: "|"),
-            snapshot.card.imagePath ?? "",
-            snapshot.card.videoPath ?? "",
-            previewReady ? "preview-ready" : "preview-pending",
-            drawingPreviewReady ? "drawing-ready" : "drawing-none",
             "\(Int(snapshot.metadata.canvasSize.width.rounded()))x\(Int(snapshot.metadata.canvasSize.height.rounded()))"
         ].joined(separator: "::")
     }
 
     func browserCardRasterKey(for snapshot: BrowserCardLayerSnapshot) -> String {
-        let previewReady = snapshot.detailLevel == .thumbnail ? false : cachedPreviewImage(for: snapshot.card) != nil
-        let drawingPreviewReady = snapshot.detailLevel == .full
-            ? cachedDrawingPreviewImage(for: snapshot.card, targetSize: CGSize(width: 96, height: 72)) != nil
-            : false
-        return browserCardRasterCacheKey(
-            for: snapshot,
-            previewReady: previewReady,
-            drawingPreviewReady: drawingPreviewReady
-        )
+        browserCardRasterCacheKey(for: snapshot)
     }
 
     func cachedBrowserCardRaster(for snapshot: BrowserCardLayerSnapshot) -> NSImage? {
@@ -136,29 +120,15 @@ extension WorkspaceViewModel {
     }
 
     func cachedBrowserCardRaster(for snapshot: BrowserCardLayerSnapshot, cacheKey: String) -> NSImage? {
-        let previewImage = snapshot.detailLevel == .thumbnail ? nil : cachedPreviewImage(for: snapshot.card)
-        let drawingPreviewImage = snapshot.detailLevel == .full
-            ? cachedDrawingPreviewImage(for: snapshot.card, targetSize: CGSize(width: 96, height: 72))
-            : nil
         if let cached = browserCardRasterCache[cacheKey] {
             touchBrowserCardRasterCacheKey(cacheKey)
             return cached
         }
 
         let rasterStart = CACurrentMediaTime()
-        let renderer = ImageRenderer(
-            content: BrowserCardRasterContentView(
-                card: snapshot.card,
-                metadata: snapshot.metadata,
-                detailLevel: snapshot.detailLevel,
-                fillColor: color(for: snapshot.card),
-                previewImage: previewImage,
-                drawingPreviewImage: drawingPreviewImage
-            )
-            .frame(width: snapshot.metadata.canvasSize.width, height: snapshot.metadata.canvasSize.height)
-        )
-        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
-        guard let image = renderer.nsImage else { return nil }
+        guard let image = rasterizeBrowserCardTitle(for: snapshot.card, canvasSize: snapshot.metadata.canvasSize) else {
+            return nil
+        }
         recordBrowserCardRasterMetric((CACurrentMediaTime() - rasterStart) * 1000)
         browserCardRasterCache[cacheKey] = image
         touchBrowserCardRasterCacheKey(cacheKey)
@@ -173,6 +143,39 @@ extension WorkspaceViewModel {
         }
         enqueueBrowserCardRaster(for: snapshot, cacheKey: cacheKey)
         return nil
+    }
+
+    private func rasterizeBrowserCardTitle(for card: FrieveCard, canvasSize: CGSize) -> NSImage? {
+        guard canvasSize.width > 0, canvasSize.height > 0 else { return nil }
+        let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : card.title
+        let image = NSImage(size: canvasSize)
+        image.lockFocusFlipped(true)
+        defer { image.unlockFocus() }
+
+        NSColor.clear.setFill()
+        CGRect(origin: .zero, size: canvasSize).fill()
+
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .left
+        paragraph.lineBreakMode = .byWordWrapping
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: browserCardTitleNSFont(for: card),
+            .foregroundColor: NSColor(calibratedWhite: 0.08, alpha: 0.96),
+            .paragraphStyle: paragraph
+        ]
+        let attributed = NSAttributedString(string: title, attributes: attributes)
+        let padding = browserCardContentPadding(for: card)
+        let rect = CGRect(
+            x: padding,
+            y: padding,
+            width: max(canvasSize.width - padding * 2, 1),
+            height: max(canvasSize.height - padding * 2, 1)
+        )
+        attributed.draw(
+            with: rect,
+            options: [.usesLineFragmentOrigin, .usesFontLeading, .truncatesLastVisibleLine]
+        )
+        return image
     }
 
     func browserInlineEditorFrame(for card: FrieveCard, in size: CGSize) -> CGRect {
