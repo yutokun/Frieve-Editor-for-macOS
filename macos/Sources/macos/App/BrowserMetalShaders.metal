@@ -215,10 +215,10 @@ vertex BrowserMetalTextOut browserTextVertex(
         float2( 1.0f,  1.0f)
     };
     const float2 textureUVs[4] = {
-        float2(0.0f, 1.0f),
-        float2(1.0f, 1.0f),
         float2(0.0f, 0.0f),
-        float2(1.0f, 0.0f)
+        float2(1.0f, 0.0f),
+        float2(0.0f, 1.0f),
+        float2(1.0f, 1.0f)
     };
 
     BrowserMetalTextInstance text = texts[instanceID];
