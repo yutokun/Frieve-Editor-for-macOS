@@ -161,6 +161,15 @@ private struct BrowserCanvasHUD: View {
                 Label(viewModel.autoScroll ? "Follow" : "Free", systemImage: viewModel.autoScroll ? "scope" : "hand.draw")
             }
             HStack(spacing: 12) {
+                Picker("Arrange", selection: $viewModel.arrangeMode) {
+                    Text("None").tag("None")
+                    Text("Link").tag("Link")
+                    Text("Link(Soft)").tag("Link(Soft)")
+                    Text("Matrix").tag("Matrix")
+                    Text("Tree").tag("Tree")
+                }
+                .fixedSize()
+                Button("Shuffle") { viewModel.shuffleLayout() }
                 Toggle("Auto Scroll", isOn: $viewModel.autoScroll)
                     .toggleStyle(.checkbox)
                 Toggle("Auto Zoom", isOn: $viewModel.autoZoom)

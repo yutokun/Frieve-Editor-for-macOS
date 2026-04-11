@@ -13,19 +13,6 @@ struct WorkspaceRootView: View {
                 .navigationSplitViewColumnWidth(min: 230, ideal: 280, max: 340)
         } detail: {
             WorkspaceContentView(viewModel: viewModel)
-                .toolbar {
-                    ToolbarItemGroup(placement: .primaryAction) {
-                        Picker("Arrange", selection: $viewModel.arrangeMode) {
-                            Text("None").tag("None")
-                            Text("Link").tag("Link")
-                            Text("Link(Soft)").tag("Link(Soft)")
-                            Text("Matrix").tag("Matrix")
-                            Text("Tree").tag("Tree")
-                        }
-                        .fixedSize()
-                        Button("Shuffle") { viewModel.shuffleLayout() }
-                    }
-                }
         }
         .inspector(isPresented: $viewModel.showInspector) {
             InspectorPaneView(viewModel: viewModel)
