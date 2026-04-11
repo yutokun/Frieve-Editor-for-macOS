@@ -135,6 +135,27 @@ extension WorkspaceViewModel {
         }
     }
 
+    func handleBrowserDirectionalSelection(dx: Double, dy: Double) {
+        guard let selectedCard = cardByID(selectedCardID) else { return }
+        let directionLength = hypot(dx, dy)
+        guard directionLength > 0.0001 else { return }
+
+        let directionX = dx / directionLength
+        let directionY = dy / directionLength
+        let candidates = visibleSortedCards().filter { $0.id != selectedCard.id }
+        let source = currentPosition(for: selectedCard)
+
+        let bestCard = candidates.min { lhs, rhs in
+            directionalSelectionScore(for: lhs, from: source, directionX: directionX, directionY: directionY) <
+            directionalSelectionScore(for: rhs, from: source, directionX: directionX, directionY: directionY)
+        }
+
+        guard let bestCard else { return }
+        let bestScore = directionalSelectionScore(for: bestCard, from: source, directionX: directionX, directionY: directionY)
+        guard bestScore.isFinite else { return }
+        selectCard(bestCard.id)
+    }
+
     func dismissBrowserInlineEditor() {
         browserInlineEditorCardID = nil
         markBrowserSurfacePresentationDirty()
@@ -186,5 +207,21 @@ extension WorkspaceViewModel {
         browserInlineEditorCardID = cardID
         markBrowserSurfacePresentationDirty()
         statusMessage = "Opened inline browser editor"
+    }
+
+    private func directionalSelectionScore(
+        for candidate: FrieveCard,
+        from source: FrievePoint,
+        directionX: Double,
+        directionY: Double
+    ) -> Double {
+        let position = currentPosition(for: candidate)
+        let deltaX = position.x - source.x
+        let deltaY = position.y - source.y
+        let forward = deltaX * directionX + deltaY * directionY
+        guard forward > 0.0001 else { return .infinity }
+
+        let lateral = abs(deltaX * -directionY + deltaY * directionX)
+        return hypot(forward, lateral * 3)
     }
 }

@@ -4,7 +4,7 @@ import AppKit
 struct BrowserInteractionBridge: NSViewRepresentable {
     let onScroll: (CGFloat, CGFloat, CGPoint, NSEvent.ModifierFlags) -> Void
     let onDelete: () -> Void
-    let onMoveSelection: (Double, Double) -> Void
+    let onNavigateSelection: (Double, Double) -> Void
     let onZoomIn: () -> Void
     let onZoomOut: () -> Void
     let onFit: () -> Void
@@ -16,7 +16,7 @@ struct BrowserInteractionBridge: NSViewRepresentable {
         let view = BrowserInteractionNSView()
         view.onScroll = onScroll
         view.onDelete = onDelete
-        view.onMoveSelection = onMoveSelection
+        view.onNavigateSelection = onNavigateSelection
         view.onZoomIn = onZoomIn
         view.onZoomOut = onZoomOut
         view.onFit = onFit
@@ -29,7 +29,7 @@ struct BrowserInteractionBridge: NSViewRepresentable {
     func updateNSView(_ nsView: BrowserInteractionNSView, context: Context) {
         nsView.onScroll = onScroll
         nsView.onDelete = onDelete
-        nsView.onMoveSelection = onMoveSelection
+        nsView.onNavigateSelection = onNavigateSelection
         nsView.onZoomIn = onZoomIn
         nsView.onZoomOut = onZoomOut
         nsView.onFit = onFit
@@ -48,7 +48,7 @@ struct BrowserInteractionBridge: NSViewRepresentable {
 class BrowserInteractionNSView: NSView {
     var onScroll: ((CGFloat, CGFloat, CGPoint, NSEvent.ModifierFlags) -> Void)?
     var onDelete: (() -> Void)?
-    var onMoveSelection: ((Double, Double) -> Void)?
+    var onNavigateSelection: ((Double, Double) -> Void)?
     var onZoomIn: (() -> Void)?
     var onZoomOut: (() -> Void)?
     var onFit: (() -> Void)?
@@ -80,13 +80,13 @@ class BrowserInteractionNSView: NSView {
     override func keyDown(with event: NSEvent) {
         switch event.keyCode {
         case 123:
-            onMoveSelection?(-0.02, 0)
+            onNavigateSelection?(-1, 0)
         case 124:
-            onMoveSelection?(0.02, 0)
+            onNavigateSelection?(1, 0)
         case 125:
-            onMoveSelection?(0, 0.02)
+            onNavigateSelection?(0, 1)
         case 126:
-            onMoveSelection?(0, -0.02)
+            onNavigateSelection?(0, -1)
         case 51, 117:
             onDelete?()
         case 36, 76:

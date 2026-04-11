@@ -77,8 +77,8 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
         view.onDelete = {
             viewModel.deleteSelectedCard()
         }
-        view.onMoveSelection = { dx, dy in
-            viewModel.nudgeSelection(dx: dx, dy: dy)
+        view.onNavigateSelection = { dx, dy in
+            viewModel.handleBrowserDirectionalSelection(dx: dx, dy: dy)
         }
         view.onZoomIn = {
             viewModel.zoomIn()

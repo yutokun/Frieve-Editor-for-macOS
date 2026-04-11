@@ -436,6 +436,48 @@ import Testing
     #expect(results.3)
 }
 
+@Test func browserArrowKeysSelectNearestCardInDirection() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let results = await MainActor.run { () -> (Bool, Bool, Bool, Bool) in
+        model.newDocument()
+        let rootID = model.selectedCardID ?? 0
+        let rightID = model.document.addCard(title: "Right", linkedFrom: rootID)
+        let leftID = model.document.addCard(title: "Left", linkedFrom: rootID)
+        let upID = model.document.addCard(title: "Up", linkedFrom: rootID)
+        let downID = model.document.addCard(title: "Down", linkedFrom: rootID)
+
+        model.document.updateCard(rootID) { $0.position = FrievePoint(x: 0.5, y: 0.5) }
+        model.document.updateCard(rightID) { $0.position = FrievePoint(x: 0.7, y: 0.5) }
+        model.document.updateCard(leftID) { $0.position = FrievePoint(x: 0.3, y: 0.5) }
+        model.document.updateCard(upID) { $0.position = FrievePoint(x: 0.5, y: 0.3) }
+        model.document.updateCard(downID) { $0.position = FrievePoint(x: 0.5, y: 0.7) }
+
+        model.selectCard(rootID)
+        model.handleBrowserDirectionalSelection(dx: 1, dy: 0)
+        let movedRight = model.selectedCardID == rightID
+
+        model.selectCard(rootID)
+        model.handleBrowserDirectionalSelection(dx: -1, dy: 0)
+        let movedLeft = model.selectedCardID == leftID
+
+        model.selectCard(rootID)
+        model.handleBrowserDirectionalSelection(dx: 0, dy: -1)
+        let movedUp = model.selectedCardID == upID
+
+        model.selectCard(rootID)
+        model.handleBrowserDirectionalSelection(dx: 0, dy: 1)
+        let movedDown = model.selectedCardID == downID
+
+        return (movedRight, movedLeft, movedUp, movedDown)
+    }
+
+    #expect(results.0)
+    #expect(results.1)
+    #expect(results.2)
+    #expect(results.3)
+}
+
 @Test func browserArrangeModesMatchMacExpectations() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
