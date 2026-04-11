@@ -119,6 +119,14 @@ extension WorkspaceViewModel {
         openBrowserInlineEditor(for: selectedCardID)
     }
 
+    func handleBrowserCreateChildShortcut() {
+        guard selectedCardID != nil else { return }
+        addChildCard()
+        if let selectedCardID {
+            openBrowserInlineEditor(for: selectedCardID)
+        }
+    }
+
     func dismissBrowserInlineEditor() {
         browserInlineEditorCardID = nil
         markBrowserSurfacePresentationDirty()

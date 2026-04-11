@@ -92,6 +92,9 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
         view.onEdit = {
             viewModel.handleBrowserEditShortcut()
         }
+        view.onCreateChild = {
+            viewModel.handleBrowserCreateChildShortcut()
+        }
     }
 }
 

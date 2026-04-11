@@ -9,6 +9,7 @@ struct BrowserInteractionBridge: NSViewRepresentable {
     let onZoomOut: () -> Void
     let onFit: () -> Void
     let onEdit: () -> Void
+    let onCreateChild: () -> Void
 
     func makeNSView(context: Context) -> BrowserInteractionNSView {
         let view = BrowserInteractionNSView()
@@ -19,6 +20,7 @@ struct BrowserInteractionBridge: NSViewRepresentable {
         view.onZoomOut = onZoomOut
         view.onFit = onFit
         view.onEdit = onEdit
+        view.onCreateChild = onCreateChild
         return view
     }
 
@@ -30,6 +32,7 @@ struct BrowserInteractionBridge: NSViewRepresentable {
         nsView.onZoomOut = onZoomOut
         nsView.onFit = onFit
         nsView.onEdit = onEdit
+        nsView.onCreateChild = onCreateChild
         if nsView.window?.firstResponder !== nsView {
             DispatchQueue.main.async {
                 guard nsView.window?.firstResponder !== nsView else { return }
@@ -47,6 +50,7 @@ class BrowserInteractionNSView: NSView {
     var onZoomOut: (() -> Void)?
     var onFit: (() -> Void)?
     var onEdit: (() -> Void)?
+    var onCreateChild: (() -> Void)?
 
     func browserEventPoint(from event: NSEvent) -> CGPoint {
         let point = convert(event.locationInWindow, from: nil)
@@ -82,7 +86,11 @@ class BrowserInteractionNSView: NSView {
         case 51, 117:
             onDelete?()
         case 36, 76:
-            onEdit?()
+            if event.modifierFlags.contains(.shift) {
+                onCreateChild?()
+            } else {
+                onEdit?()
+            }
         default:
             let chars = event.charactersIgnoringModifiers ?? ""
             if event.modifierFlags.contains(.command), chars == "+" || chars == "=" {

@@ -387,6 +387,31 @@ import Testing
     #expect(results.7.contains("|nop"))
 }
 
+@Test func browserShiftEnterCreatesChildCardAndStartsInlineEditing() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let results = await MainActor.run { () -> (Int, Bool, Bool, Bool) in
+        model.newDocument()
+        let rootID = model.selectedCardID ?? 0
+        let originalCount = model.document.cardCount
+        model.handleBrowserCreateChildShortcut()
+        let childID = model.selectedCardID ?? -1
+        let child = model.document.card(withID: childID)
+        let hasParentLink = model.document.links.contains { $0.fromCardID == rootID && $0.toCardID == childID }
+        return (
+            model.document.cardCount - originalCount,
+            childID != rootID,
+            hasParentLink,
+            model.browserInlineEditorCardID == child?.id
+        )
+    }
+
+    #expect(results.0 == 1)
+    #expect(results.1)
+    #expect(results.2)
+    #expect(results.3)
+}
+
 @Test func browserArrangeModesMatchMacExpectations() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
