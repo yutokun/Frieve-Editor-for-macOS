@@ -89,6 +89,9 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
         view.onFit = {
             viewModel.requestBrowserFit()
         }
+        view.onEdit = {
+            viewModel.handleBrowserEditShortcut()
+        }
     }
 }
 

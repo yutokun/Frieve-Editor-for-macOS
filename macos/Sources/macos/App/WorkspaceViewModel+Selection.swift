@@ -111,9 +111,12 @@ extension WorkspaceViewModel {
 
     func handleCardDoubleClick(_ id: Int) {
         selectCard(id)
-        browserInlineEditorCardID = id
-        markBrowserSurfacePresentationDirty()
-        statusMessage = "Opened inline browser editor"
+        openBrowserInlineEditor(for: id)
+    }
+
+    func handleBrowserEditShortcut() {
+        guard let selectedCardID else { return }
+        openBrowserInlineEditor(for: selectedCardID)
     }
 
     func dismissBrowserInlineEditor() {
@@ -161,5 +164,11 @@ extension WorkspaceViewModel {
             markBrowserSurfaceViewportDirty()
         }
         statusMessage = "Centered browser on \(card.title)"
+    }
+
+    private func openBrowserInlineEditor(for cardID: Int) {
+        browserInlineEditorCardID = cardID
+        markBrowserSurfacePresentationDirty()
+        statusMessage = "Opened inline browser editor"
     }
 }

@@ -345,7 +345,7 @@ import Testing
     let model = await MainActor.run { WorkspaceViewModel() }
     let canvasSize = CGSize(width: 1280, height: 840)
 
-    let results = await MainActor.run { () -> (Int, CGRect, Bool, Bool, Bool, Bool, String) in
+    let results = await MainActor.run { () -> (Int, CGRect, Bool, Bool, Bool, Bool, Bool, String) in
         model.newDocument()
         let rootID = model.selectedCardID ?? 0
         model.updateSelectedCardShape(4)
@@ -354,6 +354,10 @@ import Testing
         model.updateSelectedCardVideoPath("clips/demo.mov")
         model.updateSelectedCardDrawing("line 0.1 0.2 0.9 0.8 color=FF0000\nrect 0.2 0.2 0.7 0.6 fill=00FF00")
         model.handleCardDoubleClick(rootID)
+        let doubleClickOpened = model.browserInlineEditorCardID == rootID
+        model.dismissBrowserInlineEditor()
+        model.handleBrowserEditShortcut()
+        let enterShortcutOpened = model.browserInlineEditorCardID == rootID
         let selected = model.document.card(withID: rootID)!
         let previewCount = selected.drawingPreviewItems().count
         let selectionFrame = model.selectionFrame(in: canvasSize) ?? .zero
@@ -365,7 +369,8 @@ import Testing
             selectionFrame,
             selected.hasMedia,
             selected.primaryMediaPath == "/tmp/example.png",
-            model.browserInlineEditorCardID == rootID,
+            doubleClickOpened,
+            enterShortcutOpened,
             mediaURL?.lastPathComponent == "demo.mov",
             summary + (pathExists ? "|path" : "|nop")
         )
@@ -377,8 +382,9 @@ import Testing
     #expect(results.3)
     #expect(results.4)
     #expect(results.5)
-    #expect(results.6.contains("Center"))
-    #expect(results.6.contains("|nop"))
+    #expect(results.6)
+    #expect(results.7.contains("Center"))
+    #expect(results.7.contains("|nop"))
 }
 
 @Test func browserArrangeModesMatchMacExpectations() async throws {

@@ -8,6 +8,7 @@ struct BrowserInteractionBridge: NSViewRepresentable {
     let onZoomIn: () -> Void
     let onZoomOut: () -> Void
     let onFit: () -> Void
+    let onEdit: () -> Void
 
     func makeNSView(context: Context) -> BrowserInteractionNSView {
         let view = BrowserInteractionNSView()
@@ -17,6 +18,7 @@ struct BrowserInteractionBridge: NSViewRepresentable {
         view.onZoomIn = onZoomIn
         view.onZoomOut = onZoomOut
         view.onFit = onFit
+        view.onEdit = onEdit
         return view
     }
 
@@ -27,6 +29,7 @@ struct BrowserInteractionBridge: NSViewRepresentable {
         nsView.onZoomIn = onZoomIn
         nsView.onZoomOut = onZoomOut
         nsView.onFit = onFit
+        nsView.onEdit = onEdit
         if nsView.window?.firstResponder !== nsView {
             DispatchQueue.main.async {
                 guard nsView.window?.firstResponder !== nsView else { return }
@@ -43,6 +46,7 @@ class BrowserInteractionNSView: NSView {
     var onZoomIn: (() -> Void)?
     var onZoomOut: (() -> Void)?
     var onFit: (() -> Void)?
+    var onEdit: (() -> Void)?
 
     func browserEventPoint(from event: NSEvent) -> CGPoint {
         let point = convert(event.locationInWindow, from: nil)
@@ -77,6 +81,8 @@ class BrowserInteractionNSView: NSView {
             onMoveSelection?(0, -0.02)
         case 51, 117:
             onDelete?()
+        case 36, 76:
+            onEdit?()
         default:
             let chars = event.charactersIgnoringModifiers ?? ""
             if event.modifierFlags.contains(.command), chars == "+" || chars == "=" {
