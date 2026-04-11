@@ -2,9 +2,18 @@ import SwiftUI
 import AppKit
 import ImageIO
 
+private let maxDocumentUndoSnapshots = 64
 private let browserCardBaseTitlePointSize: CGFloat = 13
 private let browserCardBaseContentPadding: CGFloat = 8
 private let browserCardBaseMaximumTextWidth: CGFloat = 200
+
+struct WorkspaceDocumentUndoSnapshot {
+    let document: FrieveDocument
+    let selectedCardID: Int?
+    let selectedCardIDs: Set<Int>
+    let browserInlineEditorCardID: Int?
+    let hasUnsavedChanges: Bool
+}
 
 func browserCardStoredSize(forStep step: Int) -> Int {
     let clampedStep = max(-8, min(step, 8))
@@ -603,5 +612,69 @@ extension WorkspaceViewModel {
     func fileModificationDate(for url: URL) -> Date? {
         let values = try? url.resourceValues(forKeys: [.contentModificationDateKey])
         return values?.contentModificationDate
+    }
+}
+
+extension WorkspaceViewModel {
+    var canUndoLastDocumentChange: Bool {
+        !documentUndoStack.isEmpty
+    }
+
+    func clearDocumentUndoHistory() {
+        documentUndoStack.removeAll(keepingCapacity: true)
+        activeUndoEditCardID = nil
+    }
+
+    func registerUndoCheckpoint() {
+        activeUndoEditCardID = nil
+        pushUndoSnapshot()
+    }
+
+    func registerUndoCheckpointForEdit(cardID: Int) {
+        if activeUndoEditCardID != cardID {
+            pushUndoSnapshot()
+            activeUndoEditCardID = cardID
+        }
+    }
+
+    func finishUndoEditCoalescing() {
+        activeUndoEditCardID = nil
+    }
+
+    func undoLastDocumentChange() {
+        finishUndoEditCoalescing()
+        guard let snapshot = documentUndoStack.popLast() else {
+            statusMessage = "Nothing to undo"
+            return
+        }
+        restoreUndoSnapshot(snapshot)
+        statusMessage = "Undid the last change"
+    }
+
+    private func pushUndoSnapshot() {
+        documentUndoStack.append(
+            WorkspaceDocumentUndoSnapshot(
+                document: document,
+                selectedCardID: selectedCardID,
+                selectedCardIDs: selectedCardIDs,
+                browserInlineEditorCardID: browserInlineEditorCardID,
+                hasUnsavedChanges: hasUnsavedChanges
+            )
+        )
+        if documentUndoStack.count > maxDocumentUndoSnapshots {
+            documentUndoStack.removeFirst(documentUndoStack.count - maxDocumentUndoSnapshots)
+        }
+    }
+
+    private func restoreUndoSnapshot(_ snapshot: WorkspaceDocumentUndoSnapshot) {
+        document = snapshot.document
+        selectedCardID = snapshot.selectedCardID
+        selectedCardIDs = snapshot.selectedCardIDs
+        browserInlineEditorCardID = snapshot.browserInlineEditorCardID
+        hasUnsavedChanges = snapshot.hasUnsavedChanges
+        syncDocumentMetadataFromSettings()
+        clearRenderingCaches()
+        clearCanvasTransientState()
+        markBrowserSurfaceContentDirty()
     }
 }

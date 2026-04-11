@@ -4,6 +4,12 @@ struct FrieveEditorCommands: Commands {
     @ObservedObject var viewModel: WorkspaceViewModel
 
     var body: some Commands {
+        CommandGroup(replacing: .undoRedo) {
+            Button("Undo") { viewModel.undoLastDocumentChange() }
+                .keyboardShortcut("z", modifiers: [.command])
+                .disabled(!viewModel.canUndoLastDocumentChange)
+        }
+
         CommandGroup(replacing: .newItem) {
             Button("New") { viewModel.newDocument() }
                 .keyboardShortcut("n", modifiers: [.command])

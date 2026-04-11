@@ -305,6 +305,7 @@ extension WorkspaceViewModel {
         case .movingSelection:
             if let translation = currentDragTranslation, translation != .zero {
                 let affectedIDs = dragOriginByCardID.keys.sorted()
+                registerUndoCheckpoint()
                 let timestamp = sharedISOTimestamp()
                 for id in affectedIDs {
                     guard let origin = dragOriginByCardID[id] else { continue }

@@ -11,6 +11,7 @@ struct BrowserInteractionBridge: NSViewRepresentable {
     let onEdit: () -> Void
     let onCreateChild: () -> Void
     let onCreateSibling: () -> Void
+    let onUndo: () -> Void
 
     func makeNSView(context: Context) -> BrowserInteractionNSView {
         let view = BrowserInteractionNSView()
@@ -23,6 +24,7 @@ struct BrowserInteractionBridge: NSViewRepresentable {
         view.onEdit = onEdit
         view.onCreateChild = onCreateChild
         view.onCreateSibling = onCreateSibling
+        view.onUndo = onUndo
         return view
     }
 
@@ -36,6 +38,7 @@ struct BrowserInteractionBridge: NSViewRepresentable {
         nsView.onEdit = onEdit
         nsView.onCreateChild = onCreateChild
         nsView.onCreateSibling = onCreateSibling
+        nsView.onUndo = onUndo
         if nsView.window?.firstResponder !== nsView {
             DispatchQueue.main.async {
                 guard nsView.window?.firstResponder !== nsView else { return }
@@ -55,6 +58,7 @@ class BrowserInteractionNSView: NSView {
     var onEdit: (() -> Void)?
     var onCreateChild: (() -> Void)?
     var onCreateSibling: (() -> Void)?
+    var onUndo: (() -> Void)?
 
     func browserEventPoint(from event: NSEvent) -> CGPoint {
         let point = convert(event.locationInWindow, from: nil)
@@ -99,7 +103,9 @@ class BrowserInteractionNSView: NSView {
             }
         default:
             let chars = event.charactersIgnoringModifiers ?? ""
-            if event.modifierFlags.contains(.command), chars == "+" || chars == "=" {
+            if event.modifierFlags.contains(.command), chars.lowercased() == "z" {
+                onUndo?()
+            } else if event.modifierFlags.contains(.command), chars == "+" || chars == "=" {
                 onZoomIn?()
             } else if event.modifierFlags.contains(.command), chars == "-" {
                 onZoomOut?()

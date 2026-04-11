@@ -98,6 +98,9 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
         view.onCreateSibling = {
             viewModel.handleBrowserCreateSiblingShortcut()
         }
+        view.onUndo = {
+            viewModel.undoLastDocumentChange()
+        }
     }
 }
 

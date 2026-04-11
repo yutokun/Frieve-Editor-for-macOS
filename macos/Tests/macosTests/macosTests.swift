@@ -436,6 +436,82 @@ import Testing
     #expect(results.3)
 }
 
+@MainActor
+@Test func browserUndoRestoresCreateEditMoveAndDeleteOperations() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    let rootID = try #require(model.selectedCardID)
+    let initialCardCount = model.document.cardCount
+
+    model.addChildCard()
+    let firstChildID = try #require(model.selectedCardID)
+    #expect(model.document.cardCount == initialCardCount + 1)
+
+    model.undoLastDocumentChange()
+    #expect(model.document.cardCount == initialCardCount)
+    #expect(model.cardByID(firstChildID) == nil)
+    #expect(model.selectedCardID == rootID)
+
+    model.addChildCard()
+    let editedChildID = try #require(model.selectedCardID)
+    let originalPosition = try #require(model.cardByID(editedChildID)?.position)
+    model.updateSelectedCardTitle("Edited once")
+    model.updateSelectedCardTitle("Edited twice")
+    #expect(model.cardByID(editedChildID)?.title == "Edited twice")
+
+    model.undoLastDocumentChange()
+    #expect(model.cardByID(editedChildID)?.title == "Child Card")
+
+    model.browserGestureMode = .movingSelection
+    model.dragOriginByCardID = [editedChildID: originalPosition]
+    model.currentDragTranslation = FrievePoint(x: 0.14, y: -0.09)
+    model.endCardInteraction(at: .zero, in: CGSize(width: 1200, height: 800))
+    #expect(model.cardByID(editedChildID)?.position == FrievePoint(x: originalPosition.x + 0.14, y: originalPosition.y - 0.09))
+
+    model.undoLastDocumentChange()
+    #expect(model.cardByID(editedChildID)?.position == originalPosition)
+
+    model.deleteSelectedCard()
+    #expect(model.cardByID(editedChildID) == nil)
+
+    model.undoLastDocumentChange()
+    #expect(model.cardByID(editedChildID)?.title == "Child Card")
+    #expect(model.cardByID(editedChildID)?.position == originalPosition)
+    #expect(model.selectedCardID == editedChildID)
+    #expect(model.selectedCardIDs == [editedChildID])
+
+    model.undoLastDocumentChange()
+    #expect(model.cardByID(editedChildID) == nil)
+    #expect(model.selectedCardID == rootID)
+}
+
+@MainActor
+@Test func browserCommandZInvokesUndoShortcutHandler() async throws {
+    let view = BrowserInteractionNSView(frame: .zero)
+    var didUndo = false
+    view.onUndo = {
+        didUndo = true
+    }
+    let event = try #require(
+        NSEvent.keyEvent(
+            with: .keyDown,
+            location: .zero,
+            modifierFlags: [.command],
+            timestamp: 0,
+            windowNumber: 0,
+            context: nil,
+            characters: "z",
+            charactersIgnoringModifiers: "z",
+            isARepeat: false,
+            keyCode: 6
+        )
+    )
+
+    view.keyDown(with: event)
+
+    #expect(didUndo)
+}
+
 @Test func browserArrowKeysSelectNearestCardInDirection() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 

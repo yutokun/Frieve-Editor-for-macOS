@@ -285,6 +285,7 @@ extension WorkspaceViewModel {
     func nudgeSelection(dx: Double, dy: Double) {
         let activeIDs = selectedCardIDs.isEmpty ? Set(selectedCardID.map { [$0] } ?? []) : selectedCardIDs
         guard !activeIDs.isEmpty else { return }
+        registerUndoCheckpoint()
         for id in activeIDs {
             document.moveCard(id, dx: dx, dy: dy)
         }

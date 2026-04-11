@@ -11,6 +11,7 @@ extension WorkspaceViewModel {
     }
 
     func newDocument() {
+        clearDocumentUndoHistory()
         document = .placeholder()
         selectedCardID = document.focusedCardID
         selectedCardIDs = selectedCardID.map { [$0] } ?? []
@@ -35,6 +36,7 @@ extension WorkspaceViewModel {
 
     func openDocument(_ url: URL) {
         do {
+            clearDocumentUndoHistory()
             let loaded = try DocumentFileCodec.load(url: url)
             document = loaded
             selectedCardID = loaded.focusedCardID ?? loaded.cards.first?.id
@@ -135,12 +137,14 @@ extension WorkspaceViewModel {
     }
 
     func addRootCard() {
+        registerUndoCheckpoint()
         let id = document.addCard(title: "New Card")
         selectCard(id)
         noteDocumentMutation(status: "Added a new card")
     }
 
     func addCard(at canvasPoint: CGPoint, in size: CGSize) {
+        registerUndoCheckpoint()
         let id = document.addCard(title: "New Card")
         let world = canvasToWorld(canvasPoint, in: size)
         document.updateCard(id) { card in
@@ -152,12 +156,14 @@ extension WorkspaceViewModel {
     }
 
     func addChildCard() {
+        registerUndoCheckpoint()
         let id = document.addCard(title: "Child Card", linkedFrom: selectedCardID)
         selectCard(id)
         noteDocumentMutation(status: "Added a child card")
     }
 
     func addSiblingCard() {
+        registerUndoCheckpoint()
         let id = document.addSiblingCard(for: selectedCardID)
         selectCard(id)
         noteDocumentMutation(status: "Added a sibling card")
@@ -171,6 +177,7 @@ extension WorkspaceViewModel {
     func deleteSelectedCard() {
         let ids = selectedCardIDs.isEmpty ? Set(selectedCardID.map { [$0] } ?? []) : selectedCardIDs
         guard !ids.isEmpty else { return }
+        registerUndoCheckpoint()
         for id in ids {
             document.deleteCard(id)
         }
@@ -183,8 +190,10 @@ extension WorkspaceViewModel {
     }
 
     func updateSelectedCardTitle(_ title: String) {
-        guard let selectedCardID else { return }
-        let isTop = cardByID(selectedCardID)?.isTop ?? false
+        guard let selectedCardID, let selectedCard = cardByID(selectedCardID) else { return }
+        guard selectedCard.title != title else { return }
+        registerUndoCheckpointForEdit(cardID: selectedCardID)
+        let isTop = selectedCard.isTop
         document.updateCard(selectedCardID) { card in
             card.title = title
             card.updated = isoTimestamp()
@@ -196,7 +205,8 @@ extension WorkspaceViewModel {
     }
 
     func updateSelectedCardBody(_ body: String) {
-        guard let selectedCardID else { return }
+        guard let selectedCardID, cardByID(selectedCardID)?.bodyText != body else { return }
+        registerUndoCheckpointForEdit(cardID: selectedCardID)
         document.updateCard(selectedCardID) { card in
             card.bodyText = body
             card.updated = isoTimestamp()
@@ -205,7 +215,8 @@ extension WorkspaceViewModel {
     }
 
     func updateSelectedCardDrawing(_ drawing: String) {
-        guard let selectedCardID else { return }
+        guard let selectedCardID, cardByID(selectedCardID)?.drawingEncoded != drawing else { return }
+        registerUndoCheckpointForEdit(cardID: selectedCardID)
         document.updateCard(selectedCardID) { card in
             card.drawingEncoded = drawing
             card.updated = isoTimestamp()
@@ -214,7 +225,8 @@ extension WorkspaceViewModel {
     }
 
     func updateSelectedCardShape(_ shape: Int) {
-        guard let selectedCardID else { return }
+        guard let selectedCardID, cardByID(selectedCardID)?.shape != shape else { return }
+        registerUndoCheckpointForEdit(cardID: selectedCardID)
         document.updateCard(selectedCardID) { card in
             card.shape = shape
             card.updated = isoTimestamp()
@@ -223,9 +235,11 @@ extension WorkspaceViewModel {
     }
 
     func updateSelectedCardSize(_ size: Int) {
-        guard let selectedCardID else { return }
+        let clampedSize = max(25, min(size, 400))
+        guard let selectedCardID, cardByID(selectedCardID)?.size != clampedSize else { return }
+        registerUndoCheckpointForEdit(cardID: selectedCardID)
         document.updateCard(selectedCardID) { card in
-            card.size = max(25, min(size, 400))
+            card.size = clampedSize
             card.updated = isoTimestamp()
         }
         noteDocumentMutation()
@@ -236,25 +250,32 @@ extension WorkspaceViewModel {
     }
 
     func updateSelectedCardImagePath(_ path: String) {
-        guard let selectedCardID else { return }
+        let trimmedPath = path.trimmed
+        let nextPath = trimmedPath.isEmpty ? nil : trimmedPath
+        guard let selectedCardID, cardByID(selectedCardID)?.imagePath != nextPath else { return }
+        registerUndoCheckpointForEdit(cardID: selectedCardID)
         document.updateCard(selectedCardID) { card in
-            card.imagePath = path.trimmed.isEmpty ? nil : path.trimmed
+            card.imagePath = nextPath
             card.updated = isoTimestamp()
         }
         noteDocumentMutation()
     }
 
     func updateSelectedCardVideoPath(_ path: String) {
-        guard let selectedCardID else { return }
+        let trimmedPath = path.trimmed
+        let nextPath = trimmedPath.isEmpty ? nil : trimmedPath
+        guard let selectedCardID, cardByID(selectedCardID)?.videoPath != nextPath else { return }
+        registerUndoCheckpointForEdit(cardID: selectedCardID)
         document.updateCard(selectedCardID) { card in
-            card.videoPath = path.trimmed.isEmpty ? nil : path.trimmed
+            card.videoPath = nextPath
             card.updated = isoTimestamp()
         }
         noteDocumentMutation()
     }
 
     func updateSelectedCardFixed(_ isFixed: Bool) {
-        guard let selectedCardID else { return }
+        guard let selectedCardID, cardByID(selectedCardID)?.isFixed != isFixed else { return }
+        registerUndoCheckpointForEdit(cardID: selectedCardID)
         document.updateCard(selectedCardID) { card in
             card.isFixed = isFixed
             card.updated = isoTimestamp()
@@ -263,7 +284,8 @@ extension WorkspaceViewModel {
     }
 
     func updateSelectedCardFolded(_ isFolded: Bool) {
-        guard let selectedCardID else { return }
+        guard let selectedCardID, cardByID(selectedCardID)?.isFolded != isFolded else { return }
+        registerUndoCheckpointForEdit(cardID: selectedCardID)
         document.updateCard(selectedCardID) { card in
             card.isFolded = isFolded
             card.updated = isoTimestamp()

@@ -69,6 +69,7 @@ extension WorkspaceViewModel {
     }
 
     func selectCard(_ id: Int, additive: Bool = false) {
+        finishUndoEditCoalescing()
         if additive {
             if selectedCardIDs.contains(id) {
                 selectedCardIDs.remove(id)
@@ -96,6 +97,7 @@ extension WorkspaceViewModel {
     }
 
     func clearSelection() {
+        finishUndoEditCoalescing()
         selectedCardIDs.removeAll()
         selectedCardID = nil
         browserInlineEditorCardID = nil
@@ -160,6 +162,7 @@ extension WorkspaceViewModel {
     }
 
     func dismissBrowserInlineEditor() {
+        finishUndoEditCoalescing()
         browserInlineEditorCardID = nil
         markBrowserSurfacePresentationDirty()
     }
