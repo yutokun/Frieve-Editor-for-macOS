@@ -85,15 +85,36 @@ struct StatisticsWorkspaceView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 Text("Key")
-                    .foregroundStyle(.secondary)
-                Picker("Key", selection: $viewModel.statisticsKey) {
-                    ForEach(StatisticsGroupingKey.allCases) { key in
-                        Text(key.title).tag(key)
+                Menu(viewModel.statisticsKey.title) {
+                    Button("Label") { viewModel.statisticsKey = .label }
+                    Menu("Number of Link") {
+                        Button("Total") { viewModel.statisticsKey = .totalLinks }
+                        Button("Source") { viewModel.statisticsKey = .sourceLinks }
+                        Button("Destination") { viewModel.statisticsKey = .destinationLinks }
+                    }
+                    Menu("Created Date") {
+                        Button("Year") { viewModel.statisticsKey = .createdYear }
+                        Button("Month") { viewModel.statisticsKey = .createdMonth }
+                        Button("Day") { viewModel.statisticsKey = .createdDay }
+                        Button("Week") { viewModel.statisticsKey = .createdWeekday }
+                        Button("Hour") { viewModel.statisticsKey = .createdHour }
+                    }
+                    Menu("Edited Date") {
+                        Button("Year") { viewModel.statisticsKey = .editedYear }
+                        Button("Month") { viewModel.statisticsKey = .editedMonth }
+                        Button("Day") { viewModel.statisticsKey = .editedDay }
+                        Button("Week") { viewModel.statisticsKey = .editedWeekday }
+                        Button("Hour") { viewModel.statisticsKey = .editedHour }
+                    }
+                    Menu("Viewed Date") {
+                        Button("Year") { viewModel.statisticsKey = .viewedYear }
+                        Button("Month") { viewModel.statisticsKey = .viewedMonth }
+                        Button("Day") { viewModel.statisticsKey = .viewedDay }
+                        Button("Week") { viewModel.statisticsKey = .viewedWeekday }
+                        Button("Hour") { viewModel.statisticsKey = .viewedHour }
                     }
                 }
-                .pickerStyle(.menu)
-                .frame(maxWidth: 280, alignment: .leading)
-
+                .fixedSize()
                 Toggle("Sort", isOn: $viewModel.statisticsSortByCount)
                     .toggleStyle(.button)
 
@@ -113,6 +134,7 @@ struct StatisticsWorkspaceView: View {
                     .frame(width: labelColumnWidth, alignment: .leading)
                 StatisticsScaleHeaderView(maxCount: maxCount)
             }
+            .padding(.horizontal, 12)
 
             ScrollView {
                 LazyVStack(spacing: 0) {
