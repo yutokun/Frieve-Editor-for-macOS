@@ -319,7 +319,6 @@ struct InspectorPaneView: View {
                     .font(.headline)
                 if let card = viewModel.selectedCard {
                     LabeledContent("Title", value: card.title)
-                    LabeledContent("Card ID", value: String(card.id))
                     LabeledContent("Labels", value: viewModel.cardLabelNames(for: card).joined(separator: ", "))
                     LabeledContent("Created", value: card.created)
                     LabeledContent("Updated", value: card.updated)
@@ -355,15 +354,9 @@ struct InspectorPaneView: View {
                     Toggle("Fixed", isOn: viewModel.bindingForSelectedFixed())
                     Toggle("Folded", isOn: viewModel.bindingForSelectedFolded())
 
-                    HStack {
-                        Button("Focus Browser") {
-                            viewModel.selectedTab = .browser
-                            viewModel.focusBrowser(on: card.id)
-                        }
-                        Button("Inline Edit") {
-                            viewModel.selectedTab = .browser
-                            viewModel.handleCardDoubleClick(card.id)
-                        }
+                    Button("Focus Browser") {
+                        viewModel.selectedTab = .browser
+                        viewModel.focusBrowser(on: card.id)
                     }
                 } else {
                     Text("No card selected")
