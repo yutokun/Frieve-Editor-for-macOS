@@ -10,21 +10,12 @@ struct EditorWorkspaceView: View {
                 TextField("Card title", text: viewModel.bindingForSelectedTitle())
                     .textFieldStyle(.roundedBorder)
                 Button("Web Search") { viewModel.searchWebForSelection() }
-                Button("Read Aloud") { viewModel.readSelectedCardAloud() }
-                Button("Stop") { viewModel.stopReadAloud() }
             }
             TextEditor(text: viewModel.bindingForSelectedBody())
                 .font(.body.monospaced())
                 .padding(8)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .textBackgroundColor)))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15)))
-            HStack {
-                Text("Related links: \(viewModel.selectedCardLinks.count)")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Button("Copy FIP2") { viewModel.exportFIP2ToClipboard() }
-                Button("Copy GPT Prompt") { viewModel.copyGPTPromptToClipboard() }
-            }
             if !viewModel.lastGPTPrompt.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Last GPT Prompt")
