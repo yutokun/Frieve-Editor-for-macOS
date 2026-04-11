@@ -219,6 +219,14 @@ struct BrowserSurfaceContentCacheEntry {
     let hitRegions: [BrowserCardHitRegion]
 }
 
+struct EditorRelatedCardLine: Identifiable, Hashable {
+    let cardID: Int
+    let relation: String
+    let text: String
+
+    var id: Int { cardID }
+}
+
 @MainActor
 final class WorkspaceViewModel: ObservableObject {
     var settings: AppSettings

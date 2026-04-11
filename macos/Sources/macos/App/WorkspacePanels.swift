@@ -16,6 +16,28 @@ struct EditorWorkspaceView: View {
                 .padding(8)
                 .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .textBackgroundColor)))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15)))
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Linked Cards")
+                    .font(.headline)
+                if viewModel.editorRelatedCardLines().isEmpty {
+                    Text("リンクしているカードはありません")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 6) {
+                            ForEach(viewModel.editorRelatedCardLines()) { line in
+                                Text(line.text)
+                                    .font(.body.monospaced())
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    }
+                    .frame(minHeight: 92, maxHeight: 140)
+                    .padding(8)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .underPageBackgroundColor)))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15)))
+                }
+            }
             if !viewModel.lastGPTPrompt.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Last GPT Prompt")

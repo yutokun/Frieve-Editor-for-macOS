@@ -613,6 +613,66 @@ extension WorkspaceViewModel {
         let values = try? url.resourceValues(forKeys: [.contentModificationDateKey])
         return values?.contentModificationDate
     }
+
+    func editorRelatedCardLines() -> [EditorRelatedCardLine] {
+        guard let selectedCardID else { return [] }
+
+        struct RelationState {
+            var hasIncoming = false
+            var hasOutgoing = false
+            var order = Int.max
+        }
+
+        var relationByCardID: [Int: RelationState] = [:]
+        for (index, link) in selectedCardLinks.enumerated() {
+            let otherCardID: Int
+            var state: RelationState
+            if link.toCardID == selectedCardID {
+                otherCardID = link.fromCardID
+                state = relationByCardID[otherCardID] ?? RelationState()
+                state.hasIncoming = true
+            } else {
+                otherCardID = link.toCardID
+                state = relationByCardID[otherCardID] ?? RelationState()
+                state.hasOutgoing = true
+            }
+            state.order = min(state.order, index)
+            relationByCardID[otherCardID] = state
+        }
+
+        return relationByCardID.compactMap { cardID, state in
+            guard let card = cardByID(cardID) else { return nil }
+            let labels = cardLabelNames(for: card)
+            let labelText = labels.isEmpty ? "" : "[\(labels.joined(separator: ", "))] "
+            let bodyText = card.bodyText
+                .replacingOccurrences(of: "\n", with: " ")
+                .trimmed
+            let relation: String
+            if state.hasIncoming && state.hasOutgoing {
+                relation = "相互"
+            } else if state.hasIncoming {
+                relation = "親"
+            } else if state.hasOutgoing {
+                relation = "子"
+            } else {
+                relation = "関連"
+            }
+            let summary = bodyText.isEmpty ? "本文なし" : bodyText
+            return EditorRelatedCardLine(
+                cardID: cardID,
+                relation: relation,
+                text: "\(relation)：\(labelText)\(card.title)：\(summary)"
+            )
+        }
+        .sorted { lhs, rhs in
+            let lhsOrder = relationByCardID[lhs.cardID]?.order ?? .max
+            let rhsOrder = relationByCardID[rhs.cardID]?.order ?? .max
+            if lhsOrder != rhsOrder {
+                return lhsOrder < rhsOrder
+            }
+            return lhs.cardID < rhs.cardID
+        }
+    }
 }
 
 extension WorkspaceViewModel {

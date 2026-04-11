@@ -405,6 +405,51 @@ import Testing
     #expect(model.document.title == "Editable Title")
 }
 
+@MainActor
+@Test func editorRelatedCardLinesListLinkedCardsAsSingleLineSummaries() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    let rootID = try #require(model.selectedCardID)
+    let childID = model.document.addCard(title: "Child", linkedFrom: rootID)
+    let parentID = model.document.addCard(title: "Parent", linkedFrom: nil)
+
+    model.document.cardLabels.append(
+        FrieveLabel(
+            id: 2,
+            name: "Topic",
+            color: 0x2244EE,
+            enabled: true,
+            show: true,
+            hide: false,
+            fold: false,
+            size: 100
+        )
+    )
+    model.document.updateCard(childID) { card in
+        card.labelIDs = [2]
+        card.bodyText = "Child body\nnext line"
+    }
+    model.document.updateCard(parentID) { card in
+        card.bodyText = "Parent body"
+    }
+    model.document.links.append(
+        FrieveLink(
+            fromCardID: parentID,
+            toCardID: rootID,
+            directionVisible: true,
+            shape: 5,
+            labelIDs: [],
+            name: "Related"
+        )
+    )
+
+    let lines = model.editorRelatedCardLines()
+
+    #expect(lines.count == 2)
+    #expect(lines.map(\.text).contains("子：[Topic] Child：Child body next line"))
+    #expect(lines.map(\.text).contains("親：Parent：Parent body"))
+}
+
 @Test func browserShiftEnterCreatesChildCardAndStartsInlineEditing() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
