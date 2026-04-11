@@ -357,3 +357,55 @@ fragment float4 browserCardFragment(
     }
     return float4(color.rgb, alpha);
 }
+
+struct BrowserMetalLabelGroupInstance {
+    float2 center;
+    float2 halfSize;
+    float4 color;
+    float strokeWidth;
+    float cornerRadius;
+    float2 padding;
+};
+
+struct BrowserMetalLabelGroupOut {
+    float4 position [[position]];
+    float2 localPoint;
+    float2 halfSize;
+    float4 color;
+    float strokeWidth;
+    float cornerRadius;
+};
+
+vertex BrowserMetalLabelGroupOut browserLabelGroupVertex(
+    constant BrowserMetalViewportUniforms &viewport [[buffer(0)]],
+    const device BrowserMetalLabelGroupInstance *groups [[buffer(1)]],
+    uint vertexID [[vertex_id]],
+    uint instanceID [[instance_id]]
+) {
+    const float2 corners[4] = {
+        float2(-1.0f, -1.0f),
+        float2( 1.0f, -1.0f),
+        float2(-1.0f,  1.0f),
+        float2( 1.0f,  1.0f)
+    };
+    BrowserMetalLabelGroupInstance g = groups[instanceID];
+    float margin = g.strokeWidth * 0.5f + 1.5f;
+    float2 offset = corners[vertexID] * (g.halfSize + margin);
+    BrowserMetalLabelGroupOut out;
+    out.position = float4(browserViewportTransform(g.center + offset, viewport.viewportSize), 0.0f, 1.0f);
+    out.localPoint = offset;
+    out.halfSize = g.halfSize;
+    out.color = g.color;
+    out.strokeWidth = g.strokeWidth;
+    out.cornerRadius = g.cornerRadius;
+    return out;
+}
+
+fragment float4 browserLabelGroupFragment(BrowserMetalLabelGroupOut in [[stage_in]]) {
+    float2 q = abs(in.localPoint) - (in.halfSize - in.cornerRadius);
+    float dist = length(max(q, 0.0f)) + min(max(q.x, q.y), 0.0f) - in.cornerRadius;
+    float borderDist = abs(dist) - in.strokeWidth * 0.5f;
+    float alpha = (1.0f - smoothstep(-0.5f, 0.5f, borderDist)) * in.color.a;
+    if (alpha < 0.001f) discard_fragment();
+    return float4(in.color.rgb, alpha);
+}

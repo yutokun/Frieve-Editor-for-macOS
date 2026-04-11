@@ -95,7 +95,6 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     private let selectionOverlayLayer = CAShapeLayer()
     private let marqueeOverlayLayer = CAShapeLayer()
     private let linkPreviewLayer = CAShapeLayer()
-    private let labelGroupOverlayLayer = CALayer()
     private let renderer: BrowserMetalRenderer
     private var trackingAreaRef: NSTrackingArea?
     private var mouseDownPoint: CGPoint?
@@ -106,7 +105,6 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     private var lastOverlaySignature: Int?
     private var lastSurfaceState: BrowserSurfaceState?
     private var lastCanvasSize: CGSize = .zero
-    private var labelGroupShapeLayers: [Int: CAShapeLayer] = [:]
     private var labelGroupTextFields: [Int: NSTextField] = [:]
 
     override init(frame frameRect: NSRect) {
@@ -354,9 +352,6 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         linkPreviewLayer.lineDashPattern = [8, 5]
         linkPreviewLayer.lineWidth = 2
 
-        labelGroupOverlayLayer.masksToBounds = false
-
-        layer?.addSublayer(labelGroupOverlayLayer)
         overlayView.layer?.addSublayer(marqueeOverlayLayer)
         overlayView.layer?.addSublayer(linkPreviewLayer)
     }
@@ -407,13 +402,6 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         defer { CATransaction.commit() }
-
-        labelGroupOverlayLayer.frame = bounds
-
-        for (_, layer) in labelGroupShapeLayers {
-            layer.removeFromSuperlayer()
-        }
-        labelGroupShapeLayers.removeAll(keepingCapacity: true)
 
         let activeIDs = Set(groups.map(\.id))
         for (id, field) in labelGroupTextFields where !activeIDs.contains(id) {
@@ -471,6 +459,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     private let device: MTLDevice
     private let commandQueue: MTLCommandQueue
     private let solidPipeline: MTLRenderPipelineState
+    private let labelGroupPipeline: MTLRenderPipelineState
     private let linkPipeline: MTLRenderPipelineState
     private let cardPipeline: MTLRenderPipelineState
     private let textPipeline: MTLRenderPipelineState
@@ -483,6 +472,8 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     private var scene: BrowserSurfaceSceneSnapshot?
     private var solidVertices: [BrowserMetalColorVertex] = []
     private var solidVertexBuffer: MTLBuffer?
+    private var labelGroupInstances: [BrowserMetalLabelGroupInstance] = []
+    private var labelGroupInstanceBuffer: MTLBuffer?
     private var linkInstances: [BrowserMetalLinkInstance] = []
     private var linkInstanceBuffer: MTLBuffer?
     private var textInstances: [BrowserMetalTextInstance] = []
@@ -524,6 +515,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         solidDescriptor.vertexFunction = library.makeFunction(name: "browserColorVertex")
         solidDescriptor.fragmentFunction = library.makeFunction(name: "browserColorFragment")
         solidDescriptor.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
+
         BrowserMetalRenderer.configureAlphaBlending(for: solidDescriptor.colorAttachments[0])
         let solidVertexDescriptor = MTLVertexDescriptor()
         solidVertexDescriptor.attributes[0].format = .float2
@@ -536,11 +528,20 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         solidDescriptor.vertexDescriptor = solidVertexDescriptor
         solidPipeline = try! device.makeRenderPipelineState(descriptor: solidDescriptor)
 
+        let labelGroupDescriptor = MTLRenderPipelineDescriptor()
+        labelGroupDescriptor.label = "Browser Label Group Pipeline"
+        labelGroupDescriptor.vertexFunction = library.makeFunction(name: "browserLabelGroupVertex")
+        labelGroupDescriptor.fragmentFunction = library.makeFunction(name: "browserLabelGroupFragment")
+        labelGroupDescriptor.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
+        BrowserMetalRenderer.configureAlphaBlending(for: labelGroupDescriptor.colorAttachments[0])
+        labelGroupPipeline = try! device.makeRenderPipelineState(descriptor: labelGroupDescriptor)
+
         let linkDescriptor = MTLRenderPipelineDescriptor()
         linkDescriptor.label = "Browser Link Pipeline"
         linkDescriptor.vertexFunction = library.makeFunction(name: "browserLinkVertex")
         linkDescriptor.fragmentFunction = library.makeFunction(name: "browserLinkFragment")
         linkDescriptor.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
+        linkDescriptor.rasterSampleCount = metalView.sampleCount
         BrowserMetalRenderer.configureAlphaBlending(for: linkDescriptor.colorAttachments[0])
         linkPipeline = try! device.makeRenderPipelineState(descriptor: linkDescriptor)
 
@@ -549,6 +550,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         cardDescriptor.vertexFunction = library.makeFunction(name: "browserCardVertex")
         cardDescriptor.fragmentFunction = library.makeFunction(name: "browserCardFragment")
         cardDescriptor.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
+        cardDescriptor.rasterSampleCount = metalView.sampleCount
         BrowserMetalRenderer.configureAlphaBlending(for: cardDescriptor.colorAttachments[0])
         cardPipeline = try! device.makeRenderPipelineState(descriptor: cardDescriptor)
 
@@ -557,6 +559,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         textDescriptor.vertexFunction = library.makeFunction(name: "browserTextVertex")
         textDescriptor.fragmentFunction = library.makeFunction(name: "browserTextFragment")
         textDescriptor.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
+        textDescriptor.rasterSampleCount = metalView.sampleCount
         BrowserMetalRenderer.configureAlphaBlending(for: textDescriptor.colorAttachments[0])
         textPipeline = try! device.makeRenderPipelineState(descriptor: textDescriptor)
 
@@ -615,6 +618,13 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             renderEncoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: solidVertices.count)
         }
 
+        if let labelGroupInstanceBuffer, !labelGroupInstances.isEmpty {
+            renderEncoder.setRenderPipelineState(labelGroupPipeline)
+            renderEncoder.setVertexBytes(&viewport, length: MemoryLayout<BrowserMetalViewportUniforms>.stride, index: 0)
+            renderEncoder.setVertexBuffer(labelGroupInstanceBuffer, offset: 0, index: 1)
+            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: labelGroupInstances.count)
+        }
+
         if let linkInstanceBuffer, !linkInstances.isEmpty {
             renderEncoder.setRenderPipelineState(linkPipeline)
             renderEncoder.setVertexBytes(&viewport, length: MemoryLayout<BrowserMetalViewportUniforms>.stride, index: 0)
@@ -655,6 +665,8 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         guard let scene else {
             solidVertices.removeAll(keepingCapacity: true)
             solidVertexBuffer = nil
+            labelGroupInstances.removeAll(keepingCapacity: true)
+            labelGroupInstanceBuffer = nil
             linkInstances.removeAll(keepingCapacity: true)
             linkInstanceBuffer = nil
             textInstances.removeAll(keepingCapacity: true)
@@ -676,11 +688,36 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             solidVertexBuffer = device.makeBuffer(bytes: solidVertices, length: MemoryLayout<BrowserMetalColorVertex>.stride * solidVertices.count)
         }
         desiredAtlasKeys.removeAll(keepingCapacity: true)
+        rebuildLabelGroupResources(for: scene)
         rebuildLinkResources(for: scene)
         rebuildCardResources(for: scene)
         rebuildTextResources(for: scene)
         applyDesiredAtlasKeys()
         viewModel?.browserPerformance.surfaceScene.record(max((CACurrentMediaTime() - geometryStart) * 1000, 0))
+    }
+
+    private func rebuildLabelGroupResources(for scene: BrowserSurfaceSceneSnapshot) {
+        labelGroupInstances = buildLabelGroupInstances(for: scene)
+        if labelGroupInstances.isEmpty {
+            labelGroupInstanceBuffer = nil
+        } else {
+            labelGroupInstanceBuffer = device.makeBuffer(bytes: labelGroupInstances, length: MemoryLayout<BrowserMetalLabelGroupInstance>.stride * labelGroupInstances.count)
+        }
+    }
+
+    private func buildLabelGroupInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalLabelGroupInstance] {
+        let transform = scene.worldToCanvasTransform
+        return scene.labelGroups.map { snapshot in
+            let canvasRect = snapshot.worldRect.applying(transform).insetBy(dx: -14, dy: -14).integral
+            return BrowserMetalLabelGroupInstance(
+                center: SIMD2(Float(canvasRect.midX), Float(canvasRect.midY)),
+                halfSize: SIMD2(Float(canvasRect.width / 2), Float(canvasRect.height / 2)),
+                color: NSColor(Color(frieveRGB: snapshot.color)).withAlphaComponent(0.72).rgbaVector,
+                strokeWidth: 3,
+                cornerRadius: Float(min(14, min(canvasRect.width, canvasRect.height) * 0.12)),
+                padding: .zero
+            )
+        }
     }
 
     private func rebuildLinkResources(for scene: BrowserSurfaceSceneSnapshot) {
@@ -718,22 +755,6 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             width: 0.7,
             into: &vertices
         )
-        let transform = scene.worldToCanvasTransform
-        for snapshot in scene.labelGroups {
-            let strokeColor = NSColor(Color(frieveRGB: snapshot.color)).withAlphaComponent(0.72).rgbaVector
-            let canvasRect = snapshot.worldRect
-                .applying(transform)
-                .insetBy(dx: -14, dy: -14)
-                .integral
-            let cornerRadius = min(14, min(canvasRect.width, canvasRect.height) * 0.12)
-            let path = CGPath(
-                roundedRect: canvasRect,
-                cornerWidth: cornerRadius,
-                cornerHeight: cornerRadius,
-                transform: nil
-            )
-            appendStrokedPath(path, color: strokeColor, width: 3, into: &vertices)
-        }
         return vertices
     }
 
@@ -1153,6 +1174,15 @@ private struct BrowserMetalViewportUniforms {
 private struct BrowserMetalColorVertex {
     var position: SIMD2<Float>
     var color: SIMD4<Float>
+}
+
+private struct BrowserMetalLabelGroupInstance {
+    var center: SIMD2<Float>
+    var halfSize: SIMD2<Float>
+    var color: SIMD4<Float>
+    var strokeWidth: Float
+    var cornerRadius: Float
+    var padding: SIMD2<Float> = .zero
 }
 
 private struct BrowserMetalLinkInstance {
