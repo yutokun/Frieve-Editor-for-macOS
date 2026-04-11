@@ -175,6 +175,10 @@ extension WorkspaceViewModel {
         scheduleBrowserChromeRefresh(immediate: true)
     }
 
+    func resolvedBrowserCanvasSize() -> CGSize {
+        browserCanvasSize == .zero ? CGSize(width: 1200, height: 800) : browserCanvasSize
+    }
+
     func markBrowserSurfaceContentDirty() {
         browserSurfaceContentRevision &+= 1
         cachedBrowserSurfaceContentKey = nil

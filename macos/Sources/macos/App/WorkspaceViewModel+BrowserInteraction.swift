@@ -401,9 +401,18 @@ extension WorkspaceViewModel {
             minY = min(minY, position.y)
             maxY = max(maxY, position.y)
         }
-        let width = max(maxX - minX, 0.2)
-        let height = max(maxY - minY, 0.2)
-        return CGRect(x: minX - width * 0.3, y: minY - height * 0.3, width: width * 1.6, height: height * 1.6)
+        let spanWidth = max(maxX - minX, 0.2)
+        let spanHeight = max(maxY - minY, 0.2)
+        let centerX = (minX + maxX) * 0.5
+        let centerY = (minY + maxY) * 0.5
+        let paddedWidth = spanWidth * 1.6
+        let paddedHeight = spanHeight * 1.6
+        return CGRect(
+            x: centerX - paddedWidth * 0.5,
+            y: centerY - paddedHeight * 0.5,
+            width: paddedWidth,
+            height: paddedHeight
+        )
     }
 
     func applyMarqueeSelection(in size: CGSize, additive: Bool) {

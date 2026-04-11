@@ -246,7 +246,12 @@ final class WorkspaceViewModel: ObservableObject {
             }
         }
     }
-    @Published var autoZoom: Bool = true
+    @Published var autoZoom: Bool = true {
+        didSet {
+            guard autoZoom, selectedTab == .browser else { return }
+            zoomToSelection(in: resolvedBrowserCanvasSize())
+        }
+    }
     @Published var linkLabelsVisible: Bool = true
     @Published var labelRectanglesVisible: Bool = true
     @Published var showOverview: Bool = true {

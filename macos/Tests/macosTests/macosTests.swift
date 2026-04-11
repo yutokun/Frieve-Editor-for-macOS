@@ -493,6 +493,36 @@ import Testing
     #expect(result.1 > result.0)
 }
 
+@Test func browserAutoZoomCentersAndFitsSelectionWhenEnabled() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let result = await MainActor.run { () -> (Bool, Bool) in
+        model.newDocument()
+        model.browserCanvasSize = CGSize(width: 1200, height: 800)
+        let rootID = model.selectedCardID ?? 0
+        let childID = model.document.addCard(title: "Zoom Target", linkedFrom: rootID)
+        model.document.updateCard(childID) { card in
+            card.position = FrievePoint(x: 0.82, y: 0.27)
+        }
+
+        model.autoZoom = false
+        let beforeCenter = model.canvasCenter
+        model.selectCard(childID)
+        let centerWithoutAutoZoom = model.canvasCenter == beforeCenter
+
+        model.selectCard(rootID)
+        model.autoZoom = true
+        model.selectCard(childID)
+        let target = model.document.card(withID: childID)?.position ?? .zero
+        let centeredOnSelection = hypot(model.canvasCenter.x - target.x, model.canvasCenter.y - target.y) < 0.0001
+
+        return (centerWithoutAutoZoom, centeredOnSelection)
+    }
+
+    #expect(result.0)
+    #expect(result.1)
+}
+
 @Test func browserArrangeModesMatchMacExpectations() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 

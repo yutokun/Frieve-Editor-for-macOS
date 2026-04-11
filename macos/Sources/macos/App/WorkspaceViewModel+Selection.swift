@@ -86,6 +86,9 @@ extension WorkspaceViewModel {
         }
         document.focusedCardID = selectedCardID
         document.touchFocusedCard()
+        if autoZoom, selectedTab == .browser {
+            zoomToSelection(in: resolvedBrowserCanvasSize())
+        }
         if autoScroll, let card = cardByID(selectedCardID) {
             startBrowserAutoScroll(toward: card.position)
         }
