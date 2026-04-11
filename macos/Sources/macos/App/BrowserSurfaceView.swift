@@ -95,6 +95,9 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
         view.onCreateChild = {
             viewModel.handleBrowserCreateChildShortcut()
         }
+        view.onCreateSibling = {
+            viewModel.handleBrowserCreateSiblingShortcut()
+        }
     }
 }
 

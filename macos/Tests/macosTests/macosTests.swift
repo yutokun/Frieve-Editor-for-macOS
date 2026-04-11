@@ -412,6 +412,30 @@ import Testing
     #expect(results.3)
 }
 
+@Test func browserCommandEnterCreatesSiblingCardAndStartsInlineEditing() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let results = await MainActor.run { () -> (Int, Bool, Bool, Bool) in
+        model.newDocument()
+        let rootID = model.selectedCardID ?? 0
+        let originalCount = model.document.cardCount
+        model.handleBrowserCreateSiblingShortcut()
+        let siblingID = model.selectedCardID ?? -1
+        let sibling = model.document.card(withID: siblingID)
+        return (
+            model.document.cardCount - originalCount,
+            siblingID != rootID,
+            sibling?.position.y == model.document.card(withID: rootID)?.position.y,
+            model.browserInlineEditorCardID == sibling?.id
+        )
+    }
+
+    #expect(results.0 == 1)
+    #expect(results.1)
+    #expect(results.2)
+    #expect(results.3)
+}
+
 @Test func browserArrangeModesMatchMacExpectations() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 

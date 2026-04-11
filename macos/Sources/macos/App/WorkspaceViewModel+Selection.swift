@@ -127,6 +127,14 @@ extension WorkspaceViewModel {
         }
     }
 
+    func handleBrowserCreateSiblingShortcut() {
+        guard selectedCardID != nil else { return }
+        addSiblingCard()
+        if let selectedCardID {
+            openBrowserInlineEditor(for: selectedCardID)
+        }
+    }
+
     func dismissBrowserInlineEditor() {
         browserInlineEditorCardID = nil
         markBrowserSurfacePresentationDirty()
