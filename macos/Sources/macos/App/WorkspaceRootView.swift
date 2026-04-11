@@ -13,7 +13,6 @@ struct WorkspaceRootView: View {
                 .navigationSplitViewColumnWidth(min: 230, ideal: 280, max: 340)
         } detail: {
             WorkspaceContentView(viewModel: viewModel)
-                .ignoresSafeArea(.all, edges: .top)
                 .toolbar {
                     ToolbarItemGroup(placement: .primaryAction) {
                         Picker("Arrange", selection: $viewModel.arrangeMode) {
@@ -163,6 +162,7 @@ private struct WorkspaceContentView: View {
                 switch viewModel.selectedTab {
                 case .browser:
                     BrowserWorkspaceView(viewModel: viewModel)
+                        .ignoresSafeArea(.all, edges: .top)
                 case .editor:
                     EditorWorkspaceView(viewModel: viewModel)
                 case .drawing:
