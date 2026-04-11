@@ -107,6 +107,37 @@ import Testing
     #expect(buckets.first?.count == 1)
 }
 
+@Test func statisticsCardsDoNotCrashWhenDocumentContainsDuplicateCardIDs() async throws {
+    let duplicate = FrieveCard(
+        id: 0,
+        title: "Duplicate Root ID",
+        bodyText: "",
+        drawingEncoded: "",
+        visible: true,
+        shape: 2,
+        size: 100,
+        isTop: false,
+        isFixed: false,
+        isFolded: false,
+        position: FrievePoint(x: 0.7, y: 0.7),
+        created: "2026-04-11T10:00:00Z",
+        updated: "2026-04-11T10:00:00Z",
+        viewed: "2026-04-11T10:00:00Z",
+        labelIDs: [1],
+        score: 0,
+        imagePath: nil,
+        videoPath: nil
+    )
+    var document = FrieveDocument.placeholder()
+    document.cards.append(duplicate)
+
+    let labelBucket = try #require(document.statisticsBuckets(for: .label, sortByCount: false).first)
+    let cards = document.statisticsCards(for: labelBucket)
+
+    #expect(cards.count == 2)
+    #expect(Set(cards.map(\.title)) == ["Frieve Editor", "Duplicate Root ID"])
+}
+
 @Test func windowsBGRColorValuesRenderWithExpectedChannels() async throws {
     let red = NSColor(Color(frieveRGB: 0x0000FF)).usingColorSpace(.deviceRGB) ?? .black
     #expect(red.redComponent > 0.99)

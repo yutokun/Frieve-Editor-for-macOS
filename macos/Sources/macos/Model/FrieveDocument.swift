@@ -466,12 +466,8 @@ struct FrieveDocument: Codable, Hashable {
     }
 
     func statisticsCards(for bucket: DocumentStatisticBucket) -> [FrieveCard] {
-        let sortOrder = Dictionary(uniqueKeysWithValues: sortedCards.enumerated().map { ($0.element.id, $0.offset) })
-        return bucket.cardIDs
-            .compactMap { card(withID: $0) }
-            .sorted { lhs, rhs in
-                (sortOrder[lhs.id] ?? .max) < (sortOrder[rhs.id] ?? .max)
-            }
+        let includedIDs = Set(bucket.cardIDs)
+        return sortedCards.filter { includedIDs.contains($0.id) }
     }
 
     private func labelStatisticsBuckets() -> [DocumentStatisticBucket] {
