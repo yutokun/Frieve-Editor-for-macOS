@@ -387,6 +387,24 @@ import Testing
     #expect(results.7.contains("|nop"))
 }
 
+@MainActor
+@Test func inspectorBindingsAllowEditingTitleAndLabels() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+
+    model.bindingForSelectedTitle().wrappedValue = "Editable Title"
+    model.bindingForSelectedLabels().wrappedValue = "Overview, Topic, Fresh Label"
+
+    let selectedCard = try #require(model.selectedCard)
+    let labelNames = model.cardLabelNames(for: selectedCard)
+
+    #expect(selectedCard.title == "Editable Title")
+    #expect(labelNames == ["Overview", "Topic", "Fresh Label"])
+    #expect(model.document.cardLabels.contains(where: { $0.name == "Topic" }))
+    #expect(model.document.cardLabels.contains(where: { $0.name == "Fresh Label" }))
+    #expect(model.document.title == "Editable Title")
+}
+
 @Test func browserShiftEnterCreatesChildCardAndStartsInlineEditing() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 

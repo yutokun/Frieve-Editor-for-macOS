@@ -318,8 +318,18 @@ struct InspectorPaneView: View {
                 Text("Inspector")
                     .font(.headline)
                 if let card = viewModel.selectedCard {
-                    LabeledContent("Title", value: card.title)
-                    LabeledContent("Labels", value: viewModel.cardLabelNames(for: card).joined(separator: ", "))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Title")
+                            .foregroundStyle(.secondary)
+                        TextField("Card title", text: viewModel.bindingForSelectedTitle())
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Labels")
+                            .foregroundStyle(.secondary)
+                        TextField("Comma-separated labels", text: viewModel.bindingForSelectedLabels())
+                            .textFieldStyle(.roundedBorder)
+                    }
                     LabeledContent("Created", value: card.created)
                     LabeledContent("Updated", value: card.updated)
 

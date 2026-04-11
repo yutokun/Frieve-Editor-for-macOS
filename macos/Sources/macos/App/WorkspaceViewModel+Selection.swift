@@ -16,6 +16,16 @@ extension WorkspaceViewModel {
         )
     }
 
+    func bindingForSelectedLabels() -> Binding<String> {
+        Binding(
+            get: { [weak self] in
+                guard let self, let card = self.selectedCard else { return "" }
+                return self.cardLabelNames(for: card).joined(separator: ", ")
+            },
+            set: { [weak self] newValue in self?.updateSelectedCardLabels(newValue) }
+        )
+    }
+
     func bindingForSelectedDrawing() -> Binding<String> {
         Binding(
             get: { [weak self] in self?.selectedCard?.drawingEncoded ?? "" },

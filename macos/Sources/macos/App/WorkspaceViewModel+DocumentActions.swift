@@ -214,6 +214,52 @@ extension WorkspaceViewModel {
         noteDocumentMutation()
     }
 
+    func updateSelectedCardLabels(_ labelsText: String) {
+        guard let selectedCardID, let selectedCard = cardByID(selectedCardID) else { return }
+
+        let names = labelsText
+            .split(whereSeparator: { $0 == "," || $0 == "\n" })
+            .map { String($0).trimmed }
+            .filter { !$0.isEmpty }
+        var uniqueNames: [String] = []
+        for name in names where !uniqueNames.contains(where: { $0.localizedCaseInsensitiveCompare(name) == .orderedSame }) {
+            uniqueNames.append(name)
+        }
+
+        let currentNames = cardLabelNames(for: selectedCard)
+        guard currentNames != uniqueNames else { return }
+
+        registerUndoCheckpointForEdit(cardID: selectedCardID)
+
+        var resolvedLabelIDs: [Int] = []
+        var nextLabelID = (document.cardLabels.map(\.id).max() ?? 0) + 1
+        for (index, name) in uniqueNames.enumerated() {
+            if let existing = document.cardLabels.first(where: { $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame }) {
+                resolvedLabelIDs.append(existing.id)
+                continue
+            }
+            let newLabel = FrieveLabel(
+                id: nextLabelID,
+                name: name,
+                color: defaultCardLabelColor(for: nextLabelID + index),
+                enabled: true,
+                show: true,
+                hide: false,
+                fold: false,
+                size: 100
+            )
+            document.cardLabels.append(newLabel)
+            resolvedLabelIDs.append(nextLabelID)
+            nextLabelID += 1
+        }
+
+        document.updateCard(selectedCardID) { card in
+            card.labelIDs = resolvedLabelIDs
+            card.updated = isoTimestamp()
+        }
+        noteDocumentMutation()
+    }
+
     func updateSelectedCardDrawing(_ drawing: String) {
         guard let selectedCardID, cardByID(selectedCardID)?.drawingEncoded != drawing else { return }
         registerUndoCheckpointForEdit(cardID: selectedCardID)
@@ -307,6 +353,11 @@ extension WorkspaceViewModel {
             requestBrowserFit()
         }
         noteDocumentMutation(status: "Shuffled card positions")
+    }
+
+    private func defaultCardLabelColor(for seed: Int) -> Int {
+        let palette: [Int] = [0x71CC2E, 0xE39C31, 0xD65745, 0xC45EE0, 0xD6CA3D, 0xCC7A2E, 0x8E67D9, 0x4B7FD6]
+        return palette[abs(seed) % palette.count]
     }
 
     func arrangeCards() {
