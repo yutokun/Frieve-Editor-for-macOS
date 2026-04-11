@@ -264,7 +264,6 @@ extension WorkspaceViewModel {
     }
 
     func shuffleLayout() {
-        browserAutoArrangeEnabled = false
         for card in document.cards {
             document.moveCard(card.id, dx: Double.random(in: -0.2 ... 0.2), dy: Double.random(in: -0.2 ... 0.2))
         }
