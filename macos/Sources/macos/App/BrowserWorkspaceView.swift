@@ -161,8 +161,6 @@ private struct BrowserCanvasHUD: View {
                 Label(viewModel.autoScroll ? "Follow" : "Free", systemImage: viewModel.autoScroll ? "scope" : "hand.draw")
             }
             HStack(spacing: 12) {
-                Button("Fit") { viewModel.requestBrowserFit() }
-                Button("Selection") { viewModel.zoomToSelection(in: canvasSize) }
                 Toggle("Auto Scroll", isOn: $viewModel.autoScroll)
                     .toggleStyle(.checkbox)
                 Toggle("Auto Zoom", isOn: $viewModel.autoZoom)
