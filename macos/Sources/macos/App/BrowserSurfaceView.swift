@@ -714,12 +714,13 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
 
     private func buildLinkInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalLinkInstance] {
         let transform = scene.worldToCanvasTransform
+        let canvasBackground = NSColor.textBackgroundColor
         return scene.links.flatMap { snapshot -> [BrowserMetalLinkInstance] in
             let startPoint = snapshot.startPoint.applying(transform)
             let endPoint = snapshot.endPoint.applying(transform)
             let color = (snapshot.isHighlighted
-                ? NSColor.controlAccentColor.withAlphaComponent(0.85)
-                : NSColor.secondaryLabelColor.withAlphaComponent(0.42)).rgbaVector
+                ? NSColor.controlAccentColor.browserOpaqueComposite(over: canvasBackground, opacity: 0.85, darkModeLift: 0.04)
+                : NSColor.secondaryLabelColor.browserOpaqueComposite(over: canvasBackground, opacity: 0.42, darkModeLift: 0.10)).rgbaVector
             let width: Float = snapshot.isHighlighted ? 3 : 2
             var instances = makeLinkSegmentInstances(
                 start: startPoint,
@@ -728,14 +729,16 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
                 lineWidth: width,
                 color: color
             )
-            if snapshot.directionVisible,
-               let arrow = makeArrowInstance(
-                start: startPoint,
-                end: endPoint,
-                lineWidth: width,
-                color: color
-               ) {
-                instances.append(arrow)
+            if snapshot.directionVisible {
+                instances.append(
+                    contentsOf: makeArrowInstances(
+                        start: startPoint,
+                        end: endPoint,
+                        shapeIndex: snapshot.shapeIndex,
+                        lineWidth: width,
+                        color: color
+                    )
+                )
             }
             return instances
         }
@@ -1265,28 +1268,24 @@ private extension BrowserMetalRenderer {
         }
     }
 
-    func makeArrowInstance(
+    func makeArrowInstances(
         start: CGPoint,
         end: CGPoint,
+        shapeIndex: Int,
         lineWidth: Float,
         color: SIMD4<Float>
-    ) -> BrowserMetalLinkInstance? {
-        let dx = end.x - start.x
-        let dy = end.y - start.y
-        let length = hypot(dx, dy)
-        guard length > 0.0001 else { return nil }
-        return BrowserMetalLinkInstance(
-            start: SIMD2(Float(start.x), Float(start.y)),
-            end: SIMD2(Float(end.x), Float(end.y)),
-            control1: .zero,
-            control2: .zero,
-            color: color,
-            lineWidth: max(lineWidth * 2.8, 5),
-            shapeIndex: 0,
-            isArrow: 1,
-            curveOffset: 0,
-            padding: .zero
-        )
+    ) -> [BrowserMetalLinkInstance] {
+        guard let geometry = browserLinkArrowGeometry(shapeIndex: shapeIndex, start: start, end: end) else {
+            return []
+        }
+        let arrowLineWidth = max(lineWidth * 1.4, lineWidth + 1)
+        let trimDistance = CGFloat(arrowLineWidth) * 0.5
+        let leftTip = browserTrimmedSegmentEnd(start: geometry.leftWing, end: geometry.tip, trimDistance: trimDistance)
+        let rightTip = browserTrimmedSegmentEnd(start: geometry.rightWing, end: geometry.tip, trimDistance: trimDistance)
+        return [
+            makeLinkBodyInstance(start: geometry.leftWing, end: leftTip, shapeIndex: 0, lineWidth: arrowLineWidth, color: color),
+            makeLinkBodyInstance(start: geometry.rightWing, end: rightTip, shapeIndex: 0, lineWidth: arrowLineWidth, color: color)
+        ]
     }
 
     func applyDesiredAtlasKeys() {
@@ -1382,6 +1381,32 @@ private extension MTLClearColor {
 }
 
 private extension NSColor {
+    func browserOpaqueComposite(over background: NSColor, opacity: CGFloat, darkModeLift: CGFloat = 0) -> NSColor {
+        let foregroundRGB = (usingColorSpace(.deviceRGB) ?? self)
+        let backgroundRGB = (background.usingColorSpace(.deviceRGB) ?? background)
+        let alpha = max(0, min(1, opacity * foregroundRGB.alphaComponent))
+        let inverseAlpha = 1 - alpha
+        let composite = NSColor(
+            red: foregroundRGB.redComponent * alpha + backgroundRGB.redComponent * inverseAlpha,
+            green: foregroundRGB.greenComponent * alpha + backgroundRGB.greenComponent * inverseAlpha,
+            blue: foregroundRGB.blueComponent * alpha + backgroundRGB.blueComponent * inverseAlpha,
+            alpha: 1
+        )
+        guard darkModeLift > 0 else { return composite }
+        let luminance =
+            0.2126 * backgroundRGB.redComponent +
+            0.7152 * backgroundRGB.greenComponent +
+            0.0722 * backgroundRGB.blueComponent
+        guard luminance < 0.5 else { return composite }
+        let lift = max(0, min(1, darkModeLift))
+        return NSColor(
+            red: composite.redComponent + (1 - composite.redComponent) * lift,
+            green: composite.greenComponent + (1 - composite.greenComponent) * lift,
+            blue: composite.blueComponent + (1 - composite.blueComponent) * lift,
+            alpha: 1
+        )
+    }
+
     var rgbaVector: SIMD4<Float> {
         let converted = usingColorSpace(.deviceRGB) ?? self
         return SIMD4(

@@ -50,6 +50,79 @@ import Testing
     #expect(html.contains("Topic"))
 }
 
+@Test func browserLinkArrowPlacementUsesMidLinkGeometry() async throws {
+    let straight = browserLinkArrowPlacement(
+        shapeIndex: 5,
+        start: CGPoint(x: 0, y: 0),
+        end: CGPoint(x: 120, y: 0)
+    )
+    #expect(straight != nil)
+    if let straight {
+        #expect(abs(straight.center.x - 60) < 0.01)
+        #expect(abs(straight.center.y) < 0.01)
+        #expect(abs(straight.direction.dx - 1) < 0.001)
+        #expect(abs(straight.direction.dy) < 0.001)
+    }
+
+    let elbow = browserLinkArrowPlacement(
+        shapeIndex: 2,
+        start: CGPoint(x: 0, y: 0),
+        end: CGPoint(x: 120, y: 80)
+    )
+    #expect(elbow != nil)
+    if let elbow {
+        #expect(abs(elbow.center.x - 60) < 0.01)
+        #expect(abs(elbow.center.y - 40) < 0.01)
+        #expect(abs(elbow.direction.dx) < 0.001)
+        #expect(abs(elbow.direction.dy - 1) < 0.001)
+    }
+
+    let curve = browserLinkArrowPlacement(
+        shapeIndex: 1,
+        start: CGPoint(x: 0, y: 0),
+        end: CGPoint(x: 140, y: 40)
+    )
+    #expect(curve != nil)
+    if let curve {
+        #expect(curve.center.x > 45)
+        #expect(curve.center.x < 95)
+        #expect(curve.center.y > 0)
+        #expect(curve.center.y < 40)
+        #expect(hypot(curve.center.x - 140, curve.center.y - 40) > 40)
+    }
+}
+
+@Test func browserLinkArrowGeometryMatchesWindowsChevronStyle() async throws {
+    let geometry = browserLinkArrowGeometry(
+        shapeIndex: 5,
+        start: CGPoint(x: 0, y: 0),
+        end: CGPoint(x: 120, y: 0)
+    )
+    #expect(geometry != nil)
+    if let geometry {
+        #expect(abs(geometry.tip.x - 60) < 0.01)
+        #expect(abs(geometry.tip.y) < 0.01)
+        #expect(geometry.leftWing.x < geometry.tip.x)
+        #expect(geometry.rightWing.x < geometry.tip.x)
+        #expect(geometry.leftWing.y < geometry.tip.y)
+        #expect(geometry.rightWing.y > geometry.tip.y)
+        #expect(abs(hypot(geometry.leftWing.x - geometry.tip.x, geometry.leftWing.y - geometry.tip.y) - 12) < 0.05)
+        #expect(abs(hypot(geometry.rightWing.x - geometry.tip.x, geometry.rightWing.y - geometry.tip.y) - 12) < 0.05)
+    }
+}
+
+@Test func browserTrimmedSegmentEndPullsChevronJointBackSlightly() async throws {
+    let trimmed = browserTrimmedSegmentEnd(
+        start: CGPoint(x: 48, y: -7),
+        end: CGPoint(x: 60, y: 0),
+        trimDistance: 2
+    )
+    #expect(trimmed.x < 60)
+    #expect(trimmed.x > 58)
+    #expect(trimmed.y < 0)
+    #expect(trimmed.y > -2)
+}
+
 @Test func browserCanvasSelectionPanZoomAndOverviewMathStayConsistent() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 

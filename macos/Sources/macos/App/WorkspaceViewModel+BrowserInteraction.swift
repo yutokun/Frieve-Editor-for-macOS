@@ -1,6 +1,177 @@
 import SwiftUI
 import AppKit
 
+struct BrowserLinkArrowPlacement {
+    let center: CGPoint
+    let direction: CGVector
+}
+
+struct BrowserLinkArrowGeometry {
+    let tip: CGPoint
+    let leftWing: CGPoint
+    let rightWing: CGPoint
+}
+
+func browserTrimmedSegmentEnd(start: CGPoint, end: CGPoint, trimDistance: CGFloat) -> CGPoint {
+    let dx = end.x - start.x
+    let dy = end.y - start.y
+    let length = hypot(dx, dy)
+    guard length > 0.0001 else { return end }
+    let appliedTrim = min(max(trimDistance, 0), length * 0.45)
+    let inverseLength = 1 / length
+    return CGPoint(
+        x: end.x - dx * inverseLength * appliedTrim,
+        y: end.y - dy * inverseLength * appliedTrim
+    )
+}
+
+func browserLinkArrowPlacement(
+    shapeIndex: Int,
+    start: CGPoint,
+    end: CGPoint,
+    baseScale: CGFloat = 1,
+    curveSamples: Int = 16
+) -> BrowserLinkArrowPlacement? {
+    let points = browserLinkPolylinePoints(
+        shapeIndex: shapeIndex,
+        start: start,
+        end: end,
+        baseScale: baseScale,
+        curveSamples: curveSamples
+    )
+    guard points.count >= 2 else { return nil }
+
+    var segments: [(start: CGPoint, end: CGPoint, length: CGFloat)] = []
+    segments.reserveCapacity(points.count - 1)
+
+    var totalLength: CGFloat = 0
+    for (segmentStart, segmentEnd) in zip(points, points.dropFirst()) {
+        let length = hypot(segmentEnd.x - segmentStart.x, segmentEnd.y - segmentStart.y)
+        guard length > 0.0001 else { continue }
+        segments.append((segmentStart, segmentEnd, length))
+        totalLength += length
+    }
+
+    guard totalLength > 0, let fallback = segments.last else { return nil }
+    let targetLength = totalLength * 0.5
+    var traversed: CGFloat = 0
+
+    for segment in segments {
+        if traversed + segment.length >= targetLength {
+            let progress = (targetLength - traversed) / segment.length
+            let center = CGPoint(
+                x: segment.start.x + (segment.end.x - segment.start.x) * progress,
+                y: segment.start.y + (segment.end.y - segment.start.y) * progress
+            )
+            let inverseLength = 1 / segment.length
+            return BrowserLinkArrowPlacement(
+                center: center,
+                direction: CGVector(
+                    dx: (segment.end.x - segment.start.x) * inverseLength,
+                    dy: (segment.end.y - segment.start.y) * inverseLength
+                )
+            )
+        }
+        traversed += segment.length
+    }
+
+    let inverseLength = 1 / fallback.length
+    return BrowserLinkArrowPlacement(
+        center: fallback.end,
+        direction: CGVector(
+            dx: (fallback.end.x - fallback.start.x) * inverseLength,
+            dy: (fallback.end.y - fallback.start.y) * inverseLength
+        )
+    )
+}
+
+func browserLinkArrowGeometry(
+    shapeIndex: Int,
+    start: CGPoint,
+    end: CGPoint,
+    baseScale: CGFloat = 1
+) -> BrowserLinkArrowGeometry? {
+    guard let placement = browserLinkArrowPlacement(
+        shapeIndex: shapeIndex,
+        start: start,
+        end: end,
+        baseScale: baseScale
+    ) else { return nil }
+
+    let scale = max(baseScale, 0.0001)
+    let wingLength: CGFloat = 12 / scale
+    let wingAngle: CGFloat = .pi * 0.2
+    let directionAngle = atan2(placement.direction.dy, placement.direction.dx)
+    let tip = placement.center
+    let leftWing = CGPoint(
+        x: tip.x - cos(directionAngle + wingAngle) * wingLength,
+        y: tip.y - sin(directionAngle + wingAngle) * wingLength
+    )
+    let rightWing = CGPoint(
+        x: tip.x - cos(directionAngle - wingAngle) * wingLength,
+        y: tip.y - sin(directionAngle - wingAngle) * wingLength
+    )
+    return BrowserLinkArrowGeometry(
+        tip: tip,
+        leftWing: leftWing,
+        rightWing: rightWing
+    )
+}
+
+private func browserLinkPolylinePoints(
+    shapeIndex: Int,
+    start: CGPoint,
+    end: CGPoint,
+    baseScale: CGFloat,
+    curveSamples: Int
+) -> [CGPoint] {
+    switch abs(shapeIndex % 6) {
+    case 1, 3:
+        let scale = max(baseScale, 0.0001)
+        let dx = end.x - start.x
+        let controlOffset = max(abs(dx) * 0.35, 28 / scale)
+        let control1 = CGPoint(x: start.x + controlOffset, y: start.y)
+        let control2 = CGPoint(x: end.x - controlOffset, y: end.y)
+        return (0...max(curveSamples, 1)).map { step in
+            let t = CGFloat(step) / CGFloat(max(curveSamples, 1))
+            return cubicBezierPoint(start: start, control1: control1, control2: control2, end: end, t: t)
+        }
+    case 2, 4:
+        let midX = (start.x + end.x) / 2
+        return [
+            start,
+            CGPoint(x: midX, y: start.y),
+            CGPoint(x: midX, y: end.y),
+            end
+        ]
+    default:
+        return [start, end]
+    }
+}
+
+private func cubicBezierPoint(
+    start: CGPoint,
+    control1: CGPoint,
+    control2: CGPoint,
+    end: CGPoint,
+    t: CGFloat
+) -> CGPoint {
+    let oneMinusT = 1 - t
+    let oneMinusTSquared = oneMinusT * oneMinusT
+    let tSquared = t * t
+    let x =
+        oneMinusTSquared * oneMinusT * start.x +
+        3 * oneMinusTSquared * t * control1.x +
+        3 * oneMinusT * tSquared * control2.x +
+        tSquared * t * end.x
+    let y =
+        oneMinusTSquared * oneMinusT * start.y +
+        3 * oneMinusTSquared * t * control1.y +
+        3 * oneMinusT * tSquared * control2.y +
+        tSquared * t * end.y
+    return CGPoint(x: x, y: y)
+}
+
 extension WorkspaceViewModel {
     func beginCanvasGesture(at point: CGPoint, modifiers: NSEvent.ModifierFlags) {
         if modifiers.contains(.shift) {
@@ -286,24 +457,28 @@ extension WorkspaceViewModel {
     }
 
     func buildLinkArrowHead(for link: FrieveLink, start: CGPoint, end: CGPoint, baseScale: CGFloat = 1) -> CGPath? {
-        guard link.directionVisible else { return nil }
-        let dx = end.x - start.x
-        let dy = end.y - start.y
-        let length = max(hypot(dx, dy), 0.0001)
-        let ux = dx / length
-        let uy = dy / length
-        let scale = max(baseScale, 0.0001)
-        let arrowLength: CGFloat = 10 / scale
-        let arrowWidth: CGFloat = 5 / scale
-        let tip = end
-        let base = CGPoint(x: end.x - ux * arrowLength, y: end.y - uy * arrowLength)
-        let left = CGPoint(x: base.x - uy * arrowWidth, y: base.y + ux * arrowWidth)
-        let right = CGPoint(x: base.x + uy * arrowWidth, y: base.y - ux * arrowWidth)
+        guard link.directionVisible,
+              let geometry = browserLinkArrowGeometry(
+                shapeIndex: link.shape,
+                start: start,
+                end: end,
+                baseScale: baseScale
+              ) else { return nil }
+        let trimmedLeftTip = browserTrimmedSegmentEnd(
+            start: geometry.leftWing,
+            end: geometry.tip,
+            trimDistance: 1.2 / max(baseScale, 0.0001)
+        )
+        let trimmedRightTip = browserTrimmedSegmentEnd(
+            start: geometry.rightWing,
+            end: geometry.tip,
+            trimDistance: 1.2 / max(baseScale, 0.0001)
+        )
         let path = CGMutablePath()
-        path.move(to: tip)
-        path.addLine(to: left)
-        path.addLine(to: right)
-        path.closeSubpath()
+        path.move(to: geometry.leftWing)
+        path.addLine(to: trimmedLeftTip)
+        path.move(to: geometry.rightWing)
+        path.addLine(to: trimmedRightTip)
         return path
     }
 
