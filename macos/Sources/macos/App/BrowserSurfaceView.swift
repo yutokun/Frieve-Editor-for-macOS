@@ -106,11 +106,21 @@ private final class BrowserOverlayHostView: NSView {
     override var isFlipped: Bool { true }
 }
 
-private enum BrowserSceneUpdateMode {
+enum BrowserSceneUpdateMode: Equatable {
     case full
     case viewportOnly
     case cardsOnly
     case cardsLinksAndText
+}
+
+func browserPresentationRefreshMode(selectionChanged: Bool, dragChanged: Bool, hoverChanged: Bool) -> BrowserSceneUpdateMode {
+    if selectionChanged || dragChanged {
+        return .cardsLinksAndText
+    }
+    if hoverChanged {
+        return .cardsOnly
+    }
+    return .cardsLinksAndText
 }
 
 @MainActor
@@ -334,13 +344,12 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
                 updateLinks: selectionChanged || dragChanged
             )
             lastSceneSnapshot = updatedScene
-            if selectionChanged || dragChanged {
-                updateScene(updatedScene, canvasSize: canvasSize, mode: .cardsLinksAndText)
-            } else if hoverChanged {
-                updateScene(updatedScene, canvasSize: canvasSize, mode: .cardsOnly)
-            } else {
-                updateScene(updatedScene, canvasSize: canvasSize, mode: .cardsOnly)
-            }
+            let mode = browserPresentationRefreshMode(
+                selectionChanged: selectionChanged,
+                dragChanged: dragChanged,
+                hoverChanged: hoverChanged
+            )
+            updateScene(updatedScene, canvasSize: canvasSize, mode: mode)
         }
     }
 

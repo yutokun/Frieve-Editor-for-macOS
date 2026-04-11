@@ -523,6 +523,21 @@ import Testing
     #expect(result.1)
 }
 
+@Test func browserCardTextRefreshModeIncludesCardTexturesAfterAsyncRaster() async throws {
+    #expect(
+        browserPresentationRefreshMode(selectionChanged: false, dragChanged: false, hoverChanged: false) == .cardsLinksAndText
+    )
+    #expect(
+        browserPresentationRefreshMode(selectionChanged: false, dragChanged: false, hoverChanged: true) == .cardsOnly
+    )
+    #expect(
+        browserPresentationRefreshMode(selectionChanged: true, dragChanged: false, hoverChanged: false) == .cardsLinksAndText
+    )
+    #expect(
+        browserPresentationRefreshMode(selectionChanged: false, dragChanged: true, hoverChanged: false) == .cardsLinksAndText
+    )
+}
+
 @Test func browserArrangeModesMatchMacExpectations() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
