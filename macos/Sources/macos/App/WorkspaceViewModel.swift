@@ -270,6 +270,14 @@ final class WorkspaceViewModel: ObservableObject {
             }
         }
     }
+    @Published var statisticsKey: StatisticsGroupingKey = .label {
+        didSet {
+            guard statisticsKey != oldValue else { return }
+            selectedStatisticsBucketID = nil
+        }
+    }
+    @Published var statisticsSortByCount: Bool = false
+    @Published var selectedStatisticsBucketID: String?
     @Published var selectedDrawingTool: String = "Cursor"
     @Published var recentFiles: [URL] = []
 @Published var lastGPTPrompt: String = ""
@@ -378,8 +386,26 @@ final class WorkspaceViewModel: ObservableObject {
         linksForCard(selectedCardID)
     }
 
-    var statisticsRows: [DocumentStatisticRow] {
-        document.statisticsRows()
+    var statisticsBuckets: [DocumentStatisticBucket] {
+        document.statisticsBuckets(for: statisticsKey, sortByCount: statisticsSortByCount)
+    }
+
+    var selectedStatisticsBucket: DocumentStatisticBucket? {
+        statisticsBuckets.first { $0.id == selectedStatisticsBucketID }
+    }
+
+    func statisticsCards(for bucket: DocumentStatisticBucket) -> [FrieveCard] {
+        document.statisticsCards(for: bucket)
+    }
+
+    func selectStatisticsBucket(_ bucket: DocumentStatisticBucket) {
+        selectedStatisticsBucketID = bucket.id
+    }
+
+    func focusStatisticsCardInBrowser(_ cardID: Int) {
+        selectedCardID = cardID
+        selectedCardIDs = [cardID]
+        selectedTab = .browser
     }
 
     var browserPerformanceSummary: String {

@@ -281,15 +281,61 @@ struct FrieveCard: Identifiable, Codable, Hashable {
     }
 }
 
-struct DocumentStatisticRow: Identifiable, Hashable {
-    var id: Int { cardID }
-    let cardID: Int
-    let title: String
-    let bodyLength: Int
-    let linkCount: Int
-    let labelNames: [String]
-    let size: Int
-    let score: Double
+enum StatisticsGroupingKey: String, CaseIterable, Identifiable {
+    case label
+    case totalLinks
+    case sourceLinks
+    case destinationLinks
+    case createdYear
+    case createdMonth
+    case createdDay
+    case createdWeekday
+    case createdHour
+    case editedYear
+    case editedMonth
+    case editedDay
+    case editedWeekday
+    case editedHour
+    case viewedYear
+    case viewedMonth
+    case viewedDay
+    case viewedWeekday
+    case viewedHour
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .label: "Label"
+        case .totalLinks: "Number of Link / Total"
+        case .sourceLinks: "Number of Link / Source"
+        case .destinationLinks: "Number of Link / Destination"
+        case .createdYear: "Created Date / Year"
+        case .createdMonth: "Created Date / Month"
+        case .createdDay: "Created Date / Day"
+        case .createdWeekday: "Created Date / Week"
+        case .createdHour: "Created Date / Hour"
+        case .editedYear: "Edited Date / Year"
+        case .editedMonth: "Edited Date / Month"
+        case .editedDay: "Edited Date / Day"
+        case .editedWeekday: "Edited Date / Week"
+        case .editedHour: "Edited Date / Hour"
+        case .viewedYear: "Viewed Date / Year"
+        case .viewedMonth: "Viewed Date / Month"
+        case .viewedDay: "Viewed Date / Day"
+        case .viewedWeekday: "Viewed Date / Week"
+        case .viewedHour: "Viewed Date / Hour"
+        }
+    }
+}
+
+struct DocumentStatisticBucket: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let count: Int
+    let color: Int?
+    let cardIDs: [Int]
+    let naturalOrder: Int
 }
 
 enum DrawingPreviewKind {
@@ -365,20 +411,214 @@ struct FrieveDocument: Codable, Hashable {
         }
     }
 
-    func statisticsRows() -> [DocumentStatisticRow] {
-        let labelLookup = cardLabels.reduce(into: [Int: String]()) { partial, label in
-            partial[label.id] = partial[label.id] ?? label.name
+    func statisticsBuckets(for key: StatisticsGroupingKey, sortByCount: Bool) -> [DocumentStatisticBucket] {
+        let buckets: [DocumentStatisticBucket] = switch key {
+        case .label:
+            labelStatisticsBuckets()
+        case .totalLinks:
+            linkStatisticsBuckets(direction: .total)
+        case .sourceLinks:
+            linkStatisticsBuckets(direction: .source)
+        case .destinationLinks:
+            linkStatisticsBuckets(direction: .destination)
+        case .createdYear:
+            dateStatisticsBuckets(field: .created, granularity: .year)
+        case .createdMonth:
+            dateStatisticsBuckets(field: .created, granularity: .month)
+        case .createdDay:
+            dateStatisticsBuckets(field: .created, granularity: .day)
+        case .createdWeekday:
+            dateStatisticsBuckets(field: .created, granularity: .weekday)
+        case .createdHour:
+            dateStatisticsBuckets(field: .created, granularity: .hour)
+        case .editedYear:
+            dateStatisticsBuckets(field: .updated, granularity: .year)
+        case .editedMonth:
+            dateStatisticsBuckets(field: .updated, granularity: .month)
+        case .editedDay:
+            dateStatisticsBuckets(field: .updated, granularity: .day)
+        case .editedWeekday:
+            dateStatisticsBuckets(field: .updated, granularity: .weekday)
+        case .editedHour:
+            dateStatisticsBuckets(field: .updated, granularity: .hour)
+        case .viewedYear:
+            dateStatisticsBuckets(field: .viewed, granularity: .year)
+        case .viewedMonth:
+            dateStatisticsBuckets(field: .viewed, granularity: .month)
+        case .viewedDay:
+            dateStatisticsBuckets(field: .viewed, granularity: .day)
+        case .viewedWeekday:
+            dateStatisticsBuckets(field: .viewed, granularity: .weekday)
+        case .viewedHour:
+            dateStatisticsBuckets(field: .viewed, granularity: .hour)
         }
-        return sortedCards.map { card in
-            DocumentStatisticRow(
-                cardID: card.id,
-                title: card.title,
-                bodyLength: card.bodyText.count,
-                linkCount: links.filter { $0.fromCardID == card.id || $0.toCardID == card.id }.count,
-                labelNames: card.labelIDs.compactMap { labelLookup[$0] },
-                size: card.size,
-                score: card.score
+
+        guard sortByCount else {
+            return buckets
+        }
+
+        return buckets.sorted { lhs, rhs in
+            if lhs.count != rhs.count {
+                return lhs.count > rhs.count
+            }
+            return lhs.naturalOrder < rhs.naturalOrder
+        }
+    }
+
+    func statisticsCards(for bucket: DocumentStatisticBucket) -> [FrieveCard] {
+        let sortOrder = Dictionary(uniqueKeysWithValues: sortedCards.enumerated().map { ($0.element.id, $0.offset) })
+        return bucket.cardIDs
+            .compactMap { card(withID: $0) }
+            .sorted { lhs, rhs in
+                (sortOrder[lhs.id] ?? .max) < (sortOrder[rhs.id] ?? .max)
+            }
+    }
+
+    private func labelStatisticsBuckets() -> [DocumentStatisticBucket] {
+        cardLabels
+            .filter(\.enabled)
+            .enumerated()
+            .map { offset, label in
+                let cardIDs = cards
+                    .filter { $0.labelIDs.contains(label.id) }
+                    .map(\.id)
+                return DocumentStatisticBucket(
+                    id: "label-\(label.id)",
+                    name: label.name,
+                    count: cardIDs.count,
+                    color: label.color,
+                    cardIDs: cardIDs,
+                    naturalOrder: offset
+                )
+            }
+    }
+
+    private func linkStatisticsBuckets(direction: StatisticsLinkDirection) -> [DocumentStatisticBucket] {
+        let countsByCardID = cards.reduce(into: [Int: Int]()) { partial, card in
+            partial[card.id] = 0
+        }
+        let resolvedCountsByCardID = links.reduce(into: countsByCardID) { partial, link in
+            if direction == .total || direction == .source {
+                partial[link.fromCardID, default: 0] += 1
+            }
+            if direction == .total || direction == .destination {
+                partial[link.toCardID, default: 0] += 1
+            }
+        }
+        let maximumLinkCount = resolvedCountsByCardID.values.max() ?? 0
+
+        return (0 ... maximumLinkCount).map { linkCount in
+            let cardIDs = cards
+                .filter { resolvedCountsByCardID[$0.id, default: 0] == linkCount }
+                .map(\.id)
+            return DocumentStatisticBucket(
+                id: "links-\(direction.rawValue)-\(linkCount)",
+                name: "\(linkCount) Links",
+                count: cardIDs.count,
+                color: nil,
+                cardIDs: cardIDs,
+                naturalOrder: linkCount
             )
+        }
+    }
+
+    private func dateStatisticsBuckets(field: StatisticsDateField, granularity: StatisticsDateGranularity) -> [DocumentStatisticBucket] {
+        let parsedDates = cards.map { card in
+            (cardID: card.id, date: statisticsDate(for: card, field: field))
+        }
+        let knownDates = parsedDates.compactMap { entry -> (Int, Date)? in
+            guard let date = entry.date else { return nil }
+            return (entry.cardID, date)
+        }
+        let orderedDefinitions = knownDates
+            .sorted { $0.1 > $1.1 }
+            .reduce(into: [StatisticsBucketDefinition]()) { partial, entry in
+                let definition = statisticsBucketDefinition(for: entry.1, granularity: granularity)
+                if !partial.contains(where: { $0.id == definition.id }) {
+                    partial.append(definition)
+                }
+            }
+
+        var cardIDsByBucketID = Dictionary(uniqueKeysWithValues: orderedDefinitions.map { ($0.id, [Int]()) })
+        var unknownCardIDs: [Int] = []
+
+        for entry in parsedDates {
+            guard let date = entry.date else {
+                unknownCardIDs.append(entry.cardID)
+                continue
+            }
+            let definition = statisticsBucketDefinition(for: date, granularity: granularity)
+            cardIDsByBucketID[definition.id, default: []].append(entry.cardID)
+        }
+
+        var buckets = orderedDefinitions.enumerated().map { offset, definition in
+            let cardIDs = cardIDsByBucketID[definition.id] ?? []
+            return DocumentStatisticBucket(
+                id: definition.id,
+                name: definition.title,
+                count: cardIDs.count,
+                color: nil,
+                cardIDs: cardIDs,
+                naturalOrder: offset
+            )
+        }
+
+        if !unknownCardIDs.isEmpty {
+            buckets.append(
+                DocumentStatisticBucket(
+                    id: "date-\(field.rawValue)-\(granularity.rawValue)-unknown",
+                    name: "Unknown",
+                    count: unknownCardIDs.count,
+                    color: nil,
+                    cardIDs: unknownCardIDs,
+                    naturalOrder: buckets.count
+                )
+            )
+        }
+
+        return buckets
+    }
+
+    private func statisticsDate(for card: FrieveCard, field: StatisticsDateField) -> Date? {
+        let rawValue: String = switch field {
+        case .created:
+            card.created
+        case .updated:
+            card.updated
+        case .viewed:
+            card.viewed
+        }
+        return StatisticsDateParser.parse(rawValue)
+    }
+
+    private func statisticsBucketDefinition(for date: Date, granularity: StatisticsDateGranularity) -> StatisticsBucketDefinition {
+        let components = Self.statisticsCalendar.dateComponents([.year, .month, .day, .weekday, .hour], from: date)
+        switch granularity {
+        case .year:
+            let year = components.year ?? 0
+            return StatisticsBucketDefinition(id: "year-\(year)", title: "\(year)")
+        case .month:
+            let year = components.year ?? 0
+            let month = components.month ?? 0
+            return StatisticsBucketDefinition(id: String(format: "month-%04d-%02d", year, month), title: "\(month)/\(year)")
+        case .day:
+            let year = components.year ?? 0
+            let month = components.month ?? 0
+            let day = components.day ?? 0
+            return StatisticsBucketDefinition(
+                id: String(format: "day-%04d-%02d-%02d", year, month, day),
+                title: StatisticsDateParser.shortDayLabel(for: date)
+            )
+        case .weekday:
+            let weekday = (components.weekday ?? 2)
+            let normalizedWeekday = (weekday + 5) % 7
+            return StatisticsBucketDefinition(
+                id: "weekday-\(normalizedWeekday)",
+                title: StatisticsDateParser.weekdayLabels[normalizedWeekday]
+            )
+        case .hour:
+            let hour = components.hour ?? 0
+            return StatisticsBucketDefinition(id: "hour-\(hour)", title: "\(hour)")
         }
     }
 
@@ -609,6 +849,120 @@ func isoTimestamp() -> String {
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     return formatter.string(from: Date())
+}
+
+private enum StatisticsLinkDirection: String {
+    case total
+    case source
+    case destination
+}
+
+private enum StatisticsDateField: String {
+    case created
+    case updated
+    case viewed
+}
+
+private enum StatisticsDateGranularity: String {
+    case year
+    case month
+    case day
+    case weekday
+    case hour
+}
+
+private struct StatisticsBucketDefinition {
+    let id: String
+    let title: String
+}
+
+private enum StatisticsDateParser {
+    static let weekdayLabels = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+
+    static func parse(_ rawValue: String) -> Date? {
+        let trimmed = rawValue.trimmed
+        guard !trimmed.isEmpty else { return nil }
+
+        let iso8601Fractional = ISO8601DateFormatter()
+        iso8601Fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        let iso8601 = ISO8601DateFormatter()
+        iso8601.formatOptions = [.withInternetDateTime]
+
+        if let date = iso8601Fractional.date(from: trimmed) ?? iso8601.date(from: trimmed) {
+            return date
+        }
+
+        for formatter in makeFormatters() {
+            if let date = formatter.date(from: trimmed) {
+                return date
+            }
+        }
+
+        if let numericValue = Double(trimmed) {
+            if numericValue > 100_000_000 {
+                return Date(timeIntervalSince1970: numericValue)
+            }
+            return delphiReferenceDate.addingTimeInterval(numericValue * 86_400)
+        }
+
+        return nil
+    }
+
+    static func shortDayLabel(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = FrieveDocument.statisticsCalendar
+        formatter.locale = .autoupdatingCurrent
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateStyle = .short
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
+    private static let delphiReferenceDate: Date = {
+        var components = DateComponents()
+        components.calendar = FrieveDocument.statisticsCalendar
+        components.timeZone = .autoupdatingCurrent
+        components.year = 1899
+        components.month = 12
+        components.day = 30
+        return components.date ?? Date(timeIntervalSince1970: 0)
+    }()
+
+    private static func makeFormatters() -> [DateFormatter] {
+        [
+            makeFormatter("yyyy-MM-dd HH:mm:ss"),
+            makeFormatter("yyyy/MM/dd HH:mm:ss"),
+            makeFormatter("yyyy/MM/dd HH:mm"),
+            makeFormatter("yyyy-MM-dd HH:mm"),
+            makeFormatter("yyyy/MM/dd"),
+            makeFormatter("yyyy-MM-dd"),
+            makeFormatter("M/d/yyyy H:mm:ss"),
+            makeFormatter("M/d/yyyy H:mm"),
+            makeFormatter("M/d/yyyy"),
+            makeFormatter("M/d/yy H:mm:ss"),
+            makeFormatter("M/d/yy H:mm"),
+            makeFormatter("M/d/yy")
+        ]
+    }
+
+    private static func makeFormatter(_ format: String) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.calendar = FrieveDocument.statisticsCalendar
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .autoupdatingCurrent
+        formatter.dateFormat = format
+        return formatter
+    }
+}
+
+private extension FrieveDocument {
+    static let statisticsCalendar: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .autoupdatingCurrent
+        calendar.locale = .autoupdatingCurrent
+        return calendar
+    }()
 }
 
 extension String {

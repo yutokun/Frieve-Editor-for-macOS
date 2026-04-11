@@ -35,6 +35,78 @@ import Testing
     #expect(decoded.metadata["Title"] == decoded.title)
 }
 
+@Test func statisticsBucketsAggregateLabelsLinksAndDatesLikeWindows() async throws {
+    var document = FrieveDocument.placeholder()
+    let firstChildID = document.addCard(title: "First", linkedFrom: 0)
+    let secondChildID = document.addCard(title: "Second", linkedFrom: 0)
+
+    document.cardLabels.append(
+        FrieveLabel(
+            id: 2,
+            name: "Topic",
+            color: 0x2244EE,
+            enabled: true,
+            show: true,
+            hide: false,
+            fold: false,
+            size: 100
+        )
+    )
+
+    document.updateCard(0) { card in
+        card.labelIDs = [1, 2]
+        card.created = "2026-04-10T10:00:00Z"
+        card.updated = "2026-04-10T12:00:00Z"
+        card.viewed = "2026-04-10T14:00:00Z"
+    }
+    document.updateCard(firstChildID) { card in
+        card.labelIDs = [2]
+        card.created = "2026-04-11T11:30:00Z"
+        card.updated = "2026-04-11T12:30:00Z"
+        card.viewed = "2026-04-11T13:30:00Z"
+    }
+    document.updateCard(secondChildID) { card in
+        card.labelIDs = []
+        card.created = "2025-12-01T01:15:00Z"
+        card.updated = "2025-12-02T02:15:00Z"
+        card.viewed = "2025-12-03T03:15:00Z"
+    }
+
+    let labelBuckets = document.statisticsBuckets(for: .label, sortByCount: false)
+    #expect(labelBuckets.map(\.name) == ["Overview", "Topic"])
+    #expect(labelBuckets.map(\.count) == [1, 2])
+
+    let totalLinkBuckets = document.statisticsBuckets(for: .totalLinks, sortByCount: false)
+    #expect(totalLinkBuckets.map(\.name) == ["0 Links", "1 Links", "2 Links"])
+    #expect(totalLinkBuckets.map(\.count) == [0, 2, 1])
+
+    let createdMonthBuckets = document.statisticsBuckets(for: .createdMonth, sortByCount: false)
+    #expect(createdMonthBuckets.map(\.name) == ["4/2026", "12/2025"])
+    #expect(createdMonthBuckets.map(\.count) == [2, 1])
+
+    let sortedLabelBuckets = document.statisticsBuckets(for: .label, sortByCount: true)
+    #expect(sortedLabelBuckets.map(\.name) == ["Topic", "Overview"])
+    #expect(sortedLabelBuckets.first?.cardIDs.sorted() == [0, firstChildID])
+}
+
+@Test func statisticsBucketsHandleUnknownAndDelphiStyleDates() async throws {
+    var document = FrieveDocument.placeholder()
+    let childID = document.addCard(title: "Legacy", linkedFrom: 0)
+
+    document.updateCard(0) { card in
+        card.created = "45392.5"
+    }
+    document.updateCard(childID) { card in
+        card.created = ""
+    }
+
+    let buckets = document.statisticsBuckets(for: .createdDay, sortByCount: false)
+    #expect(buckets.count == 2)
+    #expect(buckets.last?.name == "Unknown")
+    #expect(buckets.last?.cardIDs == [childID])
+    #expect(buckets.first?.count == 1)
+}
+
 @Test func windowsBGRColorValuesRenderWithExpectedChannels() async throws {
     let red = NSColor(Color(frieveRGB: 0x0000FF)).usingColorSpace(.deviceRGB) ?? .black
     #expect(red.redComponent > 0.99)

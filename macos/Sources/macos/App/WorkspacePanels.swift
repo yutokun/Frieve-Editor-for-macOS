@@ -76,27 +76,214 @@ struct DrawingWorkspaceView: View {
 
 struct StatisticsWorkspaceView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
+    private let labelColumnWidth: CGFloat = 220
 
     var body: some View {
-        Table(viewModel.statisticsRows) {
-            TableColumn("Title", value: \.title)
-            TableColumn("Body") { row in
-                Text("\(row.bodyLength)")
+        let buckets = viewModel.statisticsBuckets
+        let maxCount = max(buckets.map(\.count).max() ?? 0, 1)
+
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Text("Key")
+                    .foregroundStyle(.secondary)
+                Picker("Key", selection: $viewModel.statisticsKey) {
+                    ForEach(StatisticsGroupingKey.allCases) { key in
+                        Text(key.title).tag(key)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: 280, alignment: .leading)
+
+                Toggle("Sort", isOn: $viewModel.statisticsSortByCount)
+                    .toggleStyle(.button)
+
+                Spacer()
+
+                if let selectedBucket = viewModel.selectedStatisticsBucket {
+                    Text("\(selectedBucket.name): \(selectedBucket.count)")
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
             }
-            TableColumn("Links") { row in
-                Text("\(row.linkCount)")
+
+            HStack(spacing: 12) {
+                Text("Item")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(width: labelColumnWidth, alignment: .leading)
+                StatisticsScaleHeaderView(maxCount: maxCount)
             }
-            TableColumn("Labels") { row in
-                Text(row.labelNames.joined(separator: ", "))
+
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(Array(buckets.enumerated()), id: \.element.id) { index, bucket in
+                        StatisticsBarRowView(
+                            bucket: bucket,
+                            isSelected: bucket.id == viewModel.selectedStatisticsBucketID,
+                            maxCount: maxCount,
+                            rowIndex: index,
+                            labelColumnWidth: labelColumnWidth
+                        )
+                        .onTapGesture {
+                            viewModel.selectStatisticsBucket(bucket)
+                        }
+                    }
+                }
             }
-            TableColumn("Size") { row in
-                Text("\(row.size)")
-            }
-            TableColumn("Score") { row in
-                Text(row.score.formatted(.number.precision(.fractionLength(2))))
+            .background(Color(nsColor: .textBackgroundColor))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.secondary.opacity(0.18))
+            )
+
+            if let selectedBucket = viewModel.selectedStatisticsBucket {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(selectedBucket.name)
+                            .font(.headline)
+                        Text("\(selectedBucket.count) cards")
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Table(viewModel.statisticsCards(for: selectedBucket)) {
+                        TableColumn("Title", value: \.title)
+                        TableColumn("Labels") { card in
+                            Text(viewModel.cardLabelNames(for: card).joined(separator: ", "))
+                                .lineLimit(1)
+                        }
+                        TableColumn("Links") { card in
+                            Text("\(viewModel.linksForCard(card.id).count)")
+                                .monospacedDigit()
+                        }
+                        TableColumn("Updated", value: \.updated)
+                        TableColumn("") { card in
+                            Button("Focus Browser") {
+                                viewModel.focusStatisticsCardInBrowser(card.id)
+                            }
+                            .buttonStyle(.link)
+                        }
+                    }
+                    .frame(minHeight: 220)
+                }
+            } else {
+                ContentUnavailableView(
+                    "Select a bar",
+                    systemImage: "chart.bar.xaxis",
+                    description: Text("Cards for the selected statistic bucket will appear here.")
+                )
+                .frame(maxWidth: .infinity, minHeight: 220)
+                .background(Color(nsColor: .underPageBackgroundColor))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
             }
         }
         .padding(16)
+    }
+}
+
+private struct StatisticsScaleHeaderView: View {
+    let maxCount: Int
+
+    var body: some View {
+        GeometryReader { geometry in
+            let steps = max(4, min(maxCount, 8))
+            ZStack(alignment: .topLeading) {
+                ForEach(0 ... steps, id: \.self) { step in
+                    let fraction = CGFloat(step) / CGFloat(steps)
+                    let scaledValue = Int((Double(maxCount) * Double(step)) / Double(steps))
+                    VStack(spacing: 4) {
+                        Text("\(scaledValue)")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                        Rectangle()
+                            .fill(Color.secondary.opacity(0.18))
+                            .frame(width: 1)
+                    }
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .position(x: geometry.size.width * fraction, y: geometry.size.height / 2)
+                }
+            }
+        }
+        .frame(height: 26)
+    }
+}
+
+private struct StatisticsBarRowView: View {
+    let bucket: DocumentStatisticBucket
+    let isSelected: Bool
+    let maxCount: Int
+    let rowIndex: Int
+    let labelColumnWidth: CGFloat
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(bucket.name)
+                .lineLimit(1)
+                .frame(width: labelColumnWidth, alignment: .leading)
+
+            GeometryReader { geometry in
+                let barWidth = geometry.size.width * CGFloat(bucket.count) / CGFloat(max(maxCount, 1))
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.secondary.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(barColor)
+                        .frame(width: barWidth)
+                    if bucket.count > 0 {
+                        Text("\(bucket.count)")
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundStyle(.primary)
+                            .padding(.horizontal, 8)
+                            .frame(maxWidth: .infinity, alignment: barWidth > 56 ? .trailing : .leading)
+                            .offset(x: labelOffset(for: geometry.size.width, barWidth: barWidth))
+                    }
+                }
+            }
+            .frame(height: 22)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(rowBackground)
+        .overlay(alignment: .leading) {
+            if isSelected {
+                Rectangle()
+                    .fill(Color.accentColor)
+                    .frame(width: 3)
+            }
+        }
+        .contentShape(Rectangle())
+    }
+
+    private var rowBackground: Color {
+        if isSelected {
+            return Color.accentColor.opacity(0.12)
+        }
+        if rowIndex.isMultiple(of: 2) {
+            return Color.clear
+        }
+        return Color.secondary.opacity(0.05)
+    }
+
+    private var barColor: Color {
+        if let color = bucket.color {
+            return Color(frieveRGB: color)
+        }
+        let hue = rowCountHue
+        return Color(hue: hue, saturation: 0.86, brightness: 0.95)
+    }
+
+    private var rowCountHue: Double {
+        guard maxCount > 0 else { return 0.58 }
+        return Double((rowIndex * 37) % 100) / 100.0
+    }
+
+    private func labelOffset(for totalWidth: CGFloat, barWidth: CGFloat) -> CGFloat {
+        if barWidth > 56 {
+            return 0
+        }
+        let preferred = min(barWidth + 8, max(totalWidth - 42, 0))
+        return preferred
     }
 }
 
