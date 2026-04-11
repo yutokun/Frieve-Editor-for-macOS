@@ -733,6 +733,10 @@ extension WorkspaceViewModel {
         return Color.secondary.opacity(0.35)
     }
 
+    func browserCardStrokeWidth(isSelected: Bool) -> Float {
+        isSelected ? 3 : 1
+    }
+
     func browserCardShadow(for card: FrieveCard, isSelected: Bool, isHovered: Bool) -> Color {
         _ = (card, isSelected, isHovered)
         return .clear

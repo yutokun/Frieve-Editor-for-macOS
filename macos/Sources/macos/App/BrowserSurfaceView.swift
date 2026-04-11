@@ -1056,6 +1056,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             let strokeColor = NSColor(viewModel.browserCardStrokeColor(for: snapshot.card, isSelected: snapshot.isSelected, isHovered: snapshot.isHovered)).rgbaVector
             let glowColor = NSColor(viewModel.browserCardGlow(for: snapshot.card, isSelected: snapshot.isSelected)).rgbaVector
             let shadowColor = NSColor(viewModel.browserCardShadow(for: snapshot.card, isSelected: snapshot.isSelected, isHovered: snapshot.isHovered)).rgbaVector
+            let strokeWidth = viewModel.browserCardStrokeWidth(isSelected: snapshot.isSelected)
             let shadowRadius: Float = 0
             let shadowOffset = SIMD2<Float>(0, 0)
             let padding: Float = 6
@@ -1071,7 +1072,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
                     strokeColor: strokeColor,
                     glowColor: glowColor,
                     shadowColor: shadowColor,
-                    strokeWidth: 1,
+                    strokeWidth: strokeWidth,
                     glowRadius: 0,
                     shadowRadius: shadowRadius,
                     shapeIndex: Int32(browserCardVisualShapeIndex(for: snapshot.card)),

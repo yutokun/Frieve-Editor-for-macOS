@@ -478,6 +478,21 @@ import Testing
     #expect(results.3)
 }
 
+@Test func browserSelectedCardsUseThickerOutlineStroke() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let result = await MainActor.run { () -> (Float, Float) in
+        model.newDocument()
+        return (
+            model.browserCardStrokeWidth(isSelected: false),
+            model.browserCardStrokeWidth(isSelected: true)
+        )
+    }
+
+    #expect(result.0 == 1)
+    #expect(result.1 > result.0)
+}
+
 @Test func browserArrangeModesMatchMacExpectations() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
