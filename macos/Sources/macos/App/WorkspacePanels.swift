@@ -588,7 +588,8 @@ struct DrawingCanvasEditor: View {
                 width: startOffset.width + delta.width,
                 height: startOffset.height + delta.height
                 ),
-                in: canvasFrameInWindow.size
+                in: canvasFrameInWindow.size,
+                allowsRubberBanding: true
             )
             return nil
         }
@@ -597,6 +598,7 @@ struct DrawingCanvasEditor: View {
             guard event.buttonNumber == 2 else { return event }
             middlePanStartLocationInWindow = nil
             middlePanStartOffset = nil
+            settleViewportPan()
             return canvasFrameInWindow.contains(event.locationInWindow) ? nil : event
         }
     }
@@ -627,7 +629,20 @@ struct DrawingCanvasEditor: View {
             )
             viewport.zoom(by: zoomFactor, anchor: anchor, in: canvasFrameInWindow.size)
         } else {
-            viewport.pan(by: CGSize(width: event.scrollingDeltaX, height: event.scrollingDeltaY), in: canvasFrameInWindow.size)
+            viewport.pan(
+                by: CGSize(width: event.scrollingDeltaX, height: event.scrollingDeltaY),
+                in: canvasFrameInWindow.size,
+                allowsRubberBanding: true
+            )
+            if event.phase == .ended || event.phase == .cancelled || event.momentumPhase == .ended || event.momentumPhase == .cancelled {
+                settleViewportPan()
+            }
+        }
+    }
+
+    private func settleViewportPan() {
+        withAnimation(.interpolatingSpring(stiffness: 240, damping: 24)) {
+            viewport.settleContentOffset(in: canvasFrameInWindow.size)
         }
     }
 }
@@ -1057,19 +1072,28 @@ struct DrawingCanvasInteraction {
 struct DrawingCanvasViewport: Equatable {
     var zoomScale: CGFloat = 1
     var contentOffset: CGSize = .zero
+    private let rubberBandLimit: CGFloat = 56
+    private let rubberBandResistance: CGFloat = 0.35
 
-    mutating func pan(by delta: CGSize, in canvasSize: CGSize) {
+    mutating func pan(by delta: CGSize, in canvasSize: CGSize, allowsRubberBanding: Bool = false) {
         setContentOffset(
             CGSize(
                 width: contentOffset.width + delta.width,
                 height: contentOffset.height + delta.height
             ),
-            in: canvasSize
+            in: canvasSize,
+            allowsRubberBanding: allowsRubberBanding
         )
     }
 
-    mutating func setContentOffset(_ proposedOffset: CGSize, in canvasSize: CGSize) {
-        contentOffset = clampedContentOffset(proposedOffset, in: canvasSize)
+    mutating func setContentOffset(_ proposedOffset: CGSize, in canvasSize: CGSize, allowsRubberBanding: Bool = false) {
+        contentOffset = allowsRubberBanding
+            ? rubberBandedContentOffset(proposedOffset, in: canvasSize)
+            : clampedContentOffset(proposedOffset, in: canvasSize)
+    }
+
+    mutating func settleContentOffset(in canvasSize: CGSize) {
+        contentOffset = clampedContentOffset(contentOffset, in: canvasSize)
     }
 
     mutating func zoom(by factor: CGFloat, anchor: CGPoint, in canvasSize: CGSize) {
@@ -1102,24 +1126,42 @@ struct DrawingCanvasViewport: Equatable {
 
     private func clampedContentOffset(_ proposedOffset: CGSize, in canvasSize: CGSize) -> CGSize {
         guard canvasSize.width > 0, canvasSize.height > 0 else { return .zero }
-        let contentWidth = canvasSize.width * zoomScale
-        let contentHeight = canvasSize.height * zoomScale
+        let horizontalBounds = offsetBounds(contentLength: canvasSize.width * zoomScale, viewportLength: canvasSize.width)
+        let verticalBounds = offsetBounds(contentLength: canvasSize.height * zoomScale, viewportLength: canvasSize.height)
+        return CGSize(
+            width: min(max(proposedOffset.width, horizontalBounds.lowerBound), horizontalBounds.upperBound),
+            height: min(max(proposedOffset.height, verticalBounds.lowerBound), verticalBounds.upperBound)
+        )
+    }
 
-        let widthOffset: CGFloat
-        if contentWidth <= canvasSize.width {
-            widthOffset = (canvasSize.width - contentWidth) * 0.5
-        } else {
-            widthOffset = min(max(proposedOffset.width, canvasSize.width - contentWidth), 0)
+    private func rubberBandedContentOffset(_ proposedOffset: CGSize, in canvasSize: CGSize) -> CGSize {
+        guard canvasSize.width > 0, canvasSize.height > 0 else { return .zero }
+        let horizontalBounds = offsetBounds(contentLength: canvasSize.width * zoomScale, viewportLength: canvasSize.width)
+        let verticalBounds = offsetBounds(contentLength: canvasSize.height * zoomScale, viewportLength: canvasSize.height)
+        return CGSize(
+            width: rubberBandedOffset(proposedOffset.width, bounds: horizontalBounds),
+            height: rubberBandedOffset(proposedOffset.height, bounds: verticalBounds)
+        )
+    }
+
+    private func offsetBounds(contentLength: CGFloat, viewportLength: CGFloat) -> ClosedRange<CGFloat> {
+        if contentLength <= viewportLength {
+            let centeredOffset = (viewportLength - contentLength) * 0.5
+            return centeredOffset...centeredOffset
         }
+        return (viewportLength - contentLength)...0
+    }
 
-        let heightOffset: CGFloat
-        if contentHeight <= canvasSize.height {
-            heightOffset = (canvasSize.height - contentHeight) * 0.5
-        } else {
-            heightOffset = min(max(proposedOffset.height, canvasSize.height - contentHeight), 0)
+    private func rubberBandedOffset(_ proposedOffset: CGFloat, bounds: ClosedRange<CGFloat>) -> CGFloat {
+        if proposedOffset < bounds.lowerBound {
+            let overflow = bounds.lowerBound - proposedOffset
+            return bounds.lowerBound - min(overflow * rubberBandResistance, rubberBandLimit)
         }
-
-        return CGSize(width: widthOffset, height: heightOffset)
+        if proposedOffset > bounds.upperBound {
+            let overflow = proposedOffset - bounds.upperBound
+            return bounds.upperBound + min(overflow * rubberBandResistance, rubberBandLimit)
+        }
+        return proposedOffset
     }
 }
 
