@@ -395,7 +395,7 @@ struct DrawingCanvasEditor: View {
             )
             viewport.zoom(by: zoomFactor, anchor: anchor, in: canvasFrameInWindow.size)
         } else {
-            viewport.pan(by: CGSize(width: -event.scrollingDeltaX, height: -event.scrollingDeltaY))
+            viewport.pan(by: CGSize(width: event.scrollingDeltaX, height: event.scrollingDeltaY))
         }
     }
 }
