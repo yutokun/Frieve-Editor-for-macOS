@@ -349,6 +349,8 @@ final class WorkspaceViewModel: ObservableObject {
     var browserMatrixSpeedByCardID: [Int: Double] = [:]
     var browserActiveArrangeMode: String?
     var browserAutoArrangeTimer: Timer?
+    var browserAutoArrangeSuspendedUntil: CFTimeInterval = 0
+    var browserAutoArrangeResumeWorkItem: DispatchWorkItem?
     var browserAutoScrollStartCenter: FrievePoint?
     var browserAutoScrollTargetCenter: FrievePoint?
     var browserAutoScrollStartedAt: CFTimeInterval?

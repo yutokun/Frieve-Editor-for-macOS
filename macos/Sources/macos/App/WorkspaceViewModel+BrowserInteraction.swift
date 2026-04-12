@@ -287,6 +287,7 @@ extension WorkspaceViewModel {
 
     func handleScrollWheel(deltaX: CGFloat, deltaY: CGFloat, modifiers: NSEvent.ModifierFlags, at location: CGPoint, in size: CGSize) {
         markBrowserInteractionActivity()
+        suspendBrowserAutoArrange()
         if modifiers.contains(.command) {
             let factor = exp(Double(deltaY) / 240.0)
             zoom(by: factor, anchor: location, in: size)

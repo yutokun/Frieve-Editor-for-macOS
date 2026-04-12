@@ -1169,6 +1169,58 @@ import Testing
     }
 }
 
+@Test func browserScrollWheelSuspendsAutoArrangeWhilePanningViewport() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+    let canvasSize = CGSize(width: 1200, height: 800)
+
+    await MainActor.run {
+        model.newDocument()
+        model.addChildCard()
+        let firstChildID = model.selectedCardID ?? 1
+        model.addChildCard()
+        let secondChildID = model.selectedCardID ?? 2
+
+        model.document.updateCard(0) { card in
+            card.position = FrievePoint(x: 0.84, y: 0.14)
+        }
+        model.document.updateCard(firstChildID) { card in
+            card.position = FrievePoint(x: 0.12, y: 0.87)
+        }
+        model.document.updateCard(secondChildID) { card in
+            card.position = FrievePoint(x: 0.9, y: 0.82)
+        }
+
+        model.selectedTab = .browser
+        model.arrangeMode = "Matrix"
+
+        let beforeContentRevision = model.browserSurfaceContentRevision
+        let beforePositions = Dictionary(uniqueKeysWithValues: model.document.cards.map { ($0.id, $0.position) })
+        #expect(model.browserAutoArrangeTimer != nil)
+
+        model.handleScrollWheel(deltaX: 24, deltaY: 36, modifiers: [], at: CGPoint(x: 500, y: 320), in: canvasSize)
+        #expect(model.browserAutoArrangeTimer == nil)
+        #expect(CACurrentMediaTime() < model.browserAutoArrangeSuspendedUntil)
+
+        model.applyBrowserAutoArrangeStepIfNeeded()
+        let suspendedPositions = Dictionary(uniqueKeysWithValues: model.document.cards.map { ($0.id, $0.position) })
+        #expect(model.browserSurfaceContentRevision == beforeContentRevision)
+        #expect(suspendedPositions == beforePositions)
+    }
+
+    try await Task.sleep(nanoseconds: 300_000_000)
+
+    await MainActor.run {
+        #expect(model.browserAutoArrangeTimer != nil)
+
+        let beforeResumeRevision = model.browserSurfaceContentRevision
+        let beforeResumePositions = Dictionary(uniqueKeysWithValues: model.document.cards.map { ($0.id, $0.position) })
+        model.applyBrowserAutoArrangeStepIfNeeded()
+        let afterResumePositions = Dictionary(uniqueKeysWithValues: model.document.cards.map { ($0.id, $0.position) })
+        #expect(model.browserSurfaceContentRevision > beforeResumeRevision)
+        #expect(afterResumePositions != beforeResumePositions)
+    }
+}
+
 @Test func browserChromeRefreshIsDeferredDuringActiveGesture() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 

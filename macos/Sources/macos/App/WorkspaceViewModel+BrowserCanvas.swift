@@ -6,6 +6,9 @@ extension WorkspaceViewModel {
     private var browserAutoArrangeBaselineInterval: CFTimeInterval { 1.0 / 30.0 }
     private var browserAutoArrangeFrameScale: Double { browserAutoArrangeFrameInterval / browserAutoArrangeBaselineInterval }
     private var browserAutoScrollDuration: CFTimeInterval { 0.28 }
+    private var isBrowserAutoArrangeTemporarilySuspended: Bool {
+        CACurrentMediaTime() < browserAutoArrangeSuspendedUntil
+    }
 
     func ensureBrowserAutoArrangeTimer() {
         guard browserAutoArrangeTimer == nil else { return }
@@ -25,11 +28,27 @@ extension WorkspaceViewModel {
     }
 
     func updateBrowserAutoArrangeTimerState() {
-        guard browserAutoArrangeEnabled, selectedTab == .browser, !shouldSuspendBrowserAutoArrangeForCurrentGesture else {
+        guard browserAutoArrangeEnabled, selectedTab == .browser, !shouldSuspendBrowserAutoArrangeForCurrentGesture, !isBrowserAutoArrangeTemporarilySuspended else {
             stopBrowserAutoArrangeTimer()
             return
         }
         ensureBrowserAutoArrangeTimer()
+    }
+
+    func suspendBrowserAutoArrange(for duration: CFTimeInterval = 0.18, at timestamp: CFTimeInterval = CACurrentMediaTime()) {
+        guard duration > 0 else { return }
+        browserAutoArrangeSuspendedUntil = max(browserAutoArrangeSuspendedUntil, timestamp + duration)
+        browserAutoArrangeResumeWorkItem?.cancel()
+        browserAutoArrangeResumeWorkItem = nil
+        stopBrowserAutoArrangeTimer()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.browserAutoArrangeResumeWorkItem = nil
+            self.updateBrowserAutoArrangeTimerState()
+        }
+        browserAutoArrangeResumeWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: workItem)
     }
 
     func browserAutoArrangeStepScale() -> Double {
