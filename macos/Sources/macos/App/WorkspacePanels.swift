@@ -181,13 +181,17 @@ struct DrawingCanvasEditor: View {
                             isSelected: selectedShapeIndices.contains(index)
                         )
                     }
-                    ForEach(Array(selectedShapes.enumerated()), id: \.offset) { offset, shape in
-                        DrawingSelectionOverlay(
-                            shape: shape,
-                            canvasSize: geometry.size,
-                            viewport: viewport,
-                            showsHandles: selectedShapeIndices.count == 1 && offset == 0
-                        )
+                    if selectedShapeIndices.count <= 1 {
+                        ForEach(Array(selectedShapes.enumerated()), id: \.offset) { offset, shape in
+                            DrawingSelectionOverlay(
+                                shape: shape,
+                                canvasSize: geometry.size,
+                                viewport: viewport,
+                                showsHandles: selectedShapeIndices.count == 1 && offset == 0
+                            )
+                        }
+                    } else if let combinedSelectionRect = combinedSelectionRect(in: geometry.size) {
+                        DrawingSelectionBoundsOverlay(rect: combinedSelectionRect)
                     }
                     if let marqueeRect = selectionMarqueeRect(in: geometry.size) {
                         DrawingSelectionMarqueeOverlay(rect: marqueeRect)
@@ -434,6 +438,15 @@ struct DrawingCanvasEditor: View {
             height: abs(current.y - start.y)
         )
         return rect.width > 0 || rect.height > 0 ? rect : nil
+    }
+
+    private func combinedSelectionRect(in canvasSize: CGSize) -> CGRect? {
+        let selectedBounds = selectedShapes.map(\.bounds)
+        guard let first = selectedBounds.first else { return nil }
+        let unionBounds = selectedBounds.dropFirst().reduce(first) { partial, bounds in
+            partial.union(bounds)
+        }
+        return unionBounds.canvasRect(in: canvasSize, viewport: viewport)
     }
 
     private func updateMarqueeSelection(from startPoint: CGPoint, to currentPoint: CGPoint) {
@@ -1115,6 +1128,18 @@ private struct DrawingSelectionMarqueeOverlay: View {
                 Rectangle()
                     .stroke(Color.accentColor.opacity(0.75), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
             )
+            .frame(width: rect.width, height: rect.height)
+            .position(x: rect.midX, y: rect.midY)
+            .allowsHitTesting(false)
+    }
+}
+
+private struct DrawingSelectionBoundsOverlay: View {
+    let rect: CGRect
+
+    var body: some View {
+        Rectangle()
+            .stroke(Color.accentColor.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
             .frame(width: rect.width, height: rect.height)
             .position(x: rect.midX, y: rect.midY)
             .allowsHitTesting(false)
