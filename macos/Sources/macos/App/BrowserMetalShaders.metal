@@ -400,7 +400,7 @@ vertex BrowserMetalLabelGroupOut browserLabelGroupVertex(
         float2( 1.0f,  1.0f)
     };
     BrowserMetalLabelGroupInstance g = groups[instanceID];
-    float2 pixelHalfSize = abs(g.halfSize * viewport.worldScale);
+    float2 pixelHalfSize = abs(g.halfSize * viewport.worldScale) + g.padding;
     float margin = g.strokeWidth * 0.5f + 1.5f;
     float2 offset = corners[vertexID] * (pixelHalfSize + margin);
     BrowserMetalLabelGroupOut out;
