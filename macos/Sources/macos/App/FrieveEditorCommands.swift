@@ -15,6 +15,20 @@ struct FrieveEditorCommands: Commands {
                 .keyboardShortcut("n", modifiers: [.command])
             Button("Open…") { viewModel.openDocument() }
                 .keyboardShortcut("o", modifiers: [.command])
+            Menu("Open Recent") {
+                ForEach(viewModel.recentFiles, id: \.self) { url in
+                    Button(url.lastPathComponent) {
+                        viewModel.openDocument(url)
+                    }
+                }
+                if !viewModel.recentFiles.isEmpty {
+                    Divider()
+                    Button("Clear Menu") {
+                        viewModel.clearRecentFiles()
+                    }
+                }
+            }
+            Divider()
             Button("Save") { viewModel.saveDocument() }
                 .keyboardShortcut("s", modifiers: [.command])
             Button("Save As…") { viewModel.saveDocumentAs() }

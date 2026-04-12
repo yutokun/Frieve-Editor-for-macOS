@@ -604,6 +604,11 @@ extension WorkspaceViewModel {
         recentFiles = settings.recentFiles
     }
 
+    func clearRecentFiles() {
+        settings.recentFilePaths = []
+        recentFiles = []
+    }
+
     func copyTextToClipboard(_ text: String) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
