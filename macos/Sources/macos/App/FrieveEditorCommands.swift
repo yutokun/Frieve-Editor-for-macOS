@@ -38,6 +38,12 @@ struct FrieveEditorCommands: Commands {
                 .keyboardShortcut("S", modifiers: [.command, .shift])
         }
 
+        CommandGroup(after: .undoRedo) {
+            Divider()
+            Button("Find…") { viewModel.cardFilterFocusTrigger = true }
+                .keyboardShortcut("f", modifiers: [.command])
+        }
+
         CommandMenu("Cards") {
             Button("New Root Card") { viewModel.addRootCard() }
                 .keyboardShortcut("r", modifiers: [.command, .shift])

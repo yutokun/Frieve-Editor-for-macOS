@@ -81,6 +81,7 @@ private struct SidebarView: View {
 
 private struct CardListPane: View {
     @ObservedObject var viewModel: WorkspaceViewModel
+    @FocusState private var filterFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -110,6 +111,7 @@ private struct CardListPane: View {
                     HStack(spacing: 4) {
                         TextField("Filter cards", text: $viewModel.searchQuery)
                             .textFieldStyle(.roundedBorder)
+                            .focused($filterFocused)
                         Menu {
                             ForEach(CardSortOrder.allCases) { order in
                                 Button {
@@ -148,6 +150,13 @@ private struct CardListPane: View {
             }
         }
         .background(Color(nsColor: .underPageBackgroundColor))
+        .onChange(of: viewModel.cardFilterFocusTrigger) { _, triggered in
+            if triggered {
+                viewModel.showCardList = true
+                filterFocused = true
+                viewModel.cardFilterFocusTrigger = false
+            }
+        }
     }
 }
 
