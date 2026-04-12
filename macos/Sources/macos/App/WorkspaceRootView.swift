@@ -107,10 +107,31 @@ private struct CardListPane: View {
                         }
                     }
                 })) {
-                    TextField("Filter cards", text: $viewModel.searchQuery)
-                        .textFieldStyle(.roundedBorder)
-                        .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 4, trailing: 8))
+                    HStack(spacing: 4) {
+                        TextField("Filter cards", text: $viewModel.searchQuery)
+                            .textFieldStyle(.roundedBorder)
+                        Menu {
+                            ForEach(CardSortOrder.allCases) { order in
+                                Button {
+                                    viewModel.cardSortOrder = order
+                                } label: {
+                                    HStack {
+                                        Text(order.label)
+                                        if viewModel.cardSortOrder == order {
+                                            Image(systemName: "checkmark")
+                                        }
+                                    }
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .font(.system(size: 12))
+                        }
+                        .menuStyle(.borderlessButton)
+                        .fixedSize()
+                    }
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 4, trailing: 8))
 
                     ForEach(viewModel.filteredCards) { card in
                         Text(card.title)

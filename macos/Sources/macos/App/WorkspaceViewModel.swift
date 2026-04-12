@@ -2,6 +2,38 @@ import SwiftUI
 import AppKit
 import AVFoundation
 
+enum CardSortOrder: String, CaseIterable, Identifiable {
+    case title
+    case titleInverse
+    case dateCreated
+    case dateCreatedInverse
+    case dateEdited
+    case dateEditedInverse
+    case dateViewed
+    case dateViewedInverse
+    case score
+    case scoreInverse
+    case shuffle
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .title: "Title"
+        case .titleInverse: "Title (Inverse)"
+        case .dateCreated: "Date Created"
+        case .dateCreatedInverse: "Date Created (Inverse)"
+        case .dateEdited: "Date Edited"
+        case .dateEditedInverse: "Date Edited (Inverse)"
+        case .dateViewed: "Date Viewed"
+        case .dateViewedInverse: "Date Viewed (Inverse)"
+        case .score: "Score"
+        case .scoreInverse: "Score (Inverse)"
+        case .shuffle: "Shuffle"
+        }
+    }
+}
+
 enum BrowserGestureMode {
     case movingSelection
     case creatingLink(sourceCardID: Int)
@@ -244,6 +276,7 @@ final class WorkspaceViewModel: ObservableObject {
         }
     }
     @Published var searchQuery: String = ""
+    @Published var cardSortOrder: CardSortOrder = .title
 @Published var statusMessage: String = "Ready"
     var zoom: Double = 1.0
     @Published var autoScroll: Bool = false {
@@ -416,7 +449,35 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     var filteredCards: [FrieveCard] {
-        document.filteredCards(query: searchQuery)
+        let base = document.filteredCards(query: searchQuery)
+        return sortCards(base, by: cardSortOrder)
+    }
+
+    private func sortCards(_ cards: [FrieveCard], by order: CardSortOrder) -> [FrieveCard] {
+        switch order {
+        case .title:
+            return cards
+        case .titleInverse:
+            return cards.reversed()
+        case .dateCreated:
+            return cards.sorted { $0.created.localizedStandardCompare($1.created) == .orderedAscending }
+        case .dateCreatedInverse:
+            return cards.sorted { $0.created.localizedStandardCompare($1.created) == .orderedDescending }
+        case .dateEdited:
+            return cards.sorted { $0.updated.localizedStandardCompare($1.updated) == .orderedAscending }
+        case .dateEditedInverse:
+            return cards.sorted { $0.updated.localizedStandardCompare($1.updated) == .orderedDescending }
+        case .dateViewed:
+            return cards.sorted { $0.viewed.localizedStandardCompare($1.viewed) == .orderedAscending }
+        case .dateViewedInverse:
+            return cards.sorted { $0.viewed.localizedStandardCompare($1.viewed) == .orderedDescending }
+        case .score:
+            return cards.sorted { $0.score < $1.score }
+        case .scoreInverse:
+            return cards.sorted { $0.score > $1.score }
+        case .shuffle:
+            return cards.shuffled()
+        }
     }
 
     var selectedCard: FrieveCard? {
