@@ -69,7 +69,6 @@ struct DrawingWorkspaceView: View {
             HStack(alignment: .center, spacing: 12) {
                 HStack(spacing: 10) {
                     Text("Tool")
-                        .foregroundStyle(Color.primary.opacity(0.8))
                     Picker("Tool", selection: $viewModel.selectedDrawingTool) {
                         ForEach(drawingToolOptions, id: \.self) { tool in
                             Text(tool).tag(tool)
@@ -589,7 +588,7 @@ struct DrawingCanvasEditor: View {
                 height: startOffset.height + delta.height
                 ),
                 in: canvasFrameInWindow.size,
-                allowsRubberBanding: true
+                allowsRubberBanding: viewport.zoomScale > 1.0
             )
             return nil
         }
@@ -632,7 +631,7 @@ struct DrawingCanvasEditor: View {
             viewport.pan(
                 by: CGSize(width: event.scrollingDeltaX, height: event.scrollingDeltaY),
                 in: canvasFrameInWindow.size,
-                allowsRubberBanding: true
+                allowsRubberBanding: viewport.zoomScale > 1.0
             )
             if event.phase == .ended || event.phase == .cancelled || event.momentumPhase == .ended || event.momentumPhase == .cancelled {
                 settleViewportPan()
