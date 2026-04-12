@@ -155,15 +155,8 @@ struct DrawingCanvasEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Canvas")
-                    .font(.headline)
-                Spacer()
-                if selectedShapeIndex != nil {
-                    Button("Delete Selected", role: .destructive, action: deleteSelectedShape)
-                        .buttonStyle(.bordered)
-                }
-            }
+            Text("Canvas")
+                .font(.headline)
             GeometryReader { geometry in
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
