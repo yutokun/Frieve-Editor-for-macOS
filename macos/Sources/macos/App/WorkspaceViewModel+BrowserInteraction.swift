@@ -173,15 +173,25 @@ private func cubicBezierPoint(
 }
 
 extension WorkspaceViewModel {
+    func beginCanvasPanGesture(at point: CGPoint) {
+        _ = point
+        browserGestureMode = .panning(originCenter: canvasCenter)
+        updateBrowserAutoArrangeTimerState()
+    }
+
+    func beginCanvasMarqueeGesture(at point: CGPoint, additive: Bool) {
+        browserGestureMode = .marquee(additive: additive)
+        marqueeStartPoint = point
+        marqueeCurrentPoint = point
+        updateBrowserAutoArrangeTimerState()
+    }
+
     func beginCanvasGesture(at point: CGPoint, modifiers: NSEvent.ModifierFlags) {
         if modifiers.contains(.shift) {
-            browserGestureMode = .marquee(additive: modifiers.contains(.command))
-            marqueeStartPoint = point
-            marqueeCurrentPoint = point
+            beginCanvasMarqueeGesture(at: point, additive: modifiers.contains(.command))
         } else {
-            browserGestureMode = .panning(originCenter: canvasCenter)
+            beginCanvasPanGesture(at: point)
         }
-        updateBrowserAutoArrangeTimerState()
     }
 
     var hasActiveBrowserGesture: Bool {

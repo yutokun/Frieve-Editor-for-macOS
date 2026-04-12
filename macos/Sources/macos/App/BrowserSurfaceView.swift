@@ -260,7 +260,8 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
             viewModel.updateCardInteraction(cardID: mouseDownCardID, from: mouseDownPoint, to: point, in: bounds.size, modifiers: mouseDownModifiers)
         } else {
             if !viewModel.hasActiveBrowserGesture {
-                viewModel.beginCanvasGesture(at: mouseDownPoint, modifiers: mouseDownModifiers)
+                let additiveSelection = mouseDownModifiers.contains(.shift) || mouseDownModifiers.contains(.command)
+                viewModel.beginCanvasMarqueeGesture(at: mouseDownPoint, additive: additiveSelection)
             }
             viewModel.updateCanvasGesture(from: mouseDownPoint, to: point, in: bounds.size)
         }
@@ -506,6 +507,40 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         middleButtonPanning = true
     }
 
+    func beginPrimaryCanvasSelection(at point: CGPoint, modifiers: NSEvent.ModifierFlags = []) {
+        mouseDownPoint = point
+        mouseDownCardID = nil
+        mouseDownModifiers = modifiers
+        interactionDidDrag = false
+        middleButtonPanning = false
+    }
+
+    func updatePrimaryCanvasSelection(to point: CGPoint) {
+        guard let viewModel, let mouseDownPoint else { return }
+        let dragDistance = hypot(point.x - mouseDownPoint.x, point.y - mouseDownPoint.y)
+        if dragDistance < pointerDragActivationDistance {
+            return
+        }
+        interactionDidDrag = true
+        if !viewModel.hasActiveBrowserGesture {
+            let additiveSelection = mouseDownModifiers.contains(.shift) || mouseDownModifiers.contains(.command)
+            viewModel.beginCanvasMarqueeGesture(at: mouseDownPoint, additive: additiveSelection)
+        }
+        viewModel.updateCanvasGesture(from: mouseDownPoint, to: point, in: bounds.size)
+    }
+
+    func endPrimaryCanvasSelection(at point: CGPoint) {
+        guard let viewModel, mouseDownPoint != nil else { return }
+        if interactionDidDrag {
+            viewModel.endCanvasGesture(in: bounds.size)
+        } else if !mouseDownModifiers.contains(.shift) && !mouseDownModifiers.contains(.command) {
+            viewModel.clearSelection()
+            viewModel.setBrowserHoverCard(cardID(atCanvasPoint: point))
+        } else {
+            viewModel.setBrowserHoverCard(cardID(atCanvasPoint: point))
+        }
+    }
+
     func updateMiddleButtonCanvasPan(to point: CGPoint) {
         guard let viewModel, let mouseDownPoint else { return }
         let dragDistance = hypot(point.x - mouseDownPoint.x, point.y - mouseDownPoint.y)
@@ -514,7 +549,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         }
         interactionDidDrag = true
         if !viewModel.hasActiveBrowserGesture {
-            viewModel.beginCanvasGesture(at: mouseDownPoint, modifiers: [])
+            viewModel.beginCanvasPanGesture(at: mouseDownPoint)
         }
         viewModel.updateCanvasGesture(from: mouseDownPoint, to: point, in: bounds.size)
     }

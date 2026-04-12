@@ -1249,6 +1249,46 @@ import Testing
     #expect(view.bounds.size == canvasSize)
 }
 
+@MainActor
+@Test func browserLeftDragOnEmptyCanvasMarqueeSelectsCards() throws {
+    let model = WorkspaceViewModel()
+    let canvasSize = CGSize(width: 1200, height: 800)
+    let view = BrowserSurfaceNSView(frame: CGRect(origin: .zero, size: canvasSize))
+    view.viewModel = model
+
+    model.newDocument()
+    model.addChildCard()
+    let firstChildID = model.selectedCardID ?? 1
+    model.addChildCard()
+    let secondChildID = model.selectedCardID ?? 2
+    model.selectedTab = .browser
+
+    model.document.updateCard(0) { card in
+        card.position = FrievePoint(x: 0.30, y: 0.34)
+    }
+    model.document.updateCard(firstChildID) { card in
+        card.position = FrievePoint(x: 0.42, y: 0.48)
+    }
+    model.document.updateCard(secondChildID) { card in
+        card.position = FrievePoint(x: 0.78, y: 0.76)
+    }
+    model.clearSelection()
+
+    let startPoint = model.canvasPoint(for: FrievePoint(x: 0.22, y: 0.24), in: canvasSize)
+    let endPoint = model.canvasPoint(for: FrievePoint(x: 0.52, y: 0.58), in: canvasSize)
+    let initialCenter = model.canvasCenter
+
+    view.beginPrimaryCanvasSelection(at: startPoint)
+    view.updatePrimaryCanvasSelection(to: endPoint)
+    view.endPrimaryCanvasSelection(at: endPoint)
+
+    #expect(model.selectedCardIDs.contains(0))
+    #expect(model.selectedCardIDs.contains(firstChildID))
+    #expect(!model.selectedCardIDs.contains(secondChildID))
+    #expect(model.canvasCenter == initialCenter)
+    #expect(model.browserGestureMode == nil)
+}
+
 @Test func browserChromeRefreshIsDeferredDuringActiveGesture() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
