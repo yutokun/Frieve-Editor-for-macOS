@@ -141,6 +141,9 @@ extension WorkspaceViewModel {
             touchBrowserCardRasterCacheKey(cacheKey)
             return cached
         }
+        if !browserInteractionModeEnabled {
+            return cachedBrowserCardRaster(for: snapshot, cacheKey: cacheKey)
+        }
         enqueueBrowserCardRaster(for: snapshot, cacheKey: cacheKey)
         return nil
     }
