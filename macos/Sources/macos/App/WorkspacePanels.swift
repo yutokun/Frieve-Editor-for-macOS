@@ -978,12 +978,6 @@ struct StatisticsWorkspaceView: View {
                     .toggleStyle(.button)
 
                 Spacer()
-
-                if let selectedBucket = viewModel.selectedStatisticsBucket {
-                    Text("\(selectedBucket.name): \(selectedBucket.count)")
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
             }
 
             HStack(spacing: 12) {
