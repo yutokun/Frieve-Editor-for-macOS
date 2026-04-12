@@ -516,9 +516,12 @@ struct DrawingCanvasEditor: View {
                 width: event.locationInWindow.x - startLocation.x,
                 height: event.locationInWindow.y - startLocation.y
             )
-            viewport.contentOffset = CGSize(
+            viewport.setContentOffset(
+                CGSize(
                 width: startOffset.width + delta.width,
                 height: startOffset.height + delta.height
+                ),
+                in: canvasFrameInWindow.size
             )
             return nil
         }
@@ -557,7 +560,7 @@ struct DrawingCanvasEditor: View {
             )
             viewport.zoom(by: zoomFactor, anchor: anchor, in: canvasFrameInWindow.size)
         } else {
-            viewport.pan(by: CGSize(width: event.scrollingDeltaX, height: event.scrollingDeltaY))
+            viewport.pan(by: CGSize(width: event.scrollingDeltaX, height: event.scrollingDeltaY), in: canvasFrameInWindow.size)
         }
     }
 }
@@ -940,9 +943,18 @@ struct DrawingCanvasViewport: Equatable {
     var zoomScale: CGFloat = 1
     var contentOffset: CGSize = .zero
 
-    mutating func pan(by delta: CGSize) {
-        contentOffset.width += delta.width
-        contentOffset.height += delta.height
+    mutating func pan(by delta: CGSize, in canvasSize: CGSize) {
+        setContentOffset(
+            CGSize(
+                width: contentOffset.width + delta.width,
+                height: contentOffset.height + delta.height
+            ),
+            in: canvasSize
+        )
+    }
+
+    mutating func setContentOffset(_ proposedOffset: CGSize, in canvasSize: CGSize) {
+        contentOffset = clampedContentOffset(proposedOffset, in: canvasSize)
     }
 
     mutating func zoom(by factor: CGFloat, anchor: CGPoint, in canvasSize: CGSize) {
@@ -950,9 +962,12 @@ struct DrawingCanvasViewport: Equatable {
         let currentZoom = max(zoomScale, 0.5)
         let nextZoom = min(max(currentZoom * factor, 0.5), 4.0)
         guard abs(nextZoom - currentZoom) > 0.0001 else { return }
-        contentOffset.width = anchor.x - ((anchor.x - contentOffset.width) / currentZoom) * nextZoom
-        contentOffset.height = anchor.y - ((anchor.y - contentOffset.height) / currentZoom) * nextZoom
         zoomScale = nextZoom
+        let proposedOffset = CGSize(
+            width: anchor.x - ((anchor.x - contentOffset.width) / currentZoom) * nextZoom,
+            height: anchor.y - ((anchor.y - contentOffset.height) / currentZoom) * nextZoom
+        )
+        contentOffset = clampedContentOffset(proposedOffset, in: canvasSize)
     }
 
     func canvasPoint(from normalizedPoint: CGPoint, in canvasSize: CGSize) -> CGPoint {
@@ -968,6 +983,28 @@ struct DrawingCanvasViewport: Equatable {
             x: (canvasPoint.x - contentOffset.width) / (canvasSize.width * zoomScale),
             y: (canvasPoint.y - contentOffset.height) / (canvasSize.height * zoomScale)
         ).clampedNormalized()
+    }
+
+    private func clampedContentOffset(_ proposedOffset: CGSize, in canvasSize: CGSize) -> CGSize {
+        guard canvasSize.width > 0, canvasSize.height > 0 else { return .zero }
+        let contentWidth = canvasSize.width * zoomScale
+        let contentHeight = canvasSize.height * zoomScale
+
+        let widthOffset: CGFloat
+        if contentWidth <= canvasSize.width {
+            widthOffset = (canvasSize.width - contentWidth) * 0.5
+        } else {
+            widthOffset = min(max(proposedOffset.width, canvasSize.width - contentWidth), 0)
+        }
+
+        let heightOffset: CGFloat
+        if contentHeight <= canvasSize.height {
+            heightOffset = (canvasSize.height - contentHeight) * 0.5
+        } else {
+            heightOffset = min(max(proposedOffset.height, canvasSize.height - contentHeight), 0)
+        }
+
+        return CGSize(width: widthOffset, height: heightOffset)
     }
 }
 
