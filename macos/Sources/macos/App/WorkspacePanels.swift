@@ -1024,20 +1024,9 @@ struct StatisticsWorkspaceView: View {
 
                     Table(viewModel.statisticsCards(for: selectedBucket)) {
                         TableColumn("Title", value: \.title)
-                        TableColumn("Labels") { card in
-                            Text(viewModel.cardLabelNames(for: card).joined(separator: ", "))
-                                .lineLimit(1)
-                        }
-                        TableColumn("Links") { card in
-                            Text("\(viewModel.linksForCard(card.id).count)")
-                                .monospacedDigit()
-                        }
-                        TableColumn("Updated", value: \.updated)
-                        TableColumn("") { card in
-                            Button("Focus Browser") {
-                                viewModel.focusStatisticsCardInBrowser(card.id)
-                            }
-                            .buttonStyle(.link)
+                        TableColumn("Body") { card in
+                            Text(card.bodyText)
+                                .lineLimit(2)
                         }
                     }
                     .frame(minHeight: 220)
