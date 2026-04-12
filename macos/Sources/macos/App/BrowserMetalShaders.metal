@@ -47,7 +47,8 @@ struct BrowserMetalTextInstance {
     float4 tintColor;
     float hasTexture;
     float cornerRadius;
-    float2 padding;
+    float yPixelOffset;
+    float _pad;
 };
 
 struct BrowserMetalTextOut {
@@ -224,7 +225,7 @@ vertex BrowserMetalTextOut browserTextVertex(
     BrowserMetalTextInstance text = texts[instanceID];
     float2 offset = corners[vertexID] * (text.size * 0.5f);
     float2 pixelCenter = browserWorldToPixel(text.center, viewport);
-    pixelCenter.y -= text.size.y * 0.5f + 2.0f;
+    pixelCenter.y += text.yPixelOffset;
     float2 pixelPoint = pixelCenter + offset;
 
     BrowserMetalTextOut out;

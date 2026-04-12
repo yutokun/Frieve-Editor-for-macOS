@@ -162,7 +162,6 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     private var lastSurfaceState: BrowserSurfaceState?
     private var lastSceneSnapshot: BrowserSurfaceSceneSnapshot?
     private var lastCanvasSize: CGSize = .zero
-    private var labelGroupTextFields: [Int: NSTextField] = [:]
 
     override init(frame frameRect: NSRect) {
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -440,9 +439,6 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
             applyOverlay(scene.overlay)
             lastOverlaySignature = scene.overlaySignature
         }
-        if mode == .full || mode == .viewportOnly {
-            applyLabelGroups(scene.labelGroups, transform: scene.worldToCanvasTransform)
-        }
         viewModel?.recordPerformanceMetric(updateStart, keyPath: \BrowserPerformanceSnapshot.surfaceApply)
     }
 
@@ -704,59 +700,6 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         } else {
             linkPreviewLayer.path = nil
             linkPreviewLayer.isHidden = true
-        }
-    }
-
-    private func applyLabelGroups(_ groups: [BrowserLabelGroupLayerSnapshot], transform: CGAffineTransform) {
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        defer { CATransaction.commit() }
-
-        let activeIDs = Set(groups.map(\.id))
-        for (id, field) in labelGroupTextFields where !activeIDs.contains(id) {
-            field.removeFromSuperview()
-            labelGroupTextFields.removeValue(forKey: id)
-        }
-
-        for snapshot in groups {
-            let strokeColor = NSColor(Color(frieveRGB: snapshot.color)).withAlphaComponent(0.72)
-            let canvasRect = snapshot.worldRect
-                .applying(transform)
-                .insetBy(dx: -14, dy: -14)
-                .integral
-
-            let pointSize = max(10, min(CGFloat(snapshot.labelSize) * 0.12, 22))
-            let textField = labelGroupTextFields[snapshot.id] ?? {
-                let field = NSTextField(labelWithString: "")
-                field.isBezeled = false
-                field.isBordered = false
-                field.isEditable = false
-                field.isSelectable = false
-                field.drawsBackground = false
-                field.backgroundColor = .clear
-                field.lineBreakMode = .byClipping
-                field.maximumNumberOfLines = 1
-                overlayView.addSubview(field)
-                labelGroupTextFields[snapshot.id] = field
-                return field
-            }()
-            textField.stringValue = snapshot.name
-            textField.textColor = strokeColor
-            textField.font = NSFont.systemFont(ofSize: pointSize, weight: .semibold)
-            textField.alignment = .center
-            textField.sizeToFit()
-
-            let fitting = textField.fittingSize
-            let originY = snapshot.prefersNameAbove
-                ? canvasRect.minY - fitting.height - 8
-                : canvasRect.maxY + 8
-            textField.frame = CGRect(
-                x: canvasRect.midX - fitting.width * 0.5,
-                y: originY,
-                width: fitting.width,
-                height: fitting.height
-            ).integral
-            textField.isHidden = false
         }
     }
 
@@ -1635,7 +1578,8 @@ private struct BrowserMetalTextInstance {
     var tintColor: SIMD4<Float>
     var hasTexture: Float
     var cornerRadius: Float
-    var padding: SIMD2<Float>
+    var yPixelOffset: Float
+    var _pad: Float = 0
 }
 
 private struct BrowserMetalCardInstance {
@@ -1660,15 +1604,18 @@ private struct BrowserMetalCardInstance {
 
 private extension BrowserMetalRenderer {
     func buildTextInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalTextInstance] {
-        guard scene.links.contains(where: { ($0.labelText?.isEmpty == false) && $0.labelPoint != nil }) else {
+        let hasLinkLabels = scene.links.contains(where: { ($0.labelText?.isEmpty == false) && $0.labelPoint != nil })
+        let hasLabelGroupNames = !scene.labelGroups.isEmpty
+        guard hasLinkLabels || hasLabelGroupNames else {
             return []
         }
 
         let transform = scene.worldToCanvasTransform
         let canvasCenter = CGPoint(x: scene.canvasSize.width * 0.5, y: scene.canvasSize.height * 0.5)
         var instances: [BrowserMetalTextInstance] = []
-        instances.reserveCapacity(scene.links.count)
+        instances.reserveCapacity(scene.links.count + scene.labelGroups.count)
 
+        // Link labels
         for snapshot in scene.links {
             guard let text = snapshot.labelText?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !text.isEmpty,
@@ -1694,19 +1641,63 @@ private extension BrowserMetalRenderer {
                     tintColor: SIMD4<Float>(1, 1, 1, 1),
                     hasTexture: atlasEntry == nil ? 0 : 1,
                     cornerRadius: 7,
-                    padding: .zero
+                    yPixelOffset: -(Float(size.height) * 0.5 + 2.0)
                 )
             )
         }
 
-        trimLabelImageCache(activeKeys: scene.links.compactMap { snapshot in
+        // Label group names
+        for snapshot in scene.labelGroups {
+            let pointSize = max(10, min(CGFloat(snapshot.labelSize) * 0.12, 22))
+            let labelKey = "label-group-name|\(snapshot.id)|\(snapshot.name)|\(snapshot.color)|\(Int(pointSize))"
+            let strokeColor = NSColor(Color(frieveRGB: snapshot.color)).withAlphaComponent(0.72)
+            let labelImage = atlasLabelGroupNameImage(name: snapshot.name, color: strokeColor, pointSize: pointSize)
+            desiredAtlasKeys.insert(labelKey)
+            let canvasPoint = CGPoint(x: snapshot.worldRect.midX, y: snapshot.worldRect.midY).applying(transform)
+            let dx = canvasPoint.x - canvasCenter.x
+            let dy = canvasPoint.y - canvasCenter.y
+            let priority = Int(max(0, 80_000 - hypot(dx, dy) * 42))
+            let atlasEntry = atlasEntry(for: labelKey, image: labelImage, priority: priority)
+            let size = labelImage.size
+            // Position text at the world-space rect edge; use yPixelOffset for
+            // the fixed pixel-space gap (14px label padding + 8px margin + half text height)
+            // so the offset stays valid across zoom levels without rebuilding.
+            let anchorY: Float
+            let yPixelOffset: Float
+            if snapshot.prefersNameAbove {
+                anchorY = Float(snapshot.worldRect.minY)
+                yPixelOffset = -(14 + 8 + Float(size.height) * 0.5)
+            } else {
+                anchorY = Float(snapshot.worldRect.maxY)
+                yPixelOffset = 14 + 8 + Float(size.height) * 0.5
+            }
+            instances.append(
+                BrowserMetalTextInstance(
+                    center: SIMD2(Float(snapshot.worldRect.midX), anchorY),
+                    size: SIMD2(Float(size.width), Float(size.height)),
+                    atlasUVOrigin: atlasEntry?.uvOrigin ?? .zero,
+                    atlasUVSize: atlasEntry?.uvSize ?? .zero,
+                    tintColor: SIMD4<Float>(1, 1, 1, 1),
+                    hasTexture: atlasEntry == nil ? 0 : 1,
+                    cornerRadius: 0,
+                    yPixelOffset: yPixelOffset
+                )
+            )
+        }
+
+        var activeLabelKeys = scene.links.compactMap { snapshot -> String? in
             guard let text = snapshot.labelText?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !text.isEmpty,
                   snapshot.labelPoint != nil else {
                 return nil
             }
             return browserLabelAtlasKey(for: snapshot)
-        })
+        }
+        activeLabelKeys += scene.labelGroups.map { snapshot in
+            let pointSize = max(10, min(CGFloat(snapshot.labelSize) * 0.12, 22))
+            return "label-group-name|\(snapshot.id)|\(snapshot.name)|\(snapshot.color)|\(Int(pointSize))"
+        }
+        trimLabelImageCache(activeKeys: activeLabelKeys)
         return instances
     }
 
@@ -1842,6 +1833,40 @@ private extension BrowserMetalRenderer {
         border.setStroke()
         backgroundPath.lineWidth = highlighted ? 1.2 : 1
         backgroundPath.stroke()
+        attributed.draw(in: CGRect(
+            x: (imageSize.width - textSize.width) / 2,
+            y: (imageSize.height - textSize.height) / 2,
+            width: textSize.width,
+            height: textSize.height
+        ))
+        image.unlockFocus()
+        labelImageCache[cacheKey] = image
+        touchLabelImageOrder(cacheKey)
+        trimLabelImageCache(activeKeys: [cacheKey])
+        return image
+    }
+
+    func atlasLabelGroupNameImage(name: String, color: NSColor, pointSize: CGFloat) -> NSImage {
+        let cacheKey = "lg|\(color.hashValue)|\(Int(pointSize))|\(name)"
+        if let cached = labelImageCache[cacheKey] {
+            touchLabelImageOrder(cacheKey)
+            return cached
+        }
+
+        let font = NSFont.systemFont(ofSize: pointSize, weight: .semibold)
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        paragraph.lineBreakMode = .byClipping
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: color,
+            .paragraphStyle: paragraph
+        ]
+        let attributed = NSAttributedString(string: name, attributes: attributes)
+        let textSize = attributed.size()
+        let imageSize = CGSize(width: ceil(textSize.width + 4), height: ceil(textSize.height + 2))
+        let image = NSImage(size: imageSize)
+        image.lockFocus()
         attributed.draw(in: CGRect(
             x: (imageSize.width - textSize.width) / 2,
             y: (imageSize.height - textSize.height) / 2,
