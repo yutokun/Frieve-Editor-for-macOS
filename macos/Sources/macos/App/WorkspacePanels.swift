@@ -157,6 +157,7 @@ struct DrawingCanvasEditor: View {
     @State private var viewport = DrawingCanvasViewport()
     @State private var canvasFrameInWindow: CGRect = .zero
     @State private var scrollMonitor: Any?
+    @State private var magnifyMonitor: Any?
     @State private var middleMouseMonitor: Any?
     @State private var middleMouseDragMonitor: Any?
     @State private var middleMouseUpMonitor: Any?
@@ -214,10 +215,12 @@ struct DrawingCanvasEditor: View {
         .onAppear {
             synchronizeDocument(from: drawingText)
             installScrollMonitorIfNeeded()
+            installMagnifyMonitorIfNeeded()
             installMiddleMousePanMonitorsIfNeeded()
         }
         .onDisappear {
             removeScrollMonitor()
+            removeMagnifyMonitor()
             removeMiddleMousePanMonitors()
         }
         .onChange(of: drawingText) { _, newValue in
@@ -469,6 +472,27 @@ struct DrawingCanvasEditor: View {
         if let scrollMonitor {
             NSEvent.removeMonitor(scrollMonitor)
             self.scrollMonitor = nil
+        }
+    }
+
+    private func installMagnifyMonitorIfNeeded() {
+        guard magnifyMonitor == nil else { return }
+        magnifyMonitor = NSEvent.addLocalMonitorForEvents(matching: .magnify) { event in
+            guard canvasFrameInWindow.contains(event.locationInWindow) else { return event }
+            let anchor = CGPoint(
+                x: event.locationInWindow.x - canvasFrameInWindow.minX,
+                y: canvasFrameInWindow.height - (event.locationInWindow.y - canvasFrameInWindow.minY)
+            )
+            let zoomFactor = max(0.2, 1.0 + event.magnification)
+            viewport.zoom(by: zoomFactor, anchor: anchor, in: canvasFrameInWindow.size)
+            return nil
+        }
+    }
+
+    private func removeMagnifyMonitor() {
+        if let magnifyMonitor {
+            NSEvent.removeMonitor(magnifyMonitor)
+            self.magnifyMonitor = nil
         }
     }
 
