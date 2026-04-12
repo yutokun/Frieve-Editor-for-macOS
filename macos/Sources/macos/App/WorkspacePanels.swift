@@ -149,7 +149,8 @@ struct DrawingCanvasEditor: View {
     let activeStrokeColorRawValue: Int?
 
     @State private var drawingDocument = DrawingEditorDocument(encoded: "")
-    @State private var selectedShapeIndex: Int?
+    @State private var selectedShapeIndices: Set<Int> = []
+    @State private var primarySelectedShapeIndex: Int?
     @State private var interaction: DrawingCanvasInteraction?
     @State private var lastSyncedDrawing = ""
     @State private var viewport = DrawingCanvasViewport()
@@ -170,11 +171,19 @@ struct DrawingCanvasEditor: View {
                             shape: shape,
                             canvasSize: geometry.size,
                             viewport: viewport,
-                            isSelected: index == selectedShapeIndex
+                            isSelected: selectedShapeIndices.contains(index)
                         )
                     }
-                    if let selectedShape {
-                        DrawingSelectionOverlay(shape: selectedShape, canvasSize: geometry.size, viewport: viewport)
+                    ForEach(Array(selectedShapes.enumerated()), id: \.offset) { offset, shape in
+                        DrawingSelectionOverlay(
+                            shape: shape,
+                            canvasSize: geometry.size,
+                            viewport: viewport,
+                            showsHandles: selectedShapeIndices.count == 1 && offset == 0
+                        )
+                    }
+                    if let marqueeRect = selectionMarqueeRect(in: geometry.size) {
+                        DrawingSelectionMarqueeOverlay(rect: marqueeRect)
                     }
                 }
                 .contentShape(Rectangle())
@@ -207,14 +216,17 @@ struct DrawingCanvasEditor: View {
         }
     }
 
-    private var selectedShape: DrawingEditorShape? {
-        guard let selectedShapeIndex, drawingDocument.shapes.indices.contains(selectedShapeIndex) else { return nil }
-        return drawingDocument.shapes[selectedShapeIndex]
+    private var selectedShapes: [DrawingEditorShape] {
+        selectedShapeIndices.sorted().compactMap { index in
+            drawingDocument.shapes.indices.contains(index) ? drawingDocument.shapes[index] : nil
+        }
     }
 
     private var selectionHint: String {
         if selectedTool == "Cursor" {
-            return selectedShapeIndex == nil ? "Click a shape to select it. Drag to move it or drag a handle to resize it." : "Drag the selected shape to move it, use the handles to resize, or delete it."
+            return selectedShapeIndices.isEmpty
+                ? "Click a shape to select it. Drag empty space to marquee-select shapes."
+                : "Drag selected shapes to move them, use a handle to resize one shape, or delete the selection."
         }
         return "Drag on the canvas to draw a \(selectedTool.lowercased()) shape."
     }
@@ -262,9 +274,10 @@ struct DrawingCanvasEditor: View {
         let normalizedPoint = viewport.normalizedPoint(from: location, in: canvasSize)
 
         if selectedTool == "Cursor" {
-            if let selectedShapeIndex,
-               drawingDocument.shapes.indices.contains(selectedShapeIndex),
-               let handle = drawingDocument.shapes[selectedShapeIndex].handleHitTest(
+            if selectedShapeIndices.count == 1,
+               let primarySelectedShapeIndex,
+               drawingDocument.shapes.indices.contains(primarySelectedShapeIndex),
+               let handle = drawingDocument.shapes[primarySelectedShapeIndex].handleHitTest(
                    at: location,
                    in: canvasSize,
                    viewport: viewport,
@@ -272,9 +285,9 @@ struct DrawingCanvasEditor: View {
                ) {
                 interaction = DrawingCanvasInteraction(
                     mode: .resizing(
-                        index: selectedShapeIndex,
+                        index: primarySelectedShapeIndex,
                         handle: handle,
-                        originalShape: drawingDocument.shapes[selectedShapeIndex]
+                        originalShape: drawingDocument.shapes[primarySelectedShapeIndex]
                     ),
                     canvasSize: canvasSize
                 )
@@ -282,16 +295,30 @@ struct DrawingCanvasEditor: View {
             }
 
             if let hitIndex = drawingDocument.hitTestShape(at: location, in: canvasSize, viewport: viewport, tolerance: 10) {
-                selectedShapeIndex = hitIndex
+                if !selectedShapeIndices.contains(hitIndex) {
+                    selectedShapeIndices = [hitIndex]
+                }
+                primarySelectedShapeIndex = hitIndex
                 interaction = DrawingCanvasInteraction(
-                    mode: .moving(index: hitIndex, startPoint: normalizedPoint, originalShape: drawingDocument.shapes[hitIndex]),
+                    mode: .moving(
+                        indices: selectedShapeIndices.sorted(),
+                        startPoint: normalizedPoint,
+                        originalShapes: Dictionary(uniqueKeysWithValues: selectedShapeIndices.compactMap { index in
+                            guard drawingDocument.shapes.indices.contains(index) else { return nil }
+                            return (index, drawingDocument.shapes[index])
+                        })
+                    ),
                     canvasSize: canvasSize
                 )
                 return
             }
 
-            selectedShapeIndex = nil
-            interaction = DrawingCanvasInteraction(mode: .selecting, canvasSize: canvasSize)
+            selectedShapeIndices = []
+            primarySelectedShapeIndex = nil
+            interaction = DrawingCanvasInteraction(
+                mode: .selecting(startPoint: normalizedPoint, currentPoint: normalizedPoint),
+                canvasSize: canvasSize
+            )
             return
         }
 
@@ -299,7 +326,8 @@ struct DrawingCanvasEditor: View {
             return
         }
         drawingDocument.shapes.append(newShape)
-        selectedShapeIndex = drawingDocument.shapes.count - 1
+        primarySelectedShapeIndex = drawingDocument.shapes.count - 1
+        selectedShapeIndices = [drawingDocument.shapes.count - 1]
         interaction = DrawingCanvasInteraction(
             mode: .drawing(index: drawingDocument.shapes.count - 1, tool: selectedTool),
             canvasSize: canvasSize
@@ -307,33 +335,40 @@ struct DrawingCanvasEditor: View {
     }
 
     private func updateInteraction(at location: CGPoint) {
-        guard let interaction else { return }
-        let normalizedPoint = viewport.normalizedPoint(from: location, in: interaction.canvasSize)
+        guard let activeInteraction = interaction else { return }
+        let normalizedPoint = viewport.normalizedPoint(from: location, in: activeInteraction.canvasSize)
 
-        switch interaction.mode {
+        switch activeInteraction.mode {
         case let .drawing(index, tool):
             guard drawingDocument.shapes.indices.contains(index) else { return }
             drawingDocument.shapes[index].updateDraft(tool: tool, with: normalizedPoint)
-        case let .moving(index, startPoint, originalShape):
-            guard drawingDocument.shapes.indices.contains(index) else { return }
+        case let .moving(indices, startPoint, originalShapes):
             let delta = CGSize(width: normalizedPoint.x - startPoint.x, height: normalizedPoint.y - startPoint.y)
-            drawingDocument.shapes[index] = originalShape.moved(by: delta)
+            for index in indices {
+                guard drawingDocument.shapes.indices.contains(index), let originalShape = originalShapes[index] else { continue }
+                drawingDocument.shapes[index] = originalShape.moved(by: delta)
+            }
         case let .resizing(index, handle, originalShape):
             guard drawingDocument.shapes.indices.contains(index) else { return }
             drawingDocument.shapes[index] = originalShape.resized(using: handle, to: normalizedPoint)
-        case .selecting:
-            break
+        case let .selecting(startPoint, _):
+            interaction = DrawingCanvasInteraction(
+                mode: .selecting(startPoint: startPoint, currentPoint: normalizedPoint),
+                canvasSize: activeInteraction.canvasSize
+            )
+            updateMarqueeSelection(from: startPoint, to: normalizedPoint)
         }
     }
 
     private func finishInteraction() {
         defer { interaction = nil }
 
-        if let selectedShapeIndex,
-           drawingDocument.shapes.indices.contains(selectedShapeIndex),
-           drawingDocument.shapes[selectedShapeIndex].isDegenerate {
-            drawingDocument.shapes.remove(at: selectedShapeIndex)
-            self.selectedShapeIndex = nil
+        if let primarySelectedShapeIndex,
+           drawingDocument.shapes.indices.contains(primarySelectedShapeIndex),
+           drawingDocument.shapes[primarySelectedShapeIndex].isDegenerate {
+            drawingDocument.shapes.remove(at: primarySelectedShapeIndex)
+            selectedShapeIndices = normalizedSelectionIndices(afterRemoving: [primarySelectedShapeIndex])
+            self.primarySelectedShapeIndex = selectedShapeIndices.sorted().last
         }
 
         guard let interaction else {
@@ -350,9 +385,13 @@ struct DrawingCanvasEditor: View {
     }
 
     private func deleteSelectedShape() {
-        guard let selectedShapeIndex, drawingDocument.shapes.indices.contains(selectedShapeIndex) else { return }
-        drawingDocument.shapes.remove(at: selectedShapeIndex)
-        self.selectedShapeIndex = nil
+        let indices = selectedShapeIndices.sorted()
+        guard !indices.isEmpty else { return }
+        for index in indices.reversed() where drawingDocument.shapes.indices.contains(index) {
+            drawingDocument.shapes.remove(at: index)
+        }
+        selectedShapeIndices = []
+        primarySelectedShapeIndex = nil
         commitDrawing()
     }
 
@@ -365,9 +404,46 @@ struct DrawingCanvasEditor: View {
     private func synchronizeDocument(from encoded: String) {
         drawingDocument = DrawingEditorDocument(encoded: encoded)
         lastSyncedDrawing = encoded
-        if let selectedShapeIndex, !drawingDocument.shapes.indices.contains(selectedShapeIndex) {
-            self.selectedShapeIndex = nil
+        selectedShapeIndices = Set(selectedShapeIndices.filter { drawingDocument.shapes.indices.contains($0) })
+        if let primarySelectedShapeIndex, !drawingDocument.shapes.indices.contains(primarySelectedShapeIndex) {
+            self.primarySelectedShapeIndex = selectedShapeIndices.sorted().last
         }
+    }
+
+    private func selectionMarqueeRect(in canvasSize: CGSize) -> CGRect? {
+        guard case let .selecting(startPoint, currentPoint)? = interaction?.mode else { return nil }
+        let start = viewport.canvasPoint(from: startPoint, in: canvasSize)
+        let current = viewport.canvasPoint(from: currentPoint, in: canvasSize)
+        let rect = CGRect(
+            x: min(start.x, current.x),
+            y: min(start.y, current.y),
+            width: abs(current.x - start.x),
+            height: abs(current.y - start.y)
+        )
+        return rect.width > 0 || rect.height > 0 ? rect : nil
+    }
+
+    private func updateMarqueeSelection(from startPoint: CGPoint, to currentPoint: CGPoint) {
+        let selectionRect = CGRect(
+            x: min(startPoint.x, currentPoint.x),
+            y: min(startPoint.y, currentPoint.y),
+            width: abs(currentPoint.x - startPoint.x),
+            height: abs(currentPoint.y - startPoint.y)
+        )
+        let nextSelection = Set(drawingDocument.shapes.indices.filter { index in
+            selectionRect.intersects(drawingDocument.shapes[index].bounds)
+        })
+        selectedShapeIndices = nextSelection
+        primarySelectedShapeIndex = nextSelection.sorted().last
+    }
+
+    private func normalizedSelectionIndices(afterRemoving removedIndices: [Int]) -> Set<Int> {
+        let removed = Set(removedIndices)
+        return Set(selectedShapeIndices.compactMap { index in
+            guard !removed.contains(index) else { return nil }
+            let shift = removed.filter { $0 < index }.count
+            return index - shift
+        })
     }
 
     private func installScrollMonitorIfNeeded() {
@@ -765,9 +841,9 @@ enum DrawingEditorHandle: CaseIterable {
 struct DrawingCanvasInteraction {
     enum Mode {
         case drawing(index: Int, tool: String)
-        case moving(index: Int, startPoint: CGPoint, originalShape: DrawingEditorShape)
+        case moving(indices: [Int], startPoint: CGPoint, originalShapes: [Int: DrawingEditorShape])
         case resizing(index: Int, handle: DrawingEditorHandle, originalShape: DrawingEditorShape)
-        case selecting
+        case selecting(startPoint: CGPoint, currentPoint: CGPoint)
     }
 
     let mode: Mode
@@ -883,6 +959,7 @@ private struct DrawingSelectionOverlay: View {
     let shape: DrawingEditorShape
     let canvasSize: CGSize
     let viewport: DrawingCanvasViewport
+    let showsHandles: Bool
 
     var body: some View {
         ZStack {
@@ -892,14 +969,32 @@ private struct DrawingSelectionOverlay: View {
                 }
                 .stroke(Color.accentColor.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
             }
-            ForEach(Array(shape.handlePoints(in: canvasSize, viewport: viewport).enumerated()), id: \.offset) { _, entry in
-                Circle()
-                    .fill(Color.white)
-                    .frame(width: 10, height: 10)
-                    .overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
-                    .position(entry.1)
+            if showsHandles {
+                ForEach(Array(shape.handlePoints(in: canvasSize, viewport: viewport).enumerated()), id: \.offset) { _, entry in
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 10, height: 10)
+                        .overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
+                        .position(entry.1)
+                }
             }
         }
+    }
+}
+
+private struct DrawingSelectionMarqueeOverlay: View {
+    let rect: CGRect
+
+    var body: some View {
+        Rectangle()
+            .fill(Color.accentColor.opacity(0.10))
+            .overlay(
+                Rectangle()
+                    .stroke(Color.accentColor.opacity(0.75), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
+            )
+            .frame(width: rect.width, height: rect.height)
+            .position(x: rect.midX, y: rect.midY)
+            .allowsHitTesting(false)
     }
 }
 
