@@ -1074,8 +1074,8 @@ struct DrawingCanvasViewport: Equatable {
 
     mutating func zoom(by factor: CGFloat, anchor: CGPoint, in canvasSize: CGSize) {
         guard canvasSize.width > 0, canvasSize.height > 0 else { return }
-        let currentZoom = max(zoomScale, 0.5)
-        let nextZoom = min(max(currentZoom * factor, 0.5), 4.0)
+        let currentZoom = max(zoomScale, 1.0)
+        let nextZoom = min(max(currentZoom * factor, 1.0), 4.0)
         guard abs(nextZoom - currentZoom) > 0.0001 else { return }
         zoomScale = nextZoom
         let proposedOffset = CGSize(
