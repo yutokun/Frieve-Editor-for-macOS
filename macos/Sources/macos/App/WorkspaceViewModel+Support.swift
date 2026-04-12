@@ -171,13 +171,14 @@ extension WorkspaceViewModel {
 
     func selectedWebSearchQuery() -> String {
         if selectedCardIDs.count > 1 {
-            return selectedCards.map(\.title).joined(separator: " ")
+            return selectedCards
+                .map(\.title)
+                .map(\.trimmed)
+                .filter { !$0.isEmpty }
+                .joined(separator: " ")
         }
         guard let card = selectedCard else { return "" }
-        return [card.title, card.summary]
-            .map(\.trimmed)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
+        return card.title.trimmed
     }
 
     func selectedGPTPrompt() -> String {

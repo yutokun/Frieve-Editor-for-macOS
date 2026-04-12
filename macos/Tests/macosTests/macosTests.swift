@@ -1342,6 +1342,23 @@ import Testing
     #expect(model.cardByID(cardID) == nil)
 }
 
+@Test func webSearchQueryUsesCardTitleOnlyForSingleSelection() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let query = await MainActor.run { () -> String in
+        model.newDocument()
+        model.addChildCard()
+        let cardID = model.selectedCardID ?? 1
+        model.document.updateCard(cardID) { card in
+            card.title = "Short Query Title"
+            card.bodyText = "Very long body text that should not be included in the web search query."
+        }
+        return model.selectedWebSearchQuery()
+    }
+
+    #expect(query == "Short Query Title")
+}
+
 @Test func browserChromeRefreshIsDeferredDuringActiveGesture() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
