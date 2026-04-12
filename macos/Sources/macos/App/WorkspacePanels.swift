@@ -69,7 +69,7 @@ struct DrawingWorkspaceView: View {
             HStack(alignment: .center, spacing: 12) {
                 HStack(spacing: 10) {
                     Text("Tool")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.primary.opacity(0.8))
                     Picker("Tool", selection: $viewModel.selectedDrawingTool) {
                         ForEach(drawingToolOptions, id: \.self) { tool in
                             Text(tool).tag(tool)
