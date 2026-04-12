@@ -1359,6 +1359,26 @@ import Testing
     #expect(query == "Short Query Title")
 }
 
+@Test func drawingCanvasViewportPanAndZoomPreserveAnchor() {
+    var viewport = DrawingCanvasViewport()
+    let canvasSize = CGSize(width: 400, height: 300)
+    let anchor = CGPoint(x: 120, y: 90)
+    let normalized = CGPoint(x: 0.3, y: 0.3)
+
+    let initialPoint = viewport.canvasPoint(from: normalized, in: canvasSize)
+    #expect(initialPoint == anchor)
+
+    viewport.pan(by: CGSize(width: 24, height: -18))
+    let pannedPoint = viewport.canvasPoint(from: normalized, in: canvasSize)
+    #expect(pannedPoint.x == initialPoint.x + 24)
+    #expect(pannedPoint.y == initialPoint.y - 18)
+
+    viewport.zoom(by: 2.0, anchor: pannedPoint, in: canvasSize)
+    let zoomedAnchorPoint = viewport.canvasPoint(from: normalized, in: canvasSize)
+    #expect(abs(zoomedAnchorPoint.x - pannedPoint.x) < 0.001)
+    #expect(abs(zoomedAnchorPoint.y - pannedPoint.y) < 0.001)
+}
+
 @Test func browserChromeRefreshIsDeferredDuringActiveGesture() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 

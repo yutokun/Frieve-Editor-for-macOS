@@ -152,6 +152,9 @@ struct DrawingCanvasEditor: View {
     @State private var selectedShapeIndex: Int?
     @State private var interaction: DrawingCanvasInteraction?
     @State private var lastSyncedDrawing = ""
+    @State private var viewport = DrawingCanvasViewport()
+    @State private var canvasFrameInWindow: CGRect = .zero
+    @State private var scrollMonitor: Any?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -161,16 +164,17 @@ struct DrawingCanvasEditor: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
                         .fill(Color(nsColor: .textBackgroundColor))
-                    drawingGrid
+                    drawingGrid(viewport: viewport)
                     ForEach(Array(drawingDocument.shapes.enumerated()), id: \.offset) { index, shape in
                         DrawingShapeLayer(
                             shape: shape,
                             canvasSize: geometry.size,
+                            viewport: viewport,
                             isSelected: index == selectedShapeIndex
                         )
                     }
                     if let selectedShape {
-                        DrawingSelectionOverlay(shape: selectedShape, canvasSize: geometry.size)
+                        DrawingSelectionOverlay(shape: selectedShape, canvasSize: geometry.size, viewport: viewport)
                     }
                 }
                 .contentShape(Rectangle())
@@ -180,6 +184,7 @@ struct DrawingCanvasEditor: View {
                         .foregroundStyle(.secondary)
                         .padding(10)
                 }
+                .background(DrawingCanvasFrameReporter(frameInWindow: $canvasFrameInWindow))
                 .gesture(drawingGesture(in: geometry.size))
             }
             .frame(minHeight: 360)
@@ -193,7 +198,9 @@ struct DrawingCanvasEditor: View {
         }
         .onAppear {
             synchronizeDocument(from: drawingText)
+            installScrollMonitorIfNeeded()
         }
+        .onDisappear(perform: removeScrollMonitor)
         .onChange(of: drawingText) { _, newValue in
             guard interaction == nil, newValue != lastSyncedDrawing else { return }
             synchronizeDocument(from: newValue)
@@ -212,20 +219,20 @@ struct DrawingCanvasEditor: View {
         return "Drag on the canvas to draw a \(selectedTool.lowercased()) shape."
     }
 
-    private var drawingGrid: some View {
+    private func drawingGrid(viewport: DrawingCanvasViewport) -> some View {
         GeometryReader { geometry in
             Path { path in
                 let columns = 8
                 let rows = 6
                 for column in 1..<columns {
-                    let x = geometry.size.width * CGFloat(column) / CGFloat(columns)
-                    path.move(to: CGPoint(x: x, y: 0))
-                    path.addLine(to: CGPoint(x: x, y: geometry.size.height))
+                    let x = CGFloat(column) / CGFloat(columns)
+                    path.move(to: viewport.canvasPoint(from: CGPoint(x: x, y: 0), in: geometry.size))
+                    path.addLine(to: viewport.canvasPoint(from: CGPoint(x: x, y: 1), in: geometry.size))
                 }
                 for row in 1..<rows {
-                    let y = geometry.size.height * CGFloat(row) / CGFloat(rows)
-                    path.move(to: CGPoint(x: 0, y: y))
-                    path.addLine(to: CGPoint(x: geometry.size.width, y: y))
+                    let y = CGFloat(row) / CGFloat(rows)
+                    path.move(to: viewport.canvasPoint(from: CGPoint(x: 0, y: y), in: geometry.size))
+                    path.addLine(to: viewport.canvasPoint(from: CGPoint(x: 1, y: y), in: geometry.size))
                 }
             }
             .stroke(Color.secondary.opacity(0.08), lineWidth: 1)
@@ -252,7 +259,7 @@ struct DrawingCanvasEditor: View {
     }
 
     private func beginInteraction(at location: CGPoint, in canvasSize: CGSize) {
-        let normalizedPoint = location.normalized(in: canvasSize)
+        let normalizedPoint = viewport.normalizedPoint(from: location, in: canvasSize)
 
         if selectedTool == "Cursor" {
             if let selectedShapeIndex,
@@ -260,6 +267,7 @@ struct DrawingCanvasEditor: View {
                let handle = drawingDocument.shapes[selectedShapeIndex].handleHitTest(
                    at: location,
                    in: canvasSize,
+                   viewport: viewport,
                    radius: 8
                ) {
                 interaction = DrawingCanvasInteraction(
@@ -273,7 +281,7 @@ struct DrawingCanvasEditor: View {
                 return
             }
 
-            if let hitIndex = drawingDocument.hitTestShape(at: location, in: canvasSize, tolerance: 10) {
+            if let hitIndex = drawingDocument.hitTestShape(at: location, in: canvasSize, viewport: viewport, tolerance: 10) {
                 selectedShapeIndex = hitIndex
                 interaction = DrawingCanvasInteraction(
                     mode: .moving(index: hitIndex, startPoint: normalizedPoint, originalShape: drawingDocument.shapes[hitIndex]),
@@ -300,7 +308,7 @@ struct DrawingCanvasEditor: View {
 
     private func updateInteraction(at location: CGPoint) {
         guard let interaction else { return }
-        let normalizedPoint = location.normalized(in: interaction.canvasSize)
+        let normalizedPoint = viewport.normalizedPoint(from: location, in: interaction.canvasSize)
 
         switch interaction.mode {
         case let .drawing(index, tool):
@@ -361,6 +369,35 @@ struct DrawingCanvasEditor: View {
             self.selectedShapeIndex = nil
         }
     }
+
+    private func installScrollMonitorIfNeeded() {
+        guard scrollMonitor == nil else { return }
+        scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
+            guard canvasFrameInWindow.contains(event.locationInWindow) else { return event }
+            handleScrollEvent(event)
+            return nil
+        }
+    }
+
+    private func removeScrollMonitor() {
+        if let scrollMonitor {
+            NSEvent.removeMonitor(scrollMonitor)
+            self.scrollMonitor = nil
+        }
+    }
+
+    private func handleScrollEvent(_ event: NSEvent) {
+        if event.modifierFlags.contains(.command) {
+            let zoomFactor = exp(-event.scrollingDeltaY / 280.0)
+            let anchor = CGPoint(
+                x: event.locationInWindow.x - canvasFrameInWindow.minX,
+                y: canvasFrameInWindow.height - (event.locationInWindow.y - canvasFrameInWindow.minY)
+            )
+            viewport.zoom(by: zoomFactor, anchor: anchor, in: canvasFrameInWindow.size)
+        } else {
+            viewport.pan(by: CGSize(width: -event.scrollingDeltaX, height: -event.scrollingDeltaY))
+        }
+    }
 }
 
 struct DrawingEditorDocument: Equatable {
@@ -393,9 +430,9 @@ struct DrawingEditorDocument: Equatable {
         (shapes.map(\.encodedChunk) + passthroughChunks).joined(separator: "\n")
     }
 
-    func hitTestShape(at point: CGPoint, in canvasSize: CGSize, tolerance: CGFloat) -> Int? {
+    func hitTestShape(at point: CGPoint, in canvasSize: CGSize, viewport: DrawingCanvasViewport, tolerance: CGFloat) -> Int? {
         for index in shapes.indices.reversed() {
-            if shapes[index].contains(point: point, in: canvasSize, tolerance: tolerance) {
+            if shapes[index].contains(point: point, in: canvasSize, viewport: viewport, tolerance: tolerance) {
                 return index
             }
         }
@@ -544,63 +581,63 @@ struct DrawingEditorShape: Equatable {
         }
     }
 
-    func path(in canvasSize: CGSize) -> Path {
+    func path(in canvasSize: CGSize, viewport: DrawingCanvasViewport) -> Path {
         var path = Path()
         switch tool {
         case "FreeHand":
             guard let first = points.first else { return path }
-            path.move(to: first.canvasPoint(in: canvasSize))
+            path.move(to: viewport.canvasPoint(from: first, in: canvasSize))
             for point in points.dropFirst() {
-                path.addLine(to: point.canvasPoint(in: canvasSize))
+                path.addLine(to: viewport.canvasPoint(from: point, in: canvasSize))
             }
         case "Line":
             guard points.count >= 2 else { return path }
-            path.move(to: points[0].canvasPoint(in: canvasSize))
-            path.addLine(to: points[1].canvasPoint(in: canvasSize))
+            path.move(to: viewport.canvasPoint(from: points[0], in: canvasSize))
+            path.addLine(to: viewport.canvasPoint(from: points[1], in: canvasSize))
         case "Rect":
-            path.addRect(bounds.canvasRect(in: canvasSize))
+            path.addRect(bounds.canvasRect(in: canvasSize, viewport: viewport))
         case "Circle":
-            path.addEllipse(in: bounds.canvasRect(in: canvasSize))
+            path.addEllipse(in: bounds.canvasRect(in: canvasSize, viewport: viewport))
         default:
             break
         }
         return path
     }
 
-    func contains(point: CGPoint, in canvasSize: CGSize, tolerance: CGFloat) -> Bool {
+    func contains(point: CGPoint, in canvasSize: CGSize, viewport: DrawingCanvasViewport, tolerance: CGFloat) -> Bool {
         switch tool {
         case "FreeHand":
-            return points.canvasSegmentsContain(point: point, in: canvasSize, tolerance: tolerance)
+            return points.canvasSegmentsContain(point: point, in: canvasSize, viewport: viewport, tolerance: tolerance)
         case "Line":
             guard points.count >= 2 else { return false }
             return DrawingEditorCodec.distanceFromSegment(
                 point,
-                points[0].canvasPoint(in: canvasSize),
-                points[1].canvasPoint(in: canvasSize)
+                viewport.canvasPoint(from: points[0], in: canvasSize),
+                viewport.canvasPoint(from: points[1], in: canvasSize)
             ) <= tolerance
         case "Rect", "Circle":
-            return bounds.canvasRect(in: canvasSize).insetBy(dx: -tolerance, dy: -tolerance).contains(point)
+            return bounds.canvasRect(in: canvasSize, viewport: viewport).insetBy(dx: -tolerance, dy: -tolerance).contains(point)
         default:
             return false
         }
     }
 
-    func handleHitTest(at point: CGPoint, in canvasSize: CGSize, radius: CGFloat) -> DrawingEditorHandle? {
-        handlePoints(in: canvasSize).first { _, handlePoint in
+    func handleHitTest(at point: CGPoint, in canvasSize: CGSize, viewport: DrawingCanvasViewport, radius: CGFloat) -> DrawingEditorHandle? {
+        handlePoints(in: canvasSize, viewport: viewport).first { _, handlePoint in
             hypot(handlePoint.x - point.x, handlePoint.y - point.y) <= radius
         }?.0
     }
 
-    func handlePoints(in canvasSize: CGSize) -> [(DrawingEditorHandle, CGPoint)] {
+    func handlePoints(in canvasSize: CGSize, viewport: DrawingCanvasViewport) -> [(DrawingEditorHandle, CGPoint)] {
         switch tool {
         case "Line":
             guard points.count >= 2 else { return [] }
             return [
-                (.lineStart, points[0].canvasPoint(in: canvasSize)),
-                (.lineEnd, points[1].canvasPoint(in: canvasSize)),
+                (.lineStart, viewport.canvasPoint(from: points[0], in: canvasSize)),
+                (.lineEnd, viewport.canvasPoint(from: points[1], in: canvasSize)),
             ]
         default:
-            let rect = bounds.canvasRect(in: canvasSize)
+            let rect = bounds.canvasRect(in: canvasSize, viewport: viewport)
             return [
                 (.topLeading, CGPoint(x: rect.minX, y: rect.minY)),
                 (.topTrailing, CGPoint(x: rect.maxX, y: rect.minY)),
@@ -737,13 +774,91 @@ struct DrawingCanvasInteraction {
     let canvasSize: CGSize
 }
 
+struct DrawingCanvasViewport: Equatable {
+    var zoomScale: CGFloat = 1
+    var contentOffset: CGSize = .zero
+
+    mutating func pan(by delta: CGSize) {
+        contentOffset.width += delta.width
+        contentOffset.height += delta.height
+    }
+
+    mutating func zoom(by factor: CGFloat, anchor: CGPoint, in canvasSize: CGSize) {
+        guard canvasSize.width > 0, canvasSize.height > 0 else { return }
+        let currentZoom = max(zoomScale, 0.5)
+        let nextZoom = min(max(currentZoom * factor, 0.5), 4.0)
+        guard abs(nextZoom - currentZoom) > 0.0001 else { return }
+        contentOffset.width = anchor.x - ((anchor.x - contentOffset.width) / currentZoom) * nextZoom
+        contentOffset.height = anchor.y - ((anchor.y - contentOffset.height) / currentZoom) * nextZoom
+        zoomScale = nextZoom
+    }
+
+    func canvasPoint(from normalizedPoint: CGPoint, in canvasSize: CGSize) -> CGPoint {
+        CGPoint(
+            x: normalizedPoint.x * canvasSize.width * zoomScale + contentOffset.width,
+            y: normalizedPoint.y * canvasSize.height * zoomScale + contentOffset.height
+        )
+    }
+
+    func normalizedPoint(from canvasPoint: CGPoint, in canvasSize: CGSize) -> CGPoint {
+        guard canvasSize.width > 0, canvasSize.height > 0, zoomScale > 0 else { return .zero }
+        return CGPoint(
+            x: (canvasPoint.x - contentOffset.width) / (canvasSize.width * zoomScale),
+            y: (canvasPoint.y - contentOffset.height) / (canvasSize.height * zoomScale)
+        ).clampedNormalized()
+    }
+}
+
+private struct DrawingCanvasFrameReporter: NSViewRepresentable {
+    @Binding var frameInWindow: CGRect
+
+    func makeNSView(context: Context) -> DrawingCanvasFrameReporterView {
+        let view = DrawingCanvasFrameReporterView()
+        view.onFrameChange = { frame in
+            self.frameInWindow = frame
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: DrawingCanvasFrameReporterView, context: Context) {
+        nsView.onFrameChange = { frame in
+            self.frameInWindow = frame
+        }
+        nsView.reportFrameIfNeeded()
+    }
+}
+
+private final class DrawingCanvasFrameReporterView: NSView {
+    var onFrameChange: ((CGRect) -> Void)?
+
+    override func layout() {
+        super.layout()
+        reportFrameIfNeeded()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        reportFrameIfNeeded()
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        nil
+    }
+
+    func reportFrameIfNeeded() {
+        let rect = convert(bounds, to: nil)
+        onFrameChange?(CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height))
+    }
+}
+
 private struct DrawingShapeLayer: View {
     let shape: DrawingEditorShape
     let canvasSize: CGSize
+    let viewport: DrawingCanvasViewport
     let isSelected: Bool
 
     var body: some View {
-        let path = shape.path(in: canvasSize)
+        let path = shape.path(in: canvasSize, viewport: viewport)
         ZStack {
             if let fillColor = shape.fillColor, shape.tool == "Rect" || shape.tool == "Circle" {
                 path.fill(Color(frieveRGB: fillColor).opacity(0.16))
@@ -767,16 +882,17 @@ private struct DrawingShapeLayer: View {
 private struct DrawingSelectionOverlay: View {
     let shape: DrawingEditorShape
     let canvasSize: CGSize
+    let viewport: DrawingCanvasViewport
 
     var body: some View {
         ZStack {
             if shape.tool != "Line" {
                 Path { path in
-                    path.addRect(shape.bounds.canvasRect(in: canvasSize))
+                    path.addRect(shape.bounds.canvasRect(in: canvasSize, viewport: viewport))
                 }
                 .stroke(Color.accentColor.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
             }
-            ForEach(Array(shape.handlePoints(in: canvasSize).enumerated()), id: \.offset) { _, entry in
+            ForEach(Array(shape.handlePoints(in: canvasSize, viewport: viewport).enumerated()), id: \.offset) { _, entry in
                 Circle()
                     .fill(Color.white)
                     .frame(width: 10, height: 10)
@@ -884,6 +1000,17 @@ private extension CGRect {
             height: height * size.height
         )
     }
+
+    func canvasRect(in size: CGSize, viewport: DrawingCanvasViewport) -> CGRect {
+        let origin = viewport.canvasPoint(from: CGPoint(x: minX, y: minY), in: size)
+        let opposite = viewport.canvasPoint(from: CGPoint(x: maxX, y: maxY), in: size)
+        return CGRect(
+            x: min(origin.x, opposite.x),
+            y: min(origin.y, opposite.y),
+            width: abs(opposite.x - origin.x),
+            height: abs(opposite.y - origin.y)
+        )
+    }
 }
 
 private extension CGPoint {
@@ -912,13 +1039,13 @@ private extension CGPoint {
 }
 
 private extension Array where Element == CGPoint {
-    func canvasSegmentsContain(point: CGPoint, in size: CGSize, tolerance: CGFloat) -> Bool {
+    func canvasSegmentsContain(point: CGPoint, in size: CGSize, viewport: DrawingCanvasViewport, tolerance: CGFloat) -> Bool {
         guard count >= 2 else { return false }
         for index in 1..<count {
             if DrawingEditorCodec.distanceFromSegment(
                 point,
-                self[index - 1].canvasPoint(in: size),
-                self[index].canvasPoint(in: size)
+                viewport.canvasPoint(from: self[index - 1], in: size),
+                viewport.canvasPoint(from: self[index], in: size)
             ) <= tolerance {
                 return true
             }
