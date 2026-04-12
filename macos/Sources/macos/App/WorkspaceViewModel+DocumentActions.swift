@@ -1184,4 +1184,78 @@ func browseHelp() {
             NSWorkspace.shared.open(url)
         }
     }
+
+    // MARK: - Label Editing
+
+    func addCardLabel(name: String) {
+        registerUndoCheckpoint()
+        let maxID = document.cardLabels.map(\.id).max() ?? 0
+        let color = Int.random(in: 0...0xFFFFFF)
+        document.cardLabels.append(FrieveLabel(
+            id: maxID + 1, name: name, color: color,
+            enabled: true, show: true, hide: false, fold: false, size: 100
+        ))
+        noteDocumentMutation(status: "Added label \"\(name)\"")
+    }
+
+    func renameCardLabel(id: Int, name: String) {
+        registerUndoCheckpoint()
+        if let index = document.cardLabels.firstIndex(where: { $0.id == id }) {
+            document.cardLabels[index].name = name
+        }
+        noteDocumentMutation(status: "Renamed label")
+    }
+
+    func changeCardLabelColor(id: Int, color: Int) {
+        registerUndoCheckpoint()
+        if let index = document.cardLabels.firstIndex(where: { $0.id == id }) {
+            document.cardLabels[index].color = color
+        }
+        noteDocumentMutation(status: "Changed label color")
+    }
+
+    func deleteCardLabel(id: Int) {
+        registerUndoCheckpoint()
+        document.cardLabels.removeAll { $0.id == id }
+        for i in document.cards.indices {
+            document.cards[i].labelIDs.removeAll { $0 == id }
+        }
+        noteDocumentMutation(status: "Deleted label")
+    }
+
+    func addLinkLabel(name: String) {
+        registerUndoCheckpoint()
+        let maxID = document.linkLabels.map(\.id).max() ?? 0
+        let color = Int.random(in: 0...0xFFFFFF)
+        document.linkLabels.append(FrieveLabel(
+            id: maxID + 1, name: name, color: color,
+            enabled: true, show: true, hide: false, fold: false, size: 100
+        ))
+        noteDocumentMutation(status: "Added link label \"\(name)\"")
+    }
+
+    func renameLinkLabel(id: Int, name: String) {
+        registerUndoCheckpoint()
+        if let index = document.linkLabels.firstIndex(where: { $0.id == id }) {
+            document.linkLabels[index].name = name
+        }
+        noteDocumentMutation(status: "Renamed link label")
+    }
+
+    func changeLinkLabelColor(id: Int, color: Int) {
+        registerUndoCheckpoint()
+        if let index = document.linkLabels.firstIndex(where: { $0.id == id }) {
+            document.linkLabels[index].color = color
+        }
+        noteDocumentMutation(status: "Changed link label color")
+    }
+
+    func deleteLinkLabel(id: Int) {
+        registerUndoCheckpoint()
+        document.linkLabels.removeAll { $0.id == id }
+        for i in document.links.indices {
+            document.links[i].labelIDs.removeAll { $0 == id }
+        }
+        noteDocumentMutation(status: "Deleted link label")
+    }
 }

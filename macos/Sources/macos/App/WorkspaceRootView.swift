@@ -40,6 +40,12 @@ struct WorkspaceRootView: View {
                 .frame(width: 330)
             }
         }
+        .sheet(isPresented: $viewModel.showCardLabelEditor) {
+            LabelEditorView(viewModel: viewModel, isLinkLabels: false)
+        }
+        .sheet(isPresented: $viewModel.showLinkLabelEditor) {
+            LabelEditorView(viewModel: viewModel, isLinkLabels: true)
+        }
     }
 }
 

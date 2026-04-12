@@ -1781,3 +1781,131 @@ struct StatusBarView: View {
         }
     }
 }
+
+struct LabelEditorView: View {
+    @ObservedObject var viewModel: WorkspaceViewModel
+    let isLinkLabels: Bool
+    @State private var newLabelName: String = ""
+    @Environment(\.dismiss) private var dismiss
+
+    private var labels: [FrieveLabel] {
+        isLinkLabels ? viewModel.document.linkLabels : viewModel.document.cardLabels
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(isLinkLabels ? "Link Label Editor" : "Card Label Editor")
+                .font(.headline)
+                .padding()
+
+            List {
+                ForEach(labels) { label in
+                    LabelEditorRow(
+                        label: label,
+                        onRename: { name in
+                            if isLinkLabels {
+                                viewModel.renameLinkLabel(id: label.id, name: name)
+                            } else {
+                                viewModel.renameCardLabel(id: label.id, name: name)
+                            }
+                        },
+                        onColorChange: { color in
+                            if isLinkLabels {
+                                viewModel.changeLinkLabelColor(id: label.id, color: color)
+                            } else {
+                                viewModel.changeCardLabelColor(id: label.id, color: color)
+                            }
+                        },
+                        onDelete: {
+                            if isLinkLabels {
+                                viewModel.deleteLinkLabel(id: label.id)
+                            } else {
+                                viewModel.deleteCardLabel(id: label.id)
+                            }
+                        }
+                    )
+                }
+            }
+            .listStyle(.inset)
+            .frame(minHeight: 200)
+
+            HStack {
+                TextField("New label name", text: $newLabelName)
+                    .textFieldStyle(.roundedBorder)
+                Button("Add") {
+                    let name = newLabelName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !name.isEmpty else { return }
+                    if isLinkLabels {
+                        viewModel.addLinkLabel(name: name)
+                    } else {
+                        viewModel.addCardLabel(name: name)
+                    }
+                    newLabelName = ""
+                }
+                .disabled(newLabelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .padding()
+
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(.horizontal)
+            .padding(.bottom)
+        }
+        .frame(width: 420, height: 400)
+    }
+}
+
+private struct LabelEditorRow: View {
+    let label: FrieveLabel
+    let onRename: (String) -> Void
+    let onColorChange: (Int) -> Void
+    let onDelete: () -> Void
+    @State private var editingName: String = ""
+    @State private var isEditing: Bool = false
+    @State private var colorValue: Color
+
+    init(label: FrieveLabel, onRename: @escaping (String) -> Void, onColorChange: @escaping (Int) -> Void, onDelete: @escaping () -> Void) {
+        self.label = label
+        self.onRename = onRename
+        self.onColorChange = onColorChange
+        self.onDelete = onDelete
+        self._colorValue = State(initialValue: Color(frieveRGB: label.color))
+    }
+
+    var body: some View {
+        HStack {
+            if isEditing {
+                TextField("Label name", text: $editingName, onCommit: {
+                    let trimmed = editingName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        onRename(trimmed)
+                    }
+                    isEditing = false
+                })
+                .textFieldStyle(.roundedBorder)
+            } else {
+                Text(label.name)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .onTapGesture(count: 2) {
+                        editingName = label.name
+                        isEditing = true
+                    }
+            }
+            ColorPicker("", selection: $colorValue, supportsOpacity: false)
+                .labelsHidden()
+                .frame(width: 30)
+                .onChange(of: colorValue) { _, newColor in
+                    onColorChange(newColor.frieveRGBValue)
+                }
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Image(systemName: "trash")
+            }
+            .buttonStyle(.borderless)
+        }
+    }
+}

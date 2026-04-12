@@ -42,6 +42,9 @@ struct FrieveEditorCommands: Commands {
             Divider()
             Button("Find…") { viewModel.cardFilterFocusTrigger = true }
                 .keyboardShortcut("f", modifiers: [.command])
+            Divider()
+            Button("Edit Card Labels…") { viewModel.showCardLabelEditor = true }
+            Button("Edit Link Labels…") { viewModel.showLinkLabelEditor = true }
         }
 
         CommandMenu("Cards") {
