@@ -450,6 +450,11 @@ import Testing
     #expect(lines.map(\.text).contains("親：Parent：Parent body"))
 }
 
+@Test func drawingToolsNoLongerIncludeTextTool() async throws {
+    #expect(drawingToolOptions == ["Cursor", "FreeHand", "Line", "Rect", "Circle"])
+    #expect(!drawingToolOptions.contains("Text"))
+}
+
 @Test func browserShiftEnterCreatesChildCardAndStartsInlineEditing() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 

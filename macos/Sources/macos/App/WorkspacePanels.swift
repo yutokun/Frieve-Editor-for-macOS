@@ -1,6 +1,8 @@
 import SwiftUI
 import AppKit
 
+let drawingToolOptions = ["Cursor", "FreeHand", "Line", "Rect", "Circle"]
+
 struct EditorWorkspaceView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
 
@@ -65,12 +67,9 @@ struct DrawingWorkspaceView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Picker("Tool", selection: $viewModel.selectedDrawingTool) {
-                    Text("Cursor").tag("Cursor")
-                    Text("FreeHand").tag("FreeHand")
-                    Text("Line").tag("Line")
-                    Text("Rect").tag("Rect")
-                    Text("Circle").tag("Circle")
-                    Text("Text").tag("Text")
+                    ForEach(drawingToolOptions, id: \.self) { tool in
+                        Text(tool).tag(tool)
+                    }
                 }
                 .pickerStyle(.segmented)
                 Spacer()
