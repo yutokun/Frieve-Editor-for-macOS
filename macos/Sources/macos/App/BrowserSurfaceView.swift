@@ -144,6 +144,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     private var mouseDownCardID: Int?
     private var mouseDownModifiers: NSEvent.ModifierFlags = []
     private var interactionDidDrag = false
+    private var middleButtonPanning = false
     private var currentHitRegions: [BrowserCardHitRegion] = []
     private var lastOverlaySignature: Int?
     private var lastSurfaceState: BrowserSurfaceState?
@@ -237,6 +238,15 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         }
     }
 
+    override func otherMouseDown(with event: NSEvent) {
+        guard event.buttonNumber == 2 else {
+            super.otherMouseDown(with: event)
+            return
+        }
+        window?.makeFirstResponder(self)
+        beginMiddleButtonCanvasPan(at: browserEventPoint(from: event))
+    }
+
     override func mouseDragged(with event: NSEvent) {
         guard let viewModel, let mouseDownPoint else { return }
         let point = browserEventPoint(from: event)
@@ -254,6 +264,14 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
             }
             viewModel.updateCanvasGesture(from: mouseDownPoint, to: point, in: bounds.size)
         }
+    }
+
+    override func otherMouseDragged(with event: NSEvent) {
+        guard middleButtonPanning else {
+            super.otherMouseDragged(with: event)
+            return
+        }
+        updateMiddleButtonCanvasPan(to: browserEventPoint(from: event))
     }
 
     override func mouseUp(with event: NSEvent) {
@@ -276,6 +294,15 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         if !interactionDidDrag {
             viewModel.setBrowserHoverCard(cardID(atCanvasPoint: point))
         }
+    }
+
+    override func otherMouseUp(with event: NSEvent) {
+        guard middleButtonPanning else {
+            super.otherMouseUp(with: event)
+            return
+        }
+        defer { resetPointerInteraction() }
+        endMiddleButtonCanvasPan(at: browserEventPoint(from: event))
     }
 
     override func magnify(with event: NSEvent) {
@@ -471,11 +498,42 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
     }
 
+    func beginMiddleButtonCanvasPan(at point: CGPoint) {
+        mouseDownPoint = point
+        mouseDownCardID = nil
+        mouseDownModifiers = []
+        interactionDidDrag = false
+        middleButtonPanning = true
+    }
+
+    func updateMiddleButtonCanvasPan(to point: CGPoint) {
+        guard let viewModel, let mouseDownPoint else { return }
+        let dragDistance = hypot(point.x - mouseDownPoint.x, point.y - mouseDownPoint.y)
+        if dragDistance < pointerDragActivationDistance {
+            return
+        }
+        interactionDidDrag = true
+        if !viewModel.hasActiveBrowserGesture {
+            viewModel.beginCanvasGesture(at: mouseDownPoint, modifiers: [])
+        }
+        viewModel.updateCanvasGesture(from: mouseDownPoint, to: point, in: bounds.size)
+    }
+
+    func endMiddleButtonCanvasPan(at point: CGPoint) {
+        guard let viewModel, mouseDownPoint != nil else { return }
+        if interactionDidDrag {
+            viewModel.endCanvasGesture(in: bounds.size)
+        } else {
+            viewModel.setBrowserHoverCard(cardID(atCanvasPoint: point))
+        }
+    }
+
     private func resetPointerInteraction() {
         mouseDownPoint = nil
         mouseDownCardID = nil
         mouseDownModifiers = []
         interactionDidDrag = false
+        middleButtonPanning = false
     }
 
     private func cardID(atCanvasPoint point: CGPoint) -> Int? {

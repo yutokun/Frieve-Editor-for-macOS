@@ -1221,6 +1221,34 @@ import Testing
     }
 }
 
+@MainActor
+@Test func browserMiddleButtonDragPansCanvasWithoutMovingCards() throws {
+    let model = WorkspaceViewModel()
+    let canvasSize = CGSize(width: 1200, height: 800)
+    let view = BrowserSurfaceNSView(frame: CGRect(origin: .zero, size: canvasSize))
+    view.viewModel = model
+
+    model.newDocument()
+    model.addChildCard()
+    let cardID = model.selectedCardID ?? 1
+    model.selectedTab = .browser
+
+    let initialCenter = model.canvasCenter
+    let initialCardPosition = model.cardByID(cardID)!.position
+    let startPoint = model.canvasPoint(for: initialCardPosition, in: canvasSize)
+
+    view.beginMiddleButtonCanvasPan(at: startPoint)
+    view.updateMiddleButtonCanvasPan(to: CGPoint(x: startPoint.x + 120, y: startPoint.y + 70))
+    view.endMiddleButtonCanvasPan(at: CGPoint(x: startPoint.x + 120, y: startPoint.y + 70))
+
+    let finalCenter = model.canvasCenter
+    let finalCardPosition = model.cardByID(cardID)!.position
+    #expect(finalCenter != initialCenter)
+    #expect(finalCardPosition == initialCardPosition)
+    #expect(model.browserGestureMode == nil)
+    #expect(view.bounds.size == canvasSize)
+}
+
 @Test func browserChromeRefreshIsDeferredDuringActiveGesture() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
