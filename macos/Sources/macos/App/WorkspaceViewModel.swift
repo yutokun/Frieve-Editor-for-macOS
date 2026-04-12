@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import AVFoundation
 
 enum BrowserGestureMode {
     case movingSelection
@@ -322,7 +323,7 @@ final class WorkspaceViewModel: ObservableObject {
 
     var dragOriginByCardID: [Int: FrievePoint] = [:]
     var currentDragTranslation: FrievePoint?
-    let speechSynthesizer = NSSpeechSynthesizer()
+    let speechSynthesizer = AVSpeechSynthesizer()
     var hasUnsavedChanges = false
     var lastMutationAt = Date.distantPast
     var lastAutoSaveAt = Date.distantPast

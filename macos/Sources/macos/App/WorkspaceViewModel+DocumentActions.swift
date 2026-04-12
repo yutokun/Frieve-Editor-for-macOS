@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import AVFoundation
 
 extension WorkspaceViewModel {
     func browserGaussianRandom(using randomUnit: () -> Double = { Double.random(in: 0 ... 1) }) -> Double {
@@ -122,17 +123,17 @@ extension WorkspaceViewModel {
             statusMessage = "Nothing available to read aloud"
             return
         }
-        speechSynthesizer.stopSpeaking()
-        speechSynthesizer.rate = Float(settings.readAloudRate)
-        if speechSynthesizer.startSpeaking(text) {
-            statusMessage = "Reading the selected card aloud"
-        } else {
-            statusMessage = "Failed to start read aloud"
-        }
+        speechSynthesizer.stopSpeaking(at: .immediate)
+        let utterance = AVSpeechUtterance(string: text)
+        // Map WPM (100–320) to AVSpeech rate (0.3–0.9)
+        let wpm = Float(settings.readAloudRate)
+        utterance.rate = (wpm - 100) / (320 - 100) * (0.9 - 0.3) + 0.3
+        speechSynthesizer.speak(utterance)
+        statusMessage = "Reading the selected card aloud"
     }
 
     func stopReadAloud() {
-        speechSynthesizer.stopSpeaking()
+        speechSynthesizer.stopSpeaking(at: .immediate)
         statusMessage = "Stopped read aloud"
     }
 
