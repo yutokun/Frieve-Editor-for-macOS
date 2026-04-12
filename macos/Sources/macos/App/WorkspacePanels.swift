@@ -66,24 +66,30 @@ struct DrawingWorkspaceView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Picker("Tool", selection: $viewModel.selectedDrawingTool) {
-                    ForEach(drawingToolOptions, id: \.self) { tool in
-                        Text(tool).tag(tool)
+            HStack(alignment: .center, spacing: 12) {
+                HStack(spacing: 10) {
+                    Text("Tool")
+                        .foregroundStyle(.secondary)
+                    Picker("Tool", selection: $viewModel.selectedDrawingTool) {
+                        ForEach(drawingToolOptions, id: \.self) { tool in
+                            Text(tool).tag(tool)
+                        }
                     }
+                    .pickerStyle(.segmented)
                 }
-                .pickerStyle(.segmented)
-            }
-            HStack(spacing: 10) {
-                Text("Color")
-                    .foregroundStyle(.secondary)
-                Button("Auto") {
-                    pendingStrokeColorRawValue = nil
-                    viewModel.setSelectedDrawingStrokeColor(nil)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                HStack(spacing: 10) {
+                    Text("Color")
+                        .foregroundStyle(.secondary)
+                    Button("Auto") {
+                        pendingStrokeColorRawValue = nil
+                        viewModel.setSelectedDrawingStrokeColor(nil)
+                    }
+                    .buttonStyle(.bordered)
+                    ColorPicker("", selection: drawingStrokeColorBinding, supportsOpacity: false)
+                        .labelsHidden()
                 }
-                .buttonStyle(.bordered)
-                ColorPicker("", selection: drawingStrokeColorBinding, supportsOpacity: false)
-                    .labelsHidden()
             }
             if viewModel.selectedCard != nil {
                 DrawingCanvasEditor(
