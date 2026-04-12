@@ -399,6 +399,7 @@ final class WorkspaceViewModel: ObservableObject {
     var browserLastChromeRefreshAt: CFTimeInterval = 0
     var browserPendingChromeRefreshWorkItem: DispatchWorkItem?
     var documentUndoStack: [WorkspaceDocumentUndoSnapshot] = []
+    var documentRedoStack: [WorkspaceDocumentUndoSnapshot] = []
     var activeUndoEditCardID: Int?
 
     var documentCacheVersion: Int = 0

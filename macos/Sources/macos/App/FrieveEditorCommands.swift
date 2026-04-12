@@ -8,6 +8,9 @@ struct FrieveEditorCommands: Commands {
             Button("Undo") { viewModel.undoLastDocumentChange() }
                 .keyboardShortcut("z", modifiers: [.command])
                 .disabled(!viewModel.canUndoLastDocumentChange)
+            Button("Redo") { viewModel.redoDocumentChange() }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+                .disabled(!viewModel.canRedoDocumentChange)
         }
 
         CommandGroup(replacing: .newItem) {

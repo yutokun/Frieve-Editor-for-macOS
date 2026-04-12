@@ -686,8 +686,13 @@ extension WorkspaceViewModel {
         !documentUndoStack.isEmpty
     }
 
+    var canRedoDocumentChange: Bool {
+        !documentRedoStack.isEmpty
+    }
+
     func clearDocumentUndoHistory() {
         documentUndoStack.removeAll(keepingCapacity: true)
+        documentRedoStack.removeAll(keepingCapacity: true)
         activeUndoEditCardID = nil
     }
 
@@ -713,11 +718,47 @@ extension WorkspaceViewModel {
             statusMessage = "Nothing to undo"
             return
         }
+        pushRedoSnapshot()
         restoreUndoSnapshot(snapshot)
         statusMessage = "Undid the last change"
     }
 
+    func redoDocumentChange() {
+        finishUndoEditCoalescing()
+        guard let snapshot = documentRedoStack.popLast() else {
+            statusMessage = "Nothing to redo"
+            return
+        }
+        documentUndoStack.append(
+            WorkspaceDocumentUndoSnapshot(
+                document: document,
+                selectedCardID: selectedCardID,
+                selectedCardIDs: selectedCardIDs,
+                browserInlineEditorCardID: browserInlineEditorCardID,
+                hasUnsavedChanges: hasUnsavedChanges
+            )
+        )
+        restoreUndoSnapshot(snapshot)
+        statusMessage = "Redid the last change"
+    }
+
+    private func pushRedoSnapshot() {
+        documentRedoStack.append(
+            WorkspaceDocumentUndoSnapshot(
+                document: document,
+                selectedCardID: selectedCardID,
+                selectedCardIDs: selectedCardIDs,
+                browserInlineEditorCardID: browserInlineEditorCardID,
+                hasUnsavedChanges: hasUnsavedChanges
+            )
+        )
+        if documentRedoStack.count > maxDocumentUndoSnapshots {
+            documentRedoStack.removeFirst(documentRedoStack.count - maxDocumentUndoSnapshots)
+        }
+    }
+
     private func pushUndoSnapshot() {
+        documentRedoStack.removeAll(keepingCapacity: true)
         documentUndoStack.append(
             WorkspaceDocumentUndoSnapshot(
                 document: document,
