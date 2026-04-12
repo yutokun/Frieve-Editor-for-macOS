@@ -181,10 +181,20 @@ extension WorkspaceViewModel {
         } else {
             browserGestureMode = .panning(originCenter: canvasCenter)
         }
+        updateBrowserAutoArrangeTimerState()
     }
 
     var hasActiveBrowserGesture: Bool {
         browserGestureMode != nil
+    }
+
+    var shouldSuspendBrowserAutoArrangeForCurrentGesture: Bool {
+        switch browserGestureMode {
+        case .panning, .marquee:
+            return true
+        case .none, .movingSelection, .creatingLink:
+            return false
+        }
     }
 
     func updateCanvasGesture(from start: CGPoint, to current: CGPoint, in size: CGSize) {
@@ -214,6 +224,7 @@ extension WorkspaceViewModel {
         marqueeStartPoint = nil
         marqueeCurrentPoint = nil
         suspendBrowserAutoScroll()
+        updateBrowserAutoArrangeTimerState()
     }
 
     func beginCardInteraction(cardID: Int, modifiers: NSEvent.ModifierFlags) {

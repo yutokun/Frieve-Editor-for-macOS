@@ -1121,6 +1121,54 @@ import Testing
     }
 }
 
+@Test func browserCanvasPanningSuspendsAutoArrangeUntilGestureEnds() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+    let canvasSize = CGSize(width: 1200, height: 800)
+
+    await MainActor.run {
+        model.newDocument()
+        model.addChildCard()
+        let firstChildID = model.selectedCardID ?? 1
+        model.addChildCard()
+        let secondChildID = model.selectedCardID ?? 2
+
+        model.document.updateCard(0) { card in
+            card.position = FrievePoint(x: 0.84, y: 0.14)
+        }
+        model.document.updateCard(firstChildID) { card in
+            card.position = FrievePoint(x: 0.12, y: 0.87)
+        }
+        model.document.updateCard(secondChildID) { card in
+            card.position = FrievePoint(x: 0.9, y: 0.82)
+        }
+
+        model.selectedTab = .browser
+        model.arrangeMode = "Matrix"
+
+        let beforeContentRevision = model.browserSurfaceContentRevision
+        let beforePositions = Dictionary(uniqueKeysWithValues: model.document.cards.map { ($0.id, $0.position) })
+        #expect(model.browserAutoArrangeTimer != nil)
+
+        model.beginCanvasGesture(at: CGPoint(x: 320, y: 240), modifiers: [])
+        #expect(model.shouldSuspendBrowserAutoArrangeForCurrentGesture)
+        #expect(model.browserAutoArrangeTimer == nil)
+
+        model.applyBrowserAutoArrangeStepIfNeeded()
+        let suspendedPositions = Dictionary(uniqueKeysWithValues: model.document.cards.map { ($0.id, $0.position) })
+        #expect(model.browserSurfaceContentRevision == beforeContentRevision)
+        #expect(suspendedPositions == beforePositions)
+
+        model.endCanvasGesture(in: canvasSize)
+        #expect(!model.shouldSuspendBrowserAutoArrangeForCurrentGesture)
+        #expect(model.browserAutoArrangeTimer != nil)
+
+        model.applyBrowserAutoArrangeStepIfNeeded()
+        let afterPositions = Dictionary(uniqueKeysWithValues: model.document.cards.map { ($0.id, $0.position) })
+        #expect(model.browserSurfaceContentRevision > beforeContentRevision)
+        #expect(afterPositions != beforePositions)
+    }
+}
+
 @Test func browserChromeRefreshIsDeferredDuringActiveGesture() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 

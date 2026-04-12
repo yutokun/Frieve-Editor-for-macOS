@@ -427,6 +427,7 @@ extension WorkspaceViewModel {
     func applyBrowserAutoArrangeStepIfNeeded(force: Bool = false) {
         guard selectedTab == .browser else { return }
         guard browserAutoArrangeEnabled || force else { return }
+        guard force || !shouldSuspendBrowserAutoArrangeForCurrentGesture else { return }
         let stepScale = browserAutoArrangeStepScale()
 
         switch arrangeMode {

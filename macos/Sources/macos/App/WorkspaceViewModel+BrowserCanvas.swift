@@ -25,7 +25,7 @@ extension WorkspaceViewModel {
     }
 
     func updateBrowserAutoArrangeTimerState() {
-        guard browserAutoArrangeEnabled, selectedTab == .browser else {
+        guard browserAutoArrangeEnabled, selectedTab == .browser, !shouldSuspendBrowserAutoArrangeForCurrentGesture else {
             stopBrowserAutoArrangeTimer()
             return
         }
