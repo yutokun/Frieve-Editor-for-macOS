@@ -1185,6 +1185,34 @@ func browseHelp() {
         }
     }
 
+    // MARK: - Batch Conversion
+
+    func batchChangeAllCardsShape(to shape: Int) {
+        registerUndoCheckpoint()
+        for i in document.cards.indices {
+            document.cards[i].shape = shape
+        }
+        noteDocumentMutation(status: "Changed all cards shape")
+    }
+
+    func batchChangeAllLinksShape(to shape: Int) {
+        registerUndoCheckpoint()
+        for i in document.links.indices {
+            document.links[i].shape = shape
+        }
+        noteDocumentMutation(status: "Changed all links shape")
+    }
+
+    func batchReverseAllLinksDirection() {
+        registerUndoCheckpoint()
+        for i in document.links.indices {
+            let from = document.links[i].fromCardID
+            document.links[i].fromCardID = document.links[i].toCardID
+            document.links[i].toCardID = from
+        }
+        noteDocumentMutation(status: "Reversed all links direction")
+    }
+
     // MARK: - Label Editing
 
     func addCardLabel(name: String) {
