@@ -138,6 +138,30 @@ import Testing
     #expect(Set(cards.map(\.title)) == ["Frieve Editor", "Duplicate Root ID"])
 }
 
+@MainActor
+@Test func statisticsCardSelectionSynchronizesWithPrimarySelection() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.statisticsKey = .totalLinks
+    let rootBucket = try #require(model.statisticsBuckets.first(where: { $0.cardIDs.contains(0) }))
+
+    #expect(model.selectedStatisticsCardID(in: rootBucket) == 0)
+
+    model.addChildCard()
+    let childID = try #require(model.selectedCardID)
+    let labelBucket = try #require(model.statisticsBuckets.first(where: { $0.cardIDs.contains(childID) }))
+
+    model.selectStatisticsCard(childID)
+    #expect(model.selectedCardID == childID)
+    #expect(model.selectedCardIDs == [childID])
+    #expect(model.selectedStatisticsCardID(in: labelBucket) == childID)
+
+    model.selectStatisticsCard(nil)
+    #expect(model.selectedCardID == nil)
+    #expect(model.selectedCardIDs.isEmpty)
+    #expect(model.selectedStatisticsCardID(in: labelBucket) == nil)
+}
+
 @Test func windowsBGRColorValuesRenderWithExpectedChannels() async throws {
     let red = NSColor(Color(frieveRGB: 0x0000FF)).usingColorSpace(.deviceRGB) ?? .black
     #expect(red.redComponent > 0.99)

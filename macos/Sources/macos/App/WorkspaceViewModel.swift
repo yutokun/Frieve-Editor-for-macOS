@@ -444,6 +444,19 @@ final class WorkspaceViewModel: ObservableObject {
         selectedStatisticsBucketID = bucket.id
     }
 
+    func selectedStatisticsCardID(in bucket: DocumentStatisticBucket) -> Int? {
+        guard let selectedCardID, bucket.cardIDs.contains(selectedCardID) else { return nil }
+        return selectedCardID
+    }
+
+    func selectStatisticsCard(_ cardID: Int?) {
+        guard let cardID else {
+            clearSelection()
+            return
+        }
+        selectCard(cardID)
+    }
+
     func focusStatisticsCardInBrowser(_ cardID: Int) {
         selectedCardID = cardID
         selectedCardIDs = [cardID]

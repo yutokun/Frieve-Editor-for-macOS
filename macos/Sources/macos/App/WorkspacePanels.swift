@@ -1022,7 +1022,13 @@ struct StatisticsWorkspaceView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Table(viewModel.statisticsCards(for: selectedBucket)) {
+                    Table(
+                        viewModel.statisticsCards(for: selectedBucket),
+                        selection: Binding<Int?>(
+                            get: { viewModel.selectedStatisticsCardID(in: selectedBucket) },
+                            set: { viewModel.selectStatisticsCard($0) }
+                        )
+                    ) {
                         TableColumn("Title", value: \.title)
                         TableColumn("Body") { card in
                             Text(card.bodyText)
