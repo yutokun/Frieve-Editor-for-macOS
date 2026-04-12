@@ -455,6 +455,26 @@ import Testing
     #expect(!drawingToolOptions.contains("Text"))
 }
 
+@MainActor
+@Test func drawingColorToolSupportsAutomaticAndPickedColors() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.updateSelectedCardDrawing("line 0 0 1 1\nrect 0 0 1 1 fill=00FF00")
+
+    model.setSelectedDrawingStrokeColor(0x3366CC)
+    let explicitDrawing = try #require(model.selectedCard?.drawingEncoded)
+    #expect(explicitDrawing.contains("color=3366CC"))
+    #expect(explicitDrawing.contains("fill=00FF00"))
+    #expect(model.selectedDrawingStrokeColorRawValue() == 0x3366CC)
+
+    model.setSelectedDrawingStrokeColor(nil)
+    let automaticDrawing = try #require(model.selectedCard?.drawingEncoded)
+    #expect(!automaticDrawing.contains("color="))
+    #expect(!automaticDrawing.contains("stroke="))
+    #expect(automaticDrawing.contains("fill=00FF00"))
+    #expect(model.selectedDrawingStrokeColorRawValue() == nil)
+}
+
 @Test func browserShiftEnterCreatesChildCardAndStartsInlineEditing() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 

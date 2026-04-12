@@ -73,6 +73,16 @@ struct DrawingWorkspaceView: View {
                 }
                 .pickerStyle(.segmented)
             }
+            HStack(spacing: 10) {
+                Text("Color")
+                    .foregroundStyle(.secondary)
+                Button("Auto") {
+                    viewModel.setSelectedDrawingStrokeColor(nil)
+                }
+                .buttonStyle(.bordered)
+                ColorPicker("", selection: viewModel.bindingForSelectedDrawingColor(), supportsOpacity: false)
+                    .labelsHidden()
+            }
             TextEditor(text: viewModel.bindingForSelectedDrawing())
                 .font(.body.monospaced())
                 .padding(8)

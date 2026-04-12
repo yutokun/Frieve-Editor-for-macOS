@@ -270,6 +270,24 @@ extension WorkspaceViewModel {
         noteDocumentMutation()
     }
 
+    func selectedDrawingStrokeColorRawValue() -> Int? {
+        guard let drawing = selectedCard?.drawingEncoded else { return nil }
+        let colors = drawing
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .compactMap { explicitDrawingStrokeColor(in: String($0)) }
+        guard let first = colors.first else { return nil }
+        return colors.allSatisfy { $0 == first } ? first : nil
+    }
+
+    func setSelectedDrawingStrokeColor(_ rawValue: Int?) {
+        guard let currentDrawing = selectedCard?.drawingEncoded else { return }
+        let updatedDrawing = currentDrawing
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { applyDrawingStrokeColor(rawValue, to: String($0)) }
+            .joined(separator: "\n")
+        updateSelectedCardDrawing(updatedDrawing)
+    }
+
     func updateSelectedCardShape(_ shape: Int) {
         guard let selectedCardID, cardByID(selectedCardID)?.shape != shape else { return }
         registerUndoCheckpointForEdit(cardID: selectedCardID)
@@ -358,6 +376,42 @@ extension WorkspaceViewModel {
     private func defaultCardLabelColor(for seed: Int) -> Int {
         let palette: [Int] = [0x71CC2E, 0xE39C31, 0xD65745, 0xC45EE0, 0xD6CA3D, 0xCC7A2E, 0x8E67D9, 0x4B7FD6]
         return palette[abs(seed) % palette.count]
+    }
+
+    private func explicitDrawingStrokeColor(in line: String) -> Int? {
+        for token in line.split(whereSeparator: \.isWhitespace) {
+            let lower = token.lowercased()
+            guard lower.hasPrefix("color=") || lower.hasPrefix("stroke=") || lower.hasPrefix("pen=") else { continue }
+            let rawValue = lower.split(separator: "=", maxSplits: 1).last.map(String.init) ?? ""
+            let cleaned = rawValue.replacingOccurrences(of: "#", with: "")
+            if let value = Int(cleaned, radix: 16) {
+                return value
+            }
+            if let value = Int(cleaned) {
+                return value
+            }
+        }
+        return nil
+    }
+
+    private func applyDrawingStrokeColor(_ rawValue: Int?, to line: String) -> String {
+        let trimmedLine = line.trimmed
+        guard !trimmedLine.isEmpty else { return line }
+
+        let filteredTokens = trimmedLine
+            .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+            .filter { token in
+                let lower = token.lowercased()
+                return !(lower.hasPrefix("color=") || lower.hasPrefix("stroke=") || lower.hasPrefix("pen="))
+            }
+
+        guard let rawValue else {
+            return filteredTokens.joined(separator: " ")
+        }
+
+        let colorToken = String(format: "color=%06X", rawValue & 0xFFFFFF)
+        return (filteredTokens + [colorToken]).joined(separator: " ")
     }
 
     func arrangeCards() {

@@ -256,6 +256,14 @@ extension Color {
         let blue = Double((value >> 16) & 0xFF) / 255.0
         self.init(red: red, green: green, blue: blue)
     }
+
+    var frieveRGBValue: Int {
+        let color = NSColor(self).usingColorSpace(.deviceRGB) ?? NSColor(self)
+        let red = Int((color.redComponent * 255).rounded())
+        let green = Int((color.greenComponent * 255).rounded())
+        let blue = Int((color.blueComponent * 255).rounded())
+        return red | (green << 8) | (blue << 16)
+    }
 }
 
 private func browserCardFillColor(from accent: Color) -> Color {

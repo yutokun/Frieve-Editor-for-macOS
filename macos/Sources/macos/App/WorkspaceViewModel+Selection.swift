@@ -33,6 +33,20 @@ extension WorkspaceViewModel {
         )
     }
 
+    func bindingForSelectedDrawingColor() -> Binding<Color> {
+        Binding(
+            get: { [weak self] in
+                guard let self, let rawValue = self.selectedDrawingStrokeColorRawValue() else {
+                    return .accentColor
+                }
+                return Color(frieveRGB: rawValue)
+            },
+            set: { [weak self] newValue in
+                self?.setSelectedDrawingStrokeColor(newValue.frieveRGBValue)
+            }
+        )
+    }
+
     func bindingForSelectedShape() -> Binding<Int> {
         Binding(
             get: { [weak self] in self?.selectedCard?.shape ?? 2 },
