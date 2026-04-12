@@ -72,9 +72,6 @@ struct DrawingWorkspaceView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                Spacer()
-                Text("Encoded drawing payload")
-                    .foregroundStyle(.secondary)
             }
             TextEditor(text: viewModel.bindingForSelectedDrawing())
                 .font(.body.monospaced())
