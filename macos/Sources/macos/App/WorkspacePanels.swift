@@ -75,6 +75,7 @@ struct DrawingWorkspaceView: View {
                             Text(tool).tag(tool)
                         }
                     }
+                    .labelsHidden()
                     .pickerStyle(.segmented)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
