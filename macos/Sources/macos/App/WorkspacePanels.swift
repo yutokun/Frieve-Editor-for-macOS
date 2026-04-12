@@ -156,6 +156,11 @@ struct DrawingCanvasEditor: View {
     @State private var viewport = DrawingCanvasViewport()
     @State private var canvasFrameInWindow: CGRect = .zero
     @State private var scrollMonitor: Any?
+    @State private var middleMouseMonitor: Any?
+    @State private var middleMouseDragMonitor: Any?
+    @State private var middleMouseUpMonitor: Any?
+    @State private var middlePanStartLocationInWindow: CGPoint?
+    @State private var middlePanStartOffset: CGSize?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -208,8 +213,12 @@ struct DrawingCanvasEditor: View {
         .onAppear {
             synchronizeDocument(from: drawingText)
             installScrollMonitorIfNeeded()
+            installMiddleMousePanMonitorsIfNeeded()
         }
-        .onDisappear(perform: removeScrollMonitor)
+        .onDisappear {
+            removeScrollMonitor()
+            removeMiddleMousePanMonitors()
+        }
         .onChange(of: drawingText) { _, newValue in
             guard interaction == nil, newValue != lastSyncedDrawing else { return }
             synchronizeDocument(from: newValue)
@@ -460,6 +469,58 @@ struct DrawingCanvasEditor: View {
             NSEvent.removeMonitor(scrollMonitor)
             self.scrollMonitor = nil
         }
+    }
+
+    private func installMiddleMousePanMonitorsIfNeeded() {
+        guard middleMouseMonitor == nil, middleMouseDragMonitor == nil, middleMouseUpMonitor == nil else { return }
+
+        middleMouseMonitor = NSEvent.addLocalMonitorForEvents(matching: .otherMouseDown) { event in
+            guard event.buttonNumber == 2, canvasFrameInWindow.contains(event.locationInWindow) else { return event }
+            middlePanStartLocationInWindow = event.locationInWindow
+            middlePanStartOffset = viewport.contentOffset
+            return nil
+        }
+
+        middleMouseDragMonitor = NSEvent.addLocalMonitorForEvents(matching: .otherMouseDragged) { event in
+            guard event.buttonNumber == 2,
+                  let startLocation = middlePanStartLocationInWindow,
+                  let startOffset = middlePanStartOffset else {
+                return event
+            }
+            let delta = CGSize(
+                width: event.locationInWindow.x - startLocation.x,
+                height: event.locationInWindow.y - startLocation.y
+            )
+            viewport.contentOffset = CGSize(
+                width: startOffset.width + delta.width,
+                height: startOffset.height + delta.height
+            )
+            return nil
+        }
+
+        middleMouseUpMonitor = NSEvent.addLocalMonitorForEvents(matching: .otherMouseUp) { event in
+            guard event.buttonNumber == 2 else { return event }
+            middlePanStartLocationInWindow = nil
+            middlePanStartOffset = nil
+            return canvasFrameInWindow.contains(event.locationInWindow) ? nil : event
+        }
+    }
+
+    private func removeMiddleMousePanMonitors() {
+        if let middleMouseMonitor {
+            NSEvent.removeMonitor(middleMouseMonitor)
+            self.middleMouseMonitor = nil
+        }
+        if let middleMouseDragMonitor {
+            NSEvent.removeMonitor(middleMouseDragMonitor)
+            self.middleMouseDragMonitor = nil
+        }
+        if let middleMouseUpMonitor {
+            NSEvent.removeMonitor(middleMouseUpMonitor)
+            self.middleMouseUpMonitor = nil
+        }
+        middlePanStartLocationInWindow = nil
+        middlePanStartOffset = nil
     }
 
     private func handleScrollEvent(_ event: NSEvent) {
