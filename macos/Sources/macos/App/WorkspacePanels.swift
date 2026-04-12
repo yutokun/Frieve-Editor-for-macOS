@@ -104,11 +104,12 @@ struct DrawingWorkspaceView: View {
                     systemImage: "scribble.variable",
                     description: Text("Choose a card in the browser before editing its drawing.")
                 )
-                .frame(maxWidth: .infinity, minHeight: 360)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(nsColor: .underPageBackgroundColor))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(16)
         .onAppear(perform: syncPendingDrawingColorFromSelection)
         .onChange(of: viewModel.selectedCardID) { _, _ in
