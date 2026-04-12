@@ -192,7 +192,12 @@ struct DrawingCanvasEditor: View {
                             )
                         }
                     } else if let combinedSelectionRect = combinedSelectionRect(in: geometry.size) {
-                        DrawingSelectionBoundsOverlay(rect: combinedSelectionRect)
+                        DrawingSelectionBoundsOverlay(
+                            rect: combinedSelectionRect,
+                            handlePoints: DrawingEditorHandle.cornerHandles.map { handle in
+                                (handle, handle.position(in: combinedSelectionRect))
+                            }
+                        )
                     }
                     if let marqueeRect = selectionMarqueeRect(in: geometry.size) {
                         DrawingSelectionMarqueeOverlay(rect: marqueeRect)
@@ -292,6 +297,25 @@ struct DrawingCanvasEditor: View {
         let normalizedPoint = viewport.normalizedPoint(from: location, in: canvasSize)
 
         if selectedTool == "Cursor" {
+            if selectedShapeIndices.count > 1,
+               let combinedBounds = combinedSelectionBounds(),
+               let handle = combinedSelectionHandleHitTest(at: location, in: canvasSize, radius: 8) {
+                let indices = selectedShapeIndices.sorted()
+                interaction = DrawingCanvasInteraction(
+                    mode: .resizingSelection(
+                        indices: indices,
+                        handle: handle,
+                        originalShapes: Dictionary(uniqueKeysWithValues: indices.compactMap { index in
+                            guard drawingDocument.shapes.indices.contains(index) else { return nil }
+                            return (index, drawingDocument.shapes[index])
+                        }),
+                        originalBounds: combinedBounds
+                    ),
+                    canvasSize: canvasSize
+                )
+                return
+            }
+
             if selectedShapeIndices.count == 1,
                let primarySelectedShapeIndex,
                drawingDocument.shapes.indices.contains(primarySelectedShapeIndex),
@@ -369,6 +393,12 @@ struct DrawingCanvasEditor: View {
         case let .resizing(index, handle, originalShape):
             guard drawingDocument.shapes.indices.contains(index) else { return }
             drawingDocument.shapes[index] = originalShape.resized(using: handle, to: normalizedPoint)
+        case let .resizingSelection(indices, handle, originalShapes, originalBounds):
+            let resizedBounds = resizedSelectionBounds(from: originalBounds, handle: handle, to: normalizedPoint)
+            for index in indices {
+                guard drawingDocument.shapes.indices.contains(index), let originalShape = originalShapes[index] else { continue }
+                drawingDocument.shapes[index] = originalShape.resized(from: originalBounds, to: resizedBounds)
+            }
         case let .selecting(startPoint, _):
             interaction = DrawingCanvasInteraction(
                 mode: .selecting(startPoint: startPoint, currentPoint: normalizedPoint),
@@ -395,7 +425,7 @@ struct DrawingCanvasEditor: View {
         }
 
         switch interaction.mode {
-        case .drawing, .moving, .resizing:
+        case .drawing, .moving, .resizing, .resizingSelection:
             commitDrawing()
         case .selecting:
             break
@@ -442,12 +472,35 @@ struct DrawingCanvasEditor: View {
     }
 
     private func combinedSelectionRect(in canvasSize: CGSize) -> CGRect? {
+        guard let unionBounds = combinedSelectionBounds() else { return nil }
+        return unionBounds.canvasRect(in: canvasSize, viewport: viewport)
+    }
+
+    private func combinedSelectionBounds() -> CGRect? {
         let selectedBounds = selectedShapes.map(\.bounds)
         guard let first = selectedBounds.first else { return nil }
-        let unionBounds = selectedBounds.dropFirst().reduce(first) { partial, bounds in
+        return selectedBounds.dropFirst().reduce(first) { partial, bounds in
             partial.union(bounds)
         }
-        return unionBounds.canvasRect(in: canvasSize, viewport: viewport)
+    }
+
+    private func combinedSelectionHandleHitTest(at point: CGPoint, in canvasSize: CGSize, radius: CGFloat) -> DrawingEditorHandle? {
+        guard let rect = combinedSelectionRect(in: canvasSize) else { return nil }
+        return DrawingEditorHandle.cornerHandles.first { handle in
+            let handlePoint = handle.position(in: rect)
+            return hypot(handlePoint.x - point.x, handlePoint.y - point.y) <= radius
+        }
+    }
+
+    private func resizedSelectionBounds(from originalBounds: CGRect, handle: DrawingEditorHandle, to point: CGPoint) -> CGRect {
+        let opposite = handle.oppositePosition(in: originalBounds)
+        let clampedPoint = point.clampedNormalized()
+        return CGRect(
+            x: min(opposite.x, clampedPoint.x),
+            y: min(opposite.y, clampedPoint.y),
+            width: abs(clampedPoint.x - opposite.x),
+            height: abs(clampedPoint.y - opposite.y)
+        )
     }
 
     private func updateMarqueeSelection(from startPoint: CGPoint, to currentPoint: CGPoint) {
@@ -916,19 +969,32 @@ struct DrawingEditorShape: Equatable {
     private func oppositeCorner(for handle: DrawingEditorHandle) -> CGPoint {
         let rect = bounds
         return switch handle {
-        case .topLeading:
-            CGPoint(x: rect.maxX, y: rect.maxY)
-        case .topTrailing:
-            CGPoint(x: rect.minX, y: rect.maxY)
-        case .bottomLeading:
-            CGPoint(x: rect.maxX, y: rect.minY)
-        case .bottomTrailing:
-            CGPoint(x: rect.minX, y: rect.minY)
+        case .topLeading, .topTrailing, .bottomLeading, .bottomTrailing:
+            handle.oppositePosition(in: rect)
         case .lineStart:
             points.count >= 2 ? points[1] : .zero
         case .lineEnd:
             points.first ?? .zero
         }
+    }
+
+    func resized(from sourceBounds: CGRect, to targetBounds: CGRect) -> DrawingEditorShape {
+        let sourceRect = CGRect(
+            x: sourceBounds.minX,
+            y: sourceBounds.minY,
+            width: max(sourceBounds.width, 0.0001),
+            height: max(sourceBounds.height, 0.0001)
+        )
+        var resizedShape = self
+        resizedShape.points = points.map { sourcePoint in
+            let u = (sourcePoint.x - sourceRect.minX) / sourceRect.width
+            let v = (sourcePoint.y - sourceRect.minY) / sourceRect.height
+            return CGPoint(
+                x: targetBounds.minX + targetBounds.width * u,
+                y: targetBounds.minY + targetBounds.height * v
+            ).clampedNormalized()
+        }
+        return resizedShape
     }
 }
 
@@ -939,6 +1005,40 @@ enum DrawingEditorHandle: CaseIterable {
     case topTrailing
     case bottomLeading
     case bottomTrailing
+
+    static var cornerHandles: [DrawingEditorHandle] {
+        [.topLeading, .topTrailing, .bottomLeading, .bottomTrailing]
+    }
+
+    func position(in rect: CGRect) -> CGPoint {
+        switch self {
+        case .topLeading:
+            CGPoint(x: rect.minX, y: rect.minY)
+        case .topTrailing:
+            CGPoint(x: rect.maxX, y: rect.minY)
+        case .bottomLeading:
+            CGPoint(x: rect.minX, y: rect.maxY)
+        case .bottomTrailing:
+            CGPoint(x: rect.maxX, y: rect.maxY)
+        case .lineStart, .lineEnd:
+            CGPoint(x: rect.midX, y: rect.midY)
+        }
+    }
+
+    func oppositePosition(in rect: CGRect) -> CGPoint {
+        switch self {
+        case .topLeading:
+            CGPoint(x: rect.maxX, y: rect.maxY)
+        case .topTrailing:
+            CGPoint(x: rect.minX, y: rect.maxY)
+        case .bottomLeading:
+            CGPoint(x: rect.maxX, y: rect.minY)
+        case .bottomTrailing:
+            CGPoint(x: rect.minX, y: rect.minY)
+        case .lineStart, .lineEnd:
+            CGPoint(x: rect.midX, y: rect.midY)
+        }
+    }
 }
 
 struct DrawingCanvasInteraction {
@@ -946,6 +1046,7 @@ struct DrawingCanvasInteraction {
         case drawing(index: Int, tool: String)
         case moving(indices: [Int], startPoint: CGPoint, originalShapes: [Int: DrawingEditorShape])
         case resizing(index: Int, handle: DrawingEditorHandle, originalShape: DrawingEditorShape)
+        case resizingSelection(indices: [Int], handle: DrawingEditorHandle, originalShapes: [Int: DrawingEditorShape], originalBounds: CGRect)
         case selecting(startPoint: CGPoint, currentPoint: CGPoint)
     }
 
@@ -1137,13 +1238,23 @@ private struct DrawingSelectionMarqueeOverlay: View {
 
 private struct DrawingSelectionBoundsOverlay: View {
     let rect: CGRect
+    let handlePoints: [(DrawingEditorHandle, CGPoint)]
 
     var body: some View {
-        Rectangle()
-            .stroke(Color.accentColor.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
-            .frame(width: rect.width, height: rect.height)
-            .position(x: rect.midX, y: rect.midY)
-            .allowsHitTesting(false)
+        ZStack {
+            Rectangle()
+                .stroke(Color.accentColor.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
+                .frame(width: rect.width, height: rect.height)
+                .position(x: rect.midX, y: rect.midY)
+            ForEach(Array(handlePoints.enumerated()), id: \.offset) { _, entry in
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 10, height: 10)
+                    .overlay(Circle().stroke(Color.accentColor, lineWidth: 2))
+                    .position(entry.1)
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 
