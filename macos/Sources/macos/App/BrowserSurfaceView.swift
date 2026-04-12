@@ -128,6 +128,18 @@ func browserPresentationRefreshMode(selectionChanged: Bool, dragChanged: Bool, h
 
 @MainActor
 final class BrowserSurfaceNSView: BrowserInteractionNSView {
+    private enum BrowserCardContextAction: Int {
+        case edit
+        case newChild
+        case newSibling
+        case toggleFixed
+        case toggleFolded
+        case webSearch
+        case copyGPTPrompt
+        case delete
+        case undo
+    }
+
     private let pointerDragActivationDistance: CGFloat = 4
     weak var viewModel: WorkspaceViewModel? {
         didSet { renderer.viewModel = viewModel }
@@ -218,6 +230,11 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
 
     override func mouseExited(with event: NSEvent) {
         viewModel?.setBrowserHoverCard(nil)
+    }
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let point = browserEventPoint(from: event)
+        return cardContextMenu(atCanvasPoint: point, modifiers: event.modifierFlags)
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -497,6 +514,94 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
 
     private var windowBackingScale: CGFloat {
         window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
+    }
+
+    func cardContextMenu(atCanvasPoint point: CGPoint, modifiers: NSEvent.ModifierFlags = []) -> NSMenu? {
+        guard let cardID = cardID(atCanvasPoint: point) else { return nil }
+        return cardContextMenu(forCardID: cardID, modifiers: modifiers)
+    }
+
+    func cardContextMenu(forCardID cardID: Int, modifiers: NSEvent.ModifierFlags = []) -> NSMenu? {
+        guard let viewModel else { return nil }
+        synchronizeSelectionForContextMenu(cardID: cardID, modifiers: modifiers)
+
+        let menu = NSMenu(title: "Card")
+        let selectedIDs = viewModel.selectedCardIDs.isEmpty ? Set(viewModel.selectedCardID.map { [$0] } ?? []) : viewModel.selectedCardIDs
+        let hasSingleSelection = selectedIDs.count == 1
+        let selectedCard = viewModel.cardByID(viewModel.selectedCardID)
+
+        menu.addItem(makeContextMenuItem("Edit Card", action: .edit, enabled: hasSingleSelection))
+        menu.addItem(makeContextMenuItem("New Child Card", action: .newChild, enabled: viewModel.selectedCardID != nil))
+        menu.addItem(makeContextMenuItem("New Sibling Card", action: .newSibling, enabled: viewModel.selectedCardID != nil))
+        menu.addItem(.separator())
+        menu.addItem(makeContextMenuItem(
+            (selectedCard?.isFixed ?? false) ? "Unfix Card" : "Fix Card",
+            action: .toggleFixed,
+            enabled: hasSingleSelection && selectedCard != nil
+        ))
+        menu.addItem(makeContextMenuItem(
+            (selectedCard?.isFolded ?? false) ? "Unfold Card" : "Fold Card",
+            action: .toggleFolded,
+            enabled: hasSingleSelection && selectedCard != nil
+        ))
+        menu.addItem(.separator())
+        menu.addItem(makeContextMenuItem("Web Search", action: .webSearch, enabled: viewModel.selectedCardID != nil))
+        menu.addItem(makeContextMenuItem("Copy GPT Prompt", action: .copyGPTPrompt, enabled: viewModel.selectedCardID != nil))
+        menu.addItem(.separator())
+        menu.addItem(makeContextMenuItem(
+            selectedIDs.count > 1 ? "Delete Selected Cards" : "Delete Card",
+            action: .delete,
+            enabled: !selectedIDs.isEmpty
+        ))
+        menu.addItem(makeContextMenuItem("Undo", action: .undo, enabled: viewModel.canUndoLastDocumentChange))
+        return menu
+    }
+
+    private func synchronizeSelectionForContextMenu(cardID: Int, modifiers: NSEvent.ModifierFlags) {
+        guard let viewModel else { return }
+        if viewModel.selectedCardIDs.contains(cardID) {
+            viewModel.selectedCardID = cardID
+            viewModel.document.focusedCardID = cardID
+            return
+        }
+        viewModel.handleCardTap(cardID, modifiers: modifiers)
+    }
+
+    private func makeContextMenuItem(_ title: String, action: BrowserCardContextAction, enabled: Bool) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: #selector(handleBrowserCardContextMenuAction(_:)), keyEquivalent: "")
+        item.target = self
+        item.tag = action.rawValue
+        item.isEnabled = enabled
+        return item
+    }
+
+    @objc
+    private func handleBrowserCardContextMenuAction(_ sender: NSMenuItem) {
+        guard let action = BrowserCardContextAction(rawValue: sender.tag), let viewModel else { return }
+        switch action {
+        case .edit:
+            viewModel.handleBrowserEditShortcut()
+        case .newChild:
+            viewModel.handleBrowserCreateChildShortcut()
+        case .newSibling:
+            viewModel.handleBrowserCreateSiblingShortcut()
+        case .toggleFixed:
+            if let card = viewModel.cardByID(viewModel.selectedCardID) {
+                viewModel.updateSelectedCardFixed(!card.isFixed)
+            }
+        case .toggleFolded:
+            if let card = viewModel.cardByID(viewModel.selectedCardID) {
+                viewModel.updateSelectedCardFolded(!card.isFolded)
+            }
+        case .webSearch:
+            viewModel.searchWebForSelection()
+        case .copyGPTPrompt:
+            viewModel.copyGPTPromptToClipboard()
+        case .delete:
+            viewModel.deleteSelectedCard()
+        case .undo:
+            viewModel.undoLastDocumentChange()
+        }
     }
 
     func beginMiddleButtonCanvasPan(at point: CGPoint) {

@@ -1289,6 +1289,59 @@ import Testing
     #expect(model.browserGestureMode == nil)
 }
 
+@MainActor
+@Test func browserCardContextMenuSelectsRightClickedCardAndExposesExpectedActions() throws {
+    let model = WorkspaceViewModel()
+    let view = BrowserSurfaceNSView(frame: CGRect(x: 0, y: 0, width: 1200, height: 800))
+    view.viewModel = model
+
+    model.newDocument()
+    model.addChildCard()
+    let firstChildID = model.selectedCardID ?? 1
+    model.addChildCard()
+    let secondChildID = model.selectedCardID ?? 2
+    model.selectCard(firstChildID)
+
+    let menu = view.cardContextMenu(forCardID: secondChildID)
+    let titles = menu?.items.map(\.title) ?? []
+
+    #expect(model.selectedCardID == secondChildID)
+    #expect(model.selectedCardIDs == [secondChildID])
+    #expect(titles.contains("Edit Card"))
+    #expect(titles.contains("New Child Card"))
+    #expect(titles.contains("New Sibling Card"))
+    #expect(titles.contains("Fix Card"))
+    #expect(titles.contains("Fold Card"))
+    #expect(titles.contains("Web Search"))
+    #expect(titles.contains("Copy GPT Prompt"))
+    #expect(titles.contains("Delete Card"))
+    #expect(titles.contains("Undo"))
+}
+
+@MainActor
+@Test func browserCardContextMenuActionsAffectSelectedCard() throws {
+    let model = WorkspaceViewModel()
+    let view = BrowserSurfaceNSView(frame: CGRect(x: 0, y: 0, width: 1200, height: 800))
+    view.viewModel = model
+
+    model.newDocument()
+    model.addChildCard()
+    let cardID = model.selectedCardID ?? 1
+
+    guard let menu = view.cardContextMenu(forCardID: cardID),
+          let fixItem = menu.items.first(where: { $0.title == "Fix Card" }),
+          let deleteItem = menu.items.first(where: { $0.title == "Delete Card" }) else {
+        Issue.record("Expected context menu items were missing")
+        return
+    }
+
+    _ = view.perform(fixItem.action, with: fixItem)
+    #expect(model.cardByID(cardID)?.isFixed == true)
+
+    _ = view.perform(deleteItem.action, with: deleteItem)
+    #expect(model.cardByID(cardID) == nil)
+}
+
 @Test func browserChromeRefreshIsDeferredDuringActiveGesture() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
