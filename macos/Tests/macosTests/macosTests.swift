@@ -455,6 +455,75 @@ import Testing
     #expect(!drawingToolOptions.contains("Text"))
 }
 
+@Test func drawingEditorDocumentPreservesUnsupportedChunksWhileEditingShapes() async throws {
+    let document = DrawingEditorDocument(
+        encoded: """
+        rect 0.1 0.2 0.6 0.7 color=112233 fill=445566
+        text 0.4 0.5 "Legacy note"
+        """
+    )
+
+    #expect(document.shapes.count == 1)
+    #expect(document.shapes.first?.tool == "Rect")
+    #expect(document.passthroughChunks == ["text 0.4 0.5 \"Legacy note\""])
+    #expect(document.encoded.contains("rect 0.1 0.2 0.6 0.7 color=112233 fill=445566"))
+    #expect(document.encoded.contains("text 0.4 0.5 \"Legacy note\""))
+}
+
+@Test func drawingEditorShapesRoundTripMoveResizeAndDeleteIntoPreviewablePayload() async throws {
+    var line = try #require(DrawingEditorShape(tool: "Line", startPoint: CGPoint(x: 0.1, y: 0.2), strokeColor: 0x3366CC))
+    line.updateDraft(tool: "Line", with: CGPoint(x: 0.4, y: 0.5))
+
+    let moved = line.moved(by: CGSize(width: 0.2, height: 0.1))
+    let resized = moved.resized(using: .lineEnd, to: CGPoint(x: 0.9, y: 0.85))
+
+    var freeHand = try #require(DrawingEditorShape(tool: "FreeHand", startPoint: CGPoint(x: 0.15, y: 0.15), strokeColor: nil))
+    freeHand.updateDraft(tool: "FreeHand", with: CGPoint(x: 0.2, y: 0.18))
+    freeHand.updateDraft(tool: "FreeHand", with: CGPoint(x: 0.3, y: 0.28))
+    let resizedFreeHand = freeHand.resized(using: .bottomTrailing, to: CGPoint(x: 0.6, y: 0.5))
+
+    var document = DrawingEditorDocument(encoded: "")
+    document.shapes = [resized, resizedFreeHand]
+
+    let encoded = document.encoded
+    #expect(encoded.contains("line 0.3 0.3 0.9 0.85 color=3366CC"))
+    #expect(encoded.contains("freehand"))
+
+    document.shapes.removeLast()
+    let lineOnlyEncoded = document.encoded
+    let previewCard = FrieveCard(
+        id: 99,
+        title: "Drawing",
+        bodyText: "",
+        drawingEncoded: lineOnlyEncoded,
+        visible: true,
+        shape: 2,
+        size: 100,
+        isTop: false,
+        isFixed: false,
+        isFolded: false,
+        position: FrievePoint(x: 0.5, y: 0.5),
+        created: "",
+        updated: "",
+        viewed: "",
+        labelIDs: [],
+        score: 0,
+        imagePath: nil,
+        videoPath: nil
+    )
+
+    let previewItems = previewCard.drawingPreviewItems()
+    #expect(previewItems.count == 1)
+    if case let .line(start, end) = try #require(previewItems.first?.kind) {
+        #expect(abs(start.x - 0.3) < 0.0001)
+        #expect(abs(start.y - 0.3) < 0.0001)
+        #expect(abs(end.x - 0.9) < 0.0001)
+        #expect(abs(end.y - 0.85) < 0.0001)
+    } else {
+        Issue.record("Expected a line preview item")
+    }
+}
+
 @MainActor
 @Test func drawingColorToolSupportsAutomaticAndPickedColors() async throws {
     let model = WorkspaceViewModel()
