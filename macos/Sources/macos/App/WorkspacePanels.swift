@@ -7,56 +7,66 @@ struct EditorWorkspaceView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                TextField("Card title", text: viewModel.bindingForSelectedTitle())
-                    .textFieldStyle(.roundedBorder)
-                Button("Web Search") { viewModel.searchWebForSelection() }
-            }
-            TextEditor(text: viewModel.bindingForSelectedBody())
-                .font(.body.monospaced())
-                .padding(8)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .textBackgroundColor)))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15)))
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Linked Cards")
-                    .font(.headline)
-                if viewModel.editorRelatedCardLines().isEmpty {
-                    Text("リンクしているカードはありません")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 6) {
-                            ForEach(viewModel.editorRelatedCardLines()) { line in
-                                Text(line.text)
-                                    .font(.body.monospaced())
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+        if viewModel.selectedCard != nil {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    TextField("Card title", text: viewModel.bindingForSelectedTitle())
+                        .textFieldStyle(.roundedBorder)
+                    Button("Web Search") { viewModel.searchWebForSelection() }
+                }
+                TextEditor(text: viewModel.bindingForSelectedBody())
+                    .font(.body.monospaced())
+                    .padding(8)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .textBackgroundColor)))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15)))
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Linked Cards")
+                        .font(.headline)
+                    if viewModel.editorRelatedCardLines().isEmpty {
+                        Text("リンクしているカードはありません")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 6) {
+                                ForEach(viewModel.editorRelatedCardLines()) { line in
+                                    Text(line.text)
+                                        .font(.body.monospaced())
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
                             }
                         }
+                        .frame(minHeight: 92, maxHeight: 140)
+                        .padding(8)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .underPageBackgroundColor)))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15)))
                     }
-                    .frame(minHeight: 92, maxHeight: 140)
-                    .padding(8)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .underPageBackgroundColor)))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15)))
+                }
+                if !viewModel.lastGPTPrompt.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Last GPT Prompt")
+                            .font(.headline)
+                        ScrollView {
+                            Text(viewModel.lastGPTPrompt)
+                                .font(.caption.monospaced())
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .frame(minHeight: 120, maxHeight: 180)
+                        .padding(8)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .underPageBackgroundColor)))
+                    }
                 }
             }
-            if !viewModel.lastGPTPrompt.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Last GPT Prompt")
-                        .font(.headline)
-                    ScrollView {
-                        Text(viewModel.lastGPTPrompt)
-                            .font(.caption.monospaced())
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(minHeight: 120, maxHeight: 180)
-                    .padding(8)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .underPageBackgroundColor)))
-                }
-            }
+            .padding(16)
+        } else {
+            ContentUnavailableView(
+                "Select a card",
+                systemImage: "square.and.pencil",
+                description: Text("Choose a card in the browser to edit its content.")
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(nsColor: .underPageBackgroundColor))
         }
-        .padding(16)
     }
 }
 
