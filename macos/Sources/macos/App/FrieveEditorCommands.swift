@@ -113,7 +113,7 @@ struct FrieveEditorCommands: Commands {
                 }
             }
             .disabled(viewModel.selectedCardID == nil || viewModel.document.cards.count <= 1)
-            Button("New Ext Link…") { viewModel.insertExtLink() }
+            Button("New External Link…") { viewModel.insertExtLink() }
             Menu("New Label for Selected Cards") {
                 ForEach(viewModel.document.cardLabels) { label in
                     Button(label.name) { viewModel.assignCardLabelToSelection(labelID: label.id) }
