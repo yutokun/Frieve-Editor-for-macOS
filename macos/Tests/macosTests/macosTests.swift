@@ -99,6 +99,39 @@ import Testing
     #expect(tickerHeight > baseHeight)
 }
 
+@MainActor
+@Test func browserScoreExpandsCardSizeAndStacksWithTicker() throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.settings.browserScoreVisible = false
+    model.settings.browserTickerVisible = false
+    model.settings.browserTickerLines = 1
+    model.document.updateCard(0) { card in
+        card.title = "A"
+        card.bodyText = "First line\nSecond line"
+        card.score = 2.75
+    }
+
+    let card = try #require(model.document.card(withID: 0))
+
+    model.invalidateDocumentCaches()
+    let baseMetadata = model.metadata(for: card)
+
+    model.settings.browserScoreVisible = true
+    model.invalidateDocumentCaches()
+    let scoreMetadata = model.metadata(for: card)
+
+    model.settings.browserTickerVisible = true
+    model.invalidateDocumentCaches()
+    let stackedMetadata = model.metadata(for: card)
+
+    #expect(baseMetadata.scoreText == nil)
+    #expect(scoreMetadata.scoreText == "Score 2.75")
+    #expect(scoreMetadata.canvasSize.width > baseMetadata.canvasSize.width)
+    #expect(scoreMetadata.canvasSize.height > baseMetadata.canvasSize.height)
+    #expect(stackedMetadata.canvasSize.height > scoreMetadata.canvasSize.height)
+}
+
 @Test func fip2RoundTripPreservesCardAndLinkData() async throws {
     var document = FrieveDocument.placeholder()
     let childID = document.addCard(title: "Child", linkedFrom: 0)

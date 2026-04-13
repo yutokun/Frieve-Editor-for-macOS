@@ -151,6 +151,7 @@ struct BrowserCardRasterContentView: View {
         let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : card.title
         let titleFont = Font(viewModel.browserCardTitleNSFont(for: card))
         let bodyFont = Font(viewModel.browserCardBodyNSFont(for: card))
+        let scoreFont = Font(viewModel.browserCardScoreNSFont(for: card))
 
         VStack(alignment: horizontalAlignment, spacing: 8) {
             Text(title)
@@ -163,7 +164,7 @@ struct BrowserCardRasterContentView: View {
 
             if let scoreText = metadata.scoreText, !scoreText.isEmpty {
                 Text(scoreText)
-                    .font(.caption.bold())
+                    .font(scoreFont)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)

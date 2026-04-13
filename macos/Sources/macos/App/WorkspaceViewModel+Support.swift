@@ -199,6 +199,11 @@ extension WorkspaceViewModel {
         return ceil(font.ascender - font.descender + font.leading)
     }
 
+    func browserCardScoreNSFont(for card: FrieveCard) -> NSFont {
+        let pointSize = max(browserCardTitlePointSize(for: card) * 0.72, 11)
+        return NSFont.systemFont(ofSize: pointSize, weight: .bold)
+    }
+
     func browserCardScoreText(for card: FrieveCard) -> String? {
         guard settings.browserScoreVisible else { return nil }
 
@@ -773,6 +778,23 @@ extension WorkspaceViewModel {
         let tickerHeight = browserCardTickerHeight(for: card)
         if tickerHeight > 0 {
             height += tickerHeight + 6
+        }
+
+        if let scoreText = browserCardScoreText(for: card), !scoreText.isEmpty {
+            let scoreFont = browserCardScoreNSFont(for: card)
+            let scoreBounds = NSAttributedString(
+                string: scoreText,
+                attributes: [.font: scoreFont]
+            ).boundingRect(
+                with: CGSize(width: maxTextWidth, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading]
+            )
+            let scoreSize = CGSize(
+                width: ceil(scoreBounds.width) + 16,
+                height: ceil(scoreBounds.height) + 8
+            )
+            width = max(width, scoreSize.width + padding * 2)
+            height += scoreSize.height + 8
         }
 
         return CGSize(width: width, height: height)
