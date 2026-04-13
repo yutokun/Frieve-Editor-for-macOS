@@ -1441,13 +1441,13 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             let width: Float = snapshot.isHighlighted ? 3 : 2
             var instances: [BrowserMetalLinkInstance] = []
             if viewModel?.settings.browserLinkHemming == true {
-                let hemmingColor = SIMD4<Float>(0, 0, 0, appearanceSignature == 1 ? 0.36 : 0.22)
+                let hemmingColor = browserCanvasBackgroundColor(for: colorScheme).withAlphaComponent(0.95).rgbaVector
                 instances.append(
                     contentsOf: makeLinkSegmentInstances(
                         start: snapshot.startPoint,
                         end: snapshot.endPoint,
                         shapeIndex: snapshot.shapeIndex,
-                        lineWidth: width + 2,
+                        lineWidth: max(width * 3, width + 3),
                         color: hemmingColor
                     )
                 )
@@ -1462,6 +1462,19 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
                 )
             )
             if snapshot.directionVisible {
+                if viewModel?.settings.browserLinkHemming == true {
+                    let hemmingColor = browserCanvasBackgroundColor(for: colorScheme).withAlphaComponent(0.95).rgbaVector
+                    instances.append(
+                        contentsOf: makeArrowInstances(
+                            start: snapshot.startPoint,
+                            end: snapshot.endPoint,
+                            shapeIndex: snapshot.shapeIndex,
+                            baseScale: linkBaseScale,
+                            lineWidth: width + 3,
+                            color: hemmingColor
+                        )
+                    )
+                }
                 instances.append(
                     contentsOf: makeArrowInstances(
                         start: snapshot.startPoint,

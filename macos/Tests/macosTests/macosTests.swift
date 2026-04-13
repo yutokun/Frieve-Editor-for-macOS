@@ -79,6 +79,8 @@ import Testing
 @Test func browserTickerExpandsCardHeightAndUsesBodyLines() throws {
     let model = WorkspaceViewModel()
     model.newDocument()
+    model.settings.browserTickerVisible = false
+    model.settings.browserTickerLines = 1
     model.document.updateCard(0) { card in
         card.bodyText = "First line\nSecond line\nThird line"
     }
