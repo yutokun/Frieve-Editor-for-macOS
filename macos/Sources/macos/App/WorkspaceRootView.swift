@@ -75,14 +75,12 @@ private struct SidebarView: View {
             .padding(.top, 12)
 
             List {
-                if viewModel.showFileList {
-                    Section("Recent") {
-                        ForEach(viewModel.recentFiles, id: \.self) { url in
-                            Button(url.lastPathComponent) {
-                                viewModel.openDocument(url)
-                            }
-                            .buttonStyle(.plain)
+                Section("Recent") {
+                    ForEach(viewModel.recentFiles, id: \.self) { url in
+                        Button(url.lastPathComponent) {
+                            viewModel.openDocument(url)
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }

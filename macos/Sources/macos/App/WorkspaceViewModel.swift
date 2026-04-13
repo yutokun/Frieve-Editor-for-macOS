@@ -493,7 +493,8 @@ final class WorkspaceViewModel: ObservableObject {
     init(settings: AppSettings = AppSettings()) {
         self.settings = settings
         showOverview = settings.showOverview
-        showFileList = settings.showFileList
+        showFileList = true
+        self.settings.showFileList = true
         showCardList = settings.showCardList
         showInspector = settings.showInspector
         showStatusBar = settings.showStatusBar
@@ -541,11 +542,14 @@ final class WorkspaceViewModel: ObservableObject {
     }
 
     private func applySettingsToWorkspace() {
+        if !settings.showFileList {
+            settings.showFileList = true
+        }
         if showOverview != settings.showOverview {
             showOverview = settings.showOverview
         }
-        if showFileList != settings.showFileList {
-            showFileList = settings.showFileList
+        if !showFileList {
+            showFileList = true
         }
         if showCardList != settings.showCardList {
             showCardList = settings.showCardList
