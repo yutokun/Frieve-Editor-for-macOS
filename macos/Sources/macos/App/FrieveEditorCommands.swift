@@ -157,11 +157,6 @@ struct FrieveEditorCommands: Commands {
             Button("Random Trace") { viewModel.startBrowserAnimation(.randomTrace) }
         }
 
-        CommandMenu("Services") {
-            Button("Read Selected Card Aloud") { viewModel.readSelectedCardAloud() }
-            Button("Stop Reading") { viewModel.stopReadAloud() }
-        }
-
         CommandGroup(after: .help) {
             Button("Frieve Editor Website") { viewModel.browseHelp() }
             Button("Check Latest Release") { viewModel.checkLatestRelease() }
