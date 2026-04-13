@@ -229,6 +229,7 @@ struct DrawingCanvasEditor: View {
                     .stroke(Color.secondary.opacity(0.15))
             )
             .focusable()
+            .focusEffectDisabled()
             .onDeleteCommand(perform: deleteSelectedShape)
         }
         .onAppear {
