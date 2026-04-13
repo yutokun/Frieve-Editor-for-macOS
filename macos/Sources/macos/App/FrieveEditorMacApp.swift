@@ -100,7 +100,6 @@ private struct FrieveEditorSettingsView: View {
             Form {
                 Section("Panels") {
                     Toggle("Show Overview", isOn: $settings.showOverview)
-                    Toggle("Show Inspector", isOn: $settings.showInspector)
                     Toggle("Show Status Bar", isOn: $settings.showStatusBar)
                 }
 
