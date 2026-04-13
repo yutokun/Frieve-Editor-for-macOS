@@ -1707,8 +1707,39 @@ struct InspectorPaneView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Labels")
                             .foregroundStyle(.secondary)
-                        TextField("Comma-separated labels", text: viewModel.bindingForSelectedLabels())
-                            .textFieldStyle(.roundedBorder)
+                        Menu {
+                            Button("No Labels") {
+                                if let id = viewModel.selectedCardID {
+                                    viewModel.registerUndoCheckpoint()
+                                    viewModel.document.updateCard(id) { $0.labelIDs = [] }
+                                    viewModel.noteDocumentMutation(status: "Cleared card labels")
+                                }
+                            }
+                            if !viewModel.document.cardLabels.isEmpty {
+                                Divider()
+                                ForEach(viewModel.document.cardLabels) { label in
+                                    Toggle(label.name, isOn: viewModel.bindingForCardLabel(label))
+                                }
+                            }
+                        } label: {
+                            let names = viewModel.cardLabelNames(for: card)
+                            HStack {
+                                Text(names.isEmpty ? "No Labels" : names.joined(separator: ", "))
+                                    .foregroundStyle(names.isEmpty ? .secondary : .primary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .foregroundStyle(.secondary)
+                                    .font(.caption)
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+                            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(nsColor: .separatorColor)))
+                        }
+                        .menuStyle(.borderlessButton)
+                        .fixedSize(horizontal: false, vertical: true)
                     }
                     LabeledContent("Created", value: card.created)
                     LabeledContent("Updated", value: card.updated)

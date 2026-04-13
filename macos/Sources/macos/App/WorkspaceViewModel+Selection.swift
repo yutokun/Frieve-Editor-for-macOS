@@ -26,6 +26,24 @@ extension WorkspaceViewModel {
         )
     }
 
+    func bindingForCardLabel(_ label: FrieveLabel) -> Binding<Bool> {
+        Binding(
+            get: { [weak self] in self?.selectedCard?.labelIDs.contains(label.id) ?? false },
+            set: { [weak self] isOn in
+                guard let self, let id = self.selectedCardID else { return }
+                self.registerUndoCheckpoint()
+                self.document.updateCard(id) { card in
+                    if isOn {
+                        if !card.labelIDs.contains(label.id) { card.labelIDs.append(label.id) }
+                    } else {
+                        card.labelIDs.removeAll { $0 == label.id }
+                    }
+                }
+                self.noteDocumentMutation(status: "Updated card label")
+            }
+        )
+    }
+
     func bindingForSelectedDrawing() -> Binding<String> {
         Binding(
             get: { [weak self] in self?.selectedCard?.drawingEncoded ?? "" },
