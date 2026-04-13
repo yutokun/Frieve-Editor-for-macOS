@@ -135,7 +135,7 @@ struct FrieveEditorCommands: Commands {
             .disabled(viewModel.selectedCardID == nil)
         }
 
-        CommandMenu("View") {
+        CommandGroup(after: .toolbar) {
             Menu("Mode") {
                 Picker("Mode", selection: $viewModel.selectedTab) {
                     ForEach(WorkspaceTab.allCases) { tab in
@@ -146,6 +146,10 @@ struct FrieveEditorCommands: Commands {
             Divider()
             Button("Arrange") { viewModel.arrangeCards() }
             Button("Shuffle") { viewModel.shuffleLayout() }
+            Divider()
+            Button("Start Read Aloud") { viewModel.readSelectedCardAloud() }
+                .disabled(viewModel.selectedCardID == nil)
+            Button("Stop Read Aloud") { viewModel.stopReadAloud() }
             Divider()
             Toggle("Show Overview", isOn: $viewModel.showOverview)
             Toggle("Show Link Labels", isOn: $viewModel.linkLabelsVisible)
