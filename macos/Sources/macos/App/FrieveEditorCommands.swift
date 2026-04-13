@@ -145,10 +145,18 @@ struct FrieveEditorCommands: Commands {
 
         CommandGroup(after: .toolbar) {
             Menu("Mode") {
-                Picker("Mode", selection: $viewModel.selectedTab) {
-                    ForEach(WorkspaceTab.allCases) { tab in
-                        Text(tab.rawValue).tag(tab)
-                    }
+                ForEach(WorkspaceTab.allCases) { tab in
+                    Toggle(
+                        tab.rawValue,
+                        isOn: Binding(
+                            get: { viewModel.selectedTab == tab },
+                            set: { isSelected in
+                                if isSelected {
+                                    viewModel.selectedTab = tab
+                                }
+                            }
+                        )
+                    )
                 }
             }
             Divider()
