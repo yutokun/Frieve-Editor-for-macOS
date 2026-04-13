@@ -52,7 +52,6 @@ struct FrieveEditorCommands: Commands {
                 Button("Txt Files…") { viewModel.exportCardBodiesPerFile() }
                 Button("Hierarchical Text File…") { viewModel.exportHierarchicalText() }
                 Button("HTML Files…") { viewModel.exportHTMLFiles() }
-                Button("HTML Document…") { viewModel.exportHTMLDocument() }
                 Divider()
                 Button("BMP File…") { viewModel.exportBrowserBMP() }
                 Button("JPEG File…") { viewModel.exportBrowserJPEG() }
