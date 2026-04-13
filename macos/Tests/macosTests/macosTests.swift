@@ -258,6 +258,7 @@ import Testing
 
     model.toggleBrowserAnimationPause()
     #expect(model.animationPaused)
+    model.stopBrowserAnimation()
 }
 
 @Test func browserLinkArrowPlacementUsesMidLinkGeometry() async throws {
@@ -1131,6 +1132,7 @@ import Testing
             card.position = FrievePoint(x: 0.74, y: 0.68)
         }
         model.document.links = [FrieveLink(fromCardID: rootID, toCardID: childID, directionVisible: true, shape: 2, labelIDs: [], name: "Route")]
+        model.resetCanvasToFit(in: canvasSize)
         model.markBrowserSurfaceContentDirty()
         let scene = model.browserSurfaceScene(in: canvasSize)
         let link = try! #require(scene.links.first)
