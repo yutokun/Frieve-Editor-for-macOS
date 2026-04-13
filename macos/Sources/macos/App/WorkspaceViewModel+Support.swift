@@ -700,9 +700,6 @@ extension WorkspaceViewModel {
         if card.isFolded {
             badges.append("Folded")
         }
-        if linkCount > 0 {
-            badges.append("Links \(linkCount)")
-        }
         return Array(badges.prefix(6))
     }
 
