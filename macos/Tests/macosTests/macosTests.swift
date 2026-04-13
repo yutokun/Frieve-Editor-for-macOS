@@ -835,6 +835,47 @@ import Testing
     #expect(results.2 >= 4)
 }
 
+@Test func browserMatrixAndTreeArrangeIgnoreDuplicateVisibleCardIDs() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let results = await MainActor.run { () -> (Int, Int, Int, FrievePoint, FrievePoint) in
+        model.newDocument()
+        let rootID = model.selectedCardID ?? 0
+        let childID = model.document.addCard(title: "Alpha", linkedFrom: rootID)
+        _ = model.document.addCard(title: "Beta", linkedFrom: rootID)
+
+        guard var duplicate = model.document.card(withID: childID) else {
+            return (0, 0, 0, .zero, .zero)
+        }
+        duplicate.title = "Alpha Duplicate"
+        duplicate.position = FrievePoint(x: 0.95, y: 0.1)
+        model.document.cards.append(duplicate)
+
+        model.browserCanvasSize = CGSize(width: 1200, height: 800)
+        let autoArrangeCards = model.browserAutoArrangeCardsInDocumentOrder()
+        let matrixTargetCount = model.computeBrowserMatrixTargets(for: autoArrangeCards).count
+        let treeTargetCount = model.computeBrowserTreeTargets(for: autoArrangeCards).count
+
+        model.arrangeMode = "Matrix"
+        model.browserAutoArrangeEnabled = true
+        model.applyBrowserAutoArrangeStepIfNeeded(force: true)
+        let matrixPosition = model.document.card(withID: childID)?.position ?? .zero
+
+        model.arrangeMode = "Tree"
+        model.browserAutoArrangeEnabled = true
+        model.applyBrowserAutoArrangeStepIfNeeded(force: true)
+        let treePosition = model.document.card(withID: childID)?.position ?? .zero
+
+        return (autoArrangeCards.count, matrixTargetCount, treeTargetCount, matrixPosition, treePosition)
+    }
+
+    #expect(results.0 == 3)
+    #expect(results.1 == 3)
+    #expect(results.2 == 3)
+    #expect(results.3 != FrievePoint(x: 0.58, y: 0.58))
+    #expect(results.4 != FrievePoint(x: 0.58, y: 0.58))
+}
+
 @Test func shuffleLayoutRepositionsWholeBrowserLayoutInOnePass() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
@@ -1368,7 +1409,7 @@ import Testing
     let initialPoint = viewport.canvasPoint(from: normalized, in: canvasSize)
     #expect(initialPoint == anchor)
 
-    viewport.pan(by: CGSize(width: 24, height: -18))
+    viewport.pan(by: CGSize(width: 24, height: -18), in: canvasSize)
     let pannedPoint = viewport.canvasPoint(from: normalized, in: canvasSize)
     #expect(pannedPoint.x == initialPoint.x + 24)
     #expect(pannedPoint.y == initialPoint.y - 18)

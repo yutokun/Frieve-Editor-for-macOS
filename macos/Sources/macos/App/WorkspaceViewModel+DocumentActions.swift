@@ -626,7 +626,7 @@ extension WorkspaceViewModel {
     }
 
     func applyBrowserMatrixAutoArrangeStep(stepScale: Double = 1.0) {
-        let visibleCards = browserVisibleCardsInDocumentOrder()
+        let visibleCards = browserAutoArrangeCardsInDocumentOrder()
         guard !visibleCards.isEmpty else { return }
 
         let targets = computeBrowserMatrixTargets(for: visibleCards)
@@ -672,7 +672,7 @@ extension WorkspaceViewModel {
     }
 
     func applyBrowserTreeAutoArrangeStep(stepScale: Double = 1.0, ratio: Double = 1.0) {
-        let visibleCards = browserVisibleCardsInDocumentOrder()
+        let visibleCards = browserAutoArrangeCardsInDocumentOrder()
         guard !visibleCards.isEmpty else { return }
 
         let targetPositions = computeBrowserTreeTargets(for: visibleCards, ratio: ratio)
@@ -739,6 +739,19 @@ extension WorkspaceViewModel {
 
     func browserVisibleCardsInDocumentOrder() -> [FrieveCard] {
         document.cards.filter(\.visible)
+    }
+
+    func browserAutoArrangeCardsInDocumentOrder() -> [FrieveCard] {
+        var seenCardIDs = Set<Int>()
+        var uniqueCards: [FrieveCard] = []
+        uniqueCards.reserveCapacity(document.cards.count)
+
+        for card in browserVisibleCardsInDocumentOrder() {
+            guard seenCardIDs.insert(card.id).inserted else { continue }
+            uniqueCards.append(card)
+        }
+
+        return uniqueCards
     }
 
     func browserArrangeBounds(for cards: [FrieveCard]) -> (minX: Double, maxX: Double, minY: Double, maxY: Double) {
