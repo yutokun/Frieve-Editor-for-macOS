@@ -722,9 +722,12 @@ import Testing
 @Test func browserCommandEnterCreatesSiblingCardAndStartsInlineEditing() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
-    let results = await MainActor.run { () -> (Int, Bool, Bool, Bool) in
+    let results = await MainActor.run { () -> (Int, Bool, Bool, Bool, Bool) in
         model.newDocument()
         let rootID = model.selectedCardID ?? 0
+        model.document.updateCard(rootID) { card in
+            card.labelIDs = [1]
+        }
         let originalCount = model.document.cardCount
         model.handleBrowserCreateSiblingShortcut()
         let siblingID = model.selectedCardID ?? -1
@@ -733,7 +736,8 @@ import Testing
             model.document.cardCount - originalCount,
             siblingID != rootID,
             sibling?.position.y == model.document.card(withID: rootID)?.position.y,
-            model.browserInlineEditorCardID == sibling?.id
+            model.browserInlineEditorCardID == sibling?.id,
+            sibling?.labelIDs == [1]
         )
     }
 
@@ -741,6 +745,7 @@ import Testing
     #expect(results.1)
     #expect(results.2)
     #expect(results.3)
+    #expect(results.4)
 }
 
 @MainActor

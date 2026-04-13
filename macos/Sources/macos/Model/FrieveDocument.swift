@@ -761,6 +761,7 @@ struct FrieveDocument: Codable, Hashable {
             sibling.shape = source.shape
             sibling.size = source.size
             sibling.isTop = parentID == nil
+            sibling.labelIDs = source.labelIDs
         }
         return siblingID
     }
