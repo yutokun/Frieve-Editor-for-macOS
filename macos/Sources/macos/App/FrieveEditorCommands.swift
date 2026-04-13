@@ -57,7 +57,7 @@ struct FrieveEditorCommands: Commands {
                 Button("JPEG File…") { viewModel.exportBrowserJPEG() }
                 Divider()
                 Button("Clipboard (Card Title)") { viewModel.copyCardTitlesToClipboard() }
-                Button("Clipboard (Text)") { viewModel.copyCardBodiesToClipboard() }
+                Button("Clipboard (Body)") { viewModel.copyCardBodiesToClipboard() }
                 Button("Clipboard (BMP)") { viewModel.copyBrowserImageToClipboard() }
             }
         }
