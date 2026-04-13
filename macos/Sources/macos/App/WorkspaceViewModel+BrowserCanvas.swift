@@ -259,7 +259,7 @@ extension WorkspaceViewModel {
         }
         browserPendingChromeRefreshWorkItem?.cancel()
         let now = CACurrentMediaTime()
-        let resolvedMinimumInterval = minimumInterval ?? (browserInteractionModeEnabled ? 1.0 / 6.0 : 1.0 / 12.0)
+        let resolvedMinimumInterval = minimumInterval ?? browserChromeRefreshMinimumInterval()
         let publish: () -> Void = { [weak self] in
             guard let self else { return }
             self.browserLastChromeRefreshAt = CACurrentMediaTime()
@@ -502,7 +502,7 @@ extension WorkspaceViewModel {
             detailLevel: detailLevel,
             canvasSize: size,
             canvasPadding: canvasPadding,
-            labelsVisible: linkLabelsVisible
+            labelsVisible: settings.browserLinkNameVisible || settings.browserLabelNameVisible || browserLabelOutlineStyle != .none
         )
         if let cachedBrowserSurfaceContent, cachedBrowserSurfaceContentKey == key {
             let coverage = cachedBrowserSurfaceContent.coverageRect
@@ -545,7 +545,7 @@ extension WorkspaceViewModel {
         }
         let visibleCardIDs = Set(cards.map { $0.id })
         let links = visibleLinkLayerSnapshots(in: size, visibleCardIDs: visibleCardIDs)
-        let labelGroups = labelRectanglesVisible
+        let labelGroups = (browserLabelOutlineStyle != .none || settings.browserLabelNameVisible)
             ? visibleBrowserLabelGroupSnapshots(
                 visibleCards: visibleCards,
                 visibleCardWorldFrames: visibleCardWorldFrames,
@@ -643,7 +643,7 @@ extension WorkspaceViewModel {
 
     func visibleLinkRenderData(in size: CGSize, visibleCardIDs: Set<Int>) -> [BrowserLinkRenderData] {
         let start = CACurrentMediaTime()
-        guard !visibleCardIDs.isEmpty else {
+        guard settings.browserLinkVisible, !visibleCardIDs.isEmpty else {
             recordPerformanceMetric(start, keyPath: \BrowserPerformanceSnapshot.visibleLinks)
             return []
         }
@@ -678,10 +678,10 @@ extension WorkspaceViewModel {
     }
 
     func visibleLinkLayerSnapshots(in size: CGSize, visibleCardIDs: Set<Int>) -> [BrowserLinkLayerSnapshot] {
-        guard !visibleCardIDs.isEmpty else { return [] }
+        guard settings.browserLinkVisible, !visibleCardIDs.isEmpty else { return [] }
         let scale = max(browserScale(in: size), 1)
         let detailLevel = browserCardDetailLevel()
-        let showsLabels = linkLabelsVisible && detailLevel != .thumbnail
+        let showsLabels = settings.browserLinkNameVisible && detailLevel != .thumbnail
         let visible = visibleWorldRect(in: size).insetBy(dx: -0.12, dy: -0.12)
         return document.links.compactMap { link -> BrowserLinkLayerSnapshot? in
             guard let from = cardByID(link.fromCardID), let to = cardByID(link.toCardID) else { return nil }
@@ -709,7 +709,7 @@ extension WorkspaceViewModel {
                 startPoint: start,
                 endPoint: end,
                 shapeIndex: ((link.shape % frieveLinkShapeOptions.count) + frieveLinkShapeOptions.count) % frieveLinkShapeOptions.count,
-                directionVisible: link.directionVisible,
+                directionVisible: settings.browserLinkDirectionVisible && link.directionVisible,
                 labelPoint: buildLinkLabelPoint(for: link, start: start, end: end, baseScale: CGFloat(scale)),
                 labelText: showsLabels ? link.name.trimmed.nilIfEmpty : nil,
                 isHighlighted: selectedCardIDs.contains(link.fromCardID) || selectedCardIDs.contains(link.toCardID)
@@ -723,6 +723,8 @@ extension WorkspaceViewModel {
         clipRect: CGRect
     ) -> [BrowserLabelGroupLayerSnapshot] {
         guard !visibleCards.isEmpty else { return [] }
+        let outlineStyle = browserLabelOutlineStyle
+        let showsName = settings.browserLabelNameVisible
 
         return document.cardLabels.compactMap { label in
             guard label.enabled, !label.fold else { return nil }
@@ -733,14 +735,26 @@ extension WorkspaceViewModel {
                 worldBounds = worldBounds.map { $0.union(frame) } ?? frame
             }
 
-            guard let worldBounds, clipRect.intersects(worldBounds) else { return nil }
+            guard var worldBounds, clipRect.intersects(worldBounds) else { return nil }
+            guard outlineStyle != .none || showsName else { return nil }
+            if outlineStyle == .circle {
+                let radius = max(worldBounds.width, worldBounds.height) / 2
+                worldBounds = CGRect(
+                    x: worldBounds.midX - radius,
+                    y: worldBounds.midY - radius,
+                    width: radius * 2,
+                    height: radius * 2
+                )
+            }
             return BrowserLabelGroupLayerSnapshot(
                 id: label.id,
                 name: label.name.trimmed.nilIfEmpty ?? "Label \(label.id)",
                 color: label.color,
                 worldRect: worldBounds,
                 labelSize: label.size,
-                prefersNameAbove: worldBounds.minY < 0.4
+                prefersNameAbove: worldBounds.minY < 0.4,
+                outlineStyle: outlineStyle,
+                showsName: showsName
             )
         }
     }
@@ -797,7 +811,8 @@ extension WorkspaceViewModel {
 
     func browserCardShadow(for card: FrieveCard, isSelected: Bool, isHovered: Bool) -> Color {
         _ = (card, isSelected, isHovered)
-        return .clear
+        guard settings.browserCardShadow else { return .clear }
+        return Color.black.opacity(isSelected ? 0.22 : 0.14)
     }
 
     func browserCardGlow(for card: FrieveCard, isSelected: Bool) -> Color {

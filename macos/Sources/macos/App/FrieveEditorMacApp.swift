@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 final class FrieveEditorAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -34,43 +35,273 @@ struct FrieveEditorMacApp: App {
 private struct FrieveEditorSettingsView: View {
     @ObservedObject var settings: AppSettings
 
+    private var availableFontFamilies: [String] {
+        NSFontManager.shared.availableFontFamilies.sorted()
+    }
+
+    private var labelOutlineStyle: Binding<BrowserLabelOutlineStyle> {
+        Binding(
+            get: {
+                if settings.browserLabelCircleVisible {
+                    return .circle
+                }
+                if settings.browserLabelRectangleVisible {
+                    return .rectangle
+                }
+                return .none
+            },
+            set: { style in
+                settings.browserLabelCircleVisible = style == .circle
+                settings.browserLabelRectangleVisible = style == .rectangle
+            }
+        )
+    }
+
+    private var foregroundColorBinding: Binding<NSColor> {
+        Binding(
+            get: { browserColor(fromHex: settings.browserForegroundColorHex) ?? NSColor.labelColor },
+            set: { settings.browserForegroundColorHex = browserHexString(from: $0) ?? settings.browserForegroundColorHex }
+        )
+    }
+
+    private var backgroundColorBinding: Binding<NSColor> {
+        Binding(
+            get: { browserColor(fromHex: settings.browserBackgroundColorHex) ?? NSColor.textBackgroundColor },
+            set: { settings.browserBackgroundColorHex = browserHexString(from: $0) ?? settings.browserBackgroundColorHex }
+        )
+    }
+
     var body: some View {
-        Form {
-            Section("Automation") {
-                Toggle("Auto Save", isOn: $settings.autoSaveDefault)
-                Toggle("Auto Reload", isOn: $settings.autoReloadDefault)
+        TabView {
+            Form {
+                Section("Automation") {
+                    Toggle("Auto Save", isOn: $settings.autoSaveDefault)
+                    Toggle("Auto Reload", isOn: $settings.autoReloadDefault)
 
-                Picker("Web Search", selection: $settings.preferredWebSearchName) {
-                    ForEach(settings.webSearchProviders) { provider in
-                        Text(provider.name).tag(provider.name)
+                    Picker("Web Search", selection: $settings.preferredWebSearchName) {
+                        ForEach(settings.webSearchProviders) { provider in
+                            Text(provider.name).tag(provider.name)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Read Speed")
+                            Spacer()
+                            Text("\(settings.readAloudRate)")
+                                .foregroundStyle(.secondary)
+                        }
+                        Slider(
+                            value: Binding(
+                                get: { Double(settings.readAloudRate) },
+                                set: { settings.readAloudRate = Int($0.rounded()) }
+                            ),
+                            in: -10 ... 10,
+                            step: 1
+                        )
+                    }
+
+                    TextField("GPT Model", text: $settings.gptModel)
+                        .textFieldStyle(.roundedBorder)
+                    SecureField("GPT API Key", text: $settings.gptAPIKey)
+                        .textFieldStyle(.roundedBorder)
+                }
+            }
+            .tabItem {
+                Label("General", systemImage: "gearshape")
+            }
+
+            Form {
+                Section("Panels") {
+                    Toggle("Show Overview", isOn: $settings.showOverview)
+                    Toggle("Show File List", isOn: $settings.showFileList)
+                    Toggle("Show Card List", isOn: $settings.showCardList)
+                    Toggle("Show Inspector", isOn: $settings.showInspector)
+                    Toggle("Show Status Bar", isOn: $settings.showStatusBar)
+                }
+
+                Section("Card") {
+                    Toggle("Shadow", isOn: $settings.browserCardShadow)
+                    Toggle("Gradation", isOn: $settings.browserCardGradation)
+                    Toggle("Ticker", isOn: $settings.browserTickerVisible)
+                    Picker("Ticker Lines", selection: $settings.browserTickerLines) {
+                        Text("1 Line").tag(1)
+                        Text("2 Lines").tag(2)
+                    }
+                    Toggle("Image", isOn: $settings.browserImageVisible)
+                    Toggle("Video", isOn: $settings.browserVideoVisible)
+                    Toggle("Drawing", isOn: $settings.browserDrawingVisible)
+                    Picker("Preview Size", selection: $settings.browserImageLimitation) {
+                        ForEach([32, 40, 64, 80, 120, 160, 240, 320], id: \.self) { value in
+                            Text("\(value) px").tag(value)
+                        }
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
+                Section("Link") {
+                    Toggle("Show Links", isOn: $settings.browserLinkVisible)
+                    Toggle("Hemming", isOn: $settings.browserLinkHemming)
+                    Toggle("Show Direction", isOn: $settings.browserLinkDirectionVisible)
+                    Toggle("Show Names", isOn: $settings.browserLinkNameVisible)
+                }
+
+                Section("Label") {
+                    Picker("Outline", selection: labelOutlineStyle) {
+                        Text("None").tag(BrowserLabelOutlineStyle.none)
+                        Text("Rectangle").tag(BrowserLabelOutlineStyle.rectangle)
+                        Text("Circle").tag(BrowserLabelOutlineStyle.circle)
+                    }
+                    Toggle("Show Label Names", isOn: $settings.browserLabelNameVisible)
+                }
+
+                Section("Text") {
+                    Toggle("Show Card Text", isOn: $settings.browserTextVisible)
+                    Toggle("Centering", isOn: $settings.browserTextCentering)
+                    Toggle("Word Wrap", isOn: $settings.browserTextWordWrap)
+                }
+
+                Section("Font") {
+                    Picker("Family", selection: $settings.browserFontFamily) {
+                        Text("System Default").tag("")
+                        ForEach(availableFontFamilies, id: \.self) { family in
+                            Text(family).tag(family)
+                        }
+                    }
+                    Stepper(value: $settings.browserFontSize, in: 8 ... 36) {
+                        Text("Size \(settings.browserFontSize) pt")
+                    }
                     HStack {
-                        Text("Read Speed")
-                        Spacer()
-                        Text("\(settings.readAloudRate)")
-                            .foregroundStyle(.secondary)
+                        Button("Default Size") {
+                            settings.browserFontSize = 13
+                        }
+                        Button("Magnify") {
+                            settings.browserFontSize = min(settings.browserFontSize + 1, 36)
+                        }
+                        Button("Reduce") {
+                            settings.browserFontSize = max(settings.browserFontSize - 1, 8)
+                        }
                     }
-                    Slider(
-                        value: Binding(
-                            get: { Double(settings.readAloudRate) },
-                            set: { settings.readAloudRate = Int($0.rounded()) }
-                        ),
-                        in: -10 ... 10,
-                        step: 1
-                    )
                 }
 
-                TextField("GPT Model", text: $settings.gptModel)
-                    .textFieldStyle(.roundedBorder)
-                SecureField("GPT API Key", text: $settings.gptAPIKey)
-                    .textFieldStyle(.roundedBorder)
+                Section("Inline Editor") {
+                    Toggle("Edit in Browser", isOn: $settings.browserEditInBrowser)
+                    Toggle("Always Show Editor", isOn: $settings.browserEditInBrowserAlways)
+                    Picker("Placement", selection: $settings.browserEditInBrowserPosition) {
+                        ForEach(BrowserInlineEditorPosition.allCases) { position in
+                            Text(position.title).tag(position.rawValue)
+                        }
+                    }
+                }
+
+                Section("Score") {
+                    Toggle("Show Score", isOn: $settings.browserScoreVisible)
+                    Picker("Score Type", selection: $settings.browserScoreType) {
+                        ForEach(BrowserScoreDisplayType.allCases) { scoreType in
+                            Text(scoreType.title).tag(scoreType.rawValue)
+                        }
+                    }
+                }
+
+                Section("Others") {
+                    BrowserColorWell(title: "Foreground Color", color: foregroundColorBinding)
+                    BrowserColorWell(title: "Background Color", color: backgroundColorBinding)
+                    Button("Use Default Colors") {
+                        settings.browserForegroundColorHex = ""
+                        settings.browserBackgroundColorHex = ""
+                    }
+
+                    HStack {
+                        Text("Wallpaper")
+                        Spacer()
+                        Text(settings.browserWallpaperPath.isEmpty ? "None" : URL(fileURLWithPath: settings.browserWallpaperPath).lastPathComponent)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    HStack {
+                        Button("Choose Wallpaper…") {
+                            let panel = NSOpenPanel()
+                            panel.allowedContentTypes = [.image]
+                            panel.canChooseDirectories = false
+                            panel.allowsMultipleSelection = false
+                            if panel.runModal() == .OK {
+                                settings.browserWallpaperPath = panel.url?.path ?? ""
+                            }
+                        }
+                        Button("Clear") {
+                            settings.browserWallpaperPath = ""
+                        }
+                        .disabled(settings.browserWallpaperPath.isEmpty)
+                    }
+                    Toggle("Fix Wallpaper", isOn: $settings.browserWallpaperFixed)
+                        .disabled(settings.browserWallpaperPath.isEmpty)
+                    Toggle("Tile Wallpaper", isOn: $settings.browserWallpaperTiled)
+                        .disabled(settings.browserWallpaperPath.isEmpty)
+                    Toggle("Background Animation", isOn: $settings.browserBackgroundAnimation)
+                    Picker("Animation Type", selection: $settings.browserBackgroundAnimationType) {
+                        ForEach(BrowserBackgroundAnimationType.allCases) { animationType in
+                            Text(animationType.title).tag(animationType.rawValue)
+                        }
+                    }
+                    .disabled(!settings.browserBackgroundAnimation)
+                    Toggle("Cursor Animation", isOn: $settings.browserCursorAnimation)
+                    Toggle("No Scroll Lag", isOn: $settings.browserNoScrollLag)
+                    Toggle("Anti-Aliasing", isOn: $settings.browserAntialiasingEnabled)
+                    Picker("AA Level", selection: $settings.browserAntialiasingSampleCount) {
+                        Text("2x").tag(2)
+                        Text("4x").tag(4)
+                    }
+                    .disabled(!settings.browserAntialiasingEnabled)
+                }
+            }
+            .tabItem {
+                Label("Browser", systemImage: "rectangle.3.group")
             }
         }
         .formStyle(.grouped)
         .padding(20)
-        .frame(minWidth: 420, idealWidth: 460)
+        .frame(minWidth: 560, idealWidth: 640, minHeight: 560)
+    }
+}
+
+private struct BrowserColorWell: NSViewRepresentable {
+    let title: String
+    @Binding var color: NSColor
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(color: $color)
+    }
+
+    func makeNSView(context: Context) -> NSStackView {
+        let label = NSTextField(labelWithString: title)
+        let spacer = NSView()
+        let colorWell = NSColorWell()
+        colorWell.color = color
+        colorWell.target = context.coordinator
+        colorWell.action = #selector(Coordinator.updateColor(_:))
+        context.coordinator.colorWell = colorWell
+
+        let stack = NSStackView(views: [label, spacer, colorWell])
+        stack.orientation = .horizontal
+        stack.alignment = .centerY
+        stack.spacing = 12
+        return stack
+    }
+
+    func updateNSView(_ nsView: NSStackView, context: Context) {
+        context.coordinator.color = $color
+        context.coordinator.colorWell?.color = color
+    }
+
+    final class Coordinator: NSObject {
+        var color: Binding<NSColor>
+        weak var colorWell: NSColorWell?
+
+        init(color: Binding<NSColor>) {
+            self.color = color
+        }
+
+        @MainActor @objc func updateColor(_ sender: NSColorWell) {
+            color.wrappedValue = sender.color
+        }
     }
 }

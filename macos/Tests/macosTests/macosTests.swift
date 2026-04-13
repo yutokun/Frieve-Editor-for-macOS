@@ -1388,6 +1388,7 @@ import Testing
             labelLine: "",
             summaryText: "",
             detailSummary: "",
+            scoreText: nil,
             badges: [],
             canvasSize: CGSize(width: 120, height: 52),
             linkCount: 0,
@@ -1613,6 +1614,278 @@ import Testing
     #expect(values.2 == "DuckDuckGo")
     #expect(values.3 == 7)
     #expect(values.4 == "gpt-4.1-mini")
+}
+
+@Test func browserDisplaySettingsPersistWhenEditedDirectly() async throws {
+    let suiteName = "FrieveEditorMacTests.browserDisplaySettings"
+
+    let values = await MainActor.run { () -> (Bool, Bool, Int, Bool, Int, Bool) in
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let settings = AppSettings(userDefaults: defaults)
+        settings.browserCardShadow = false
+        settings.browserLinkVisible = false
+        settings.browserImageLimitation = 160
+        settings.browserEditInBrowserAlways = true
+        settings.browserEditInBrowserPosition = BrowserInlineEditorPosition.browserRight.rawValue
+        settings.browserScoreVisible = true
+        settings.browserScoreType = BrowserScoreDisplayType.textLength.rawValue
+
+        let reloaded = AppSettings(userDefaults: defaults)
+        return (
+            reloaded.browserCardShadow,
+            reloaded.browserLinkVisible,
+            reloaded.browserImageLimitation,
+            reloaded.browserEditInBrowserAlways,
+            reloaded.browserEditInBrowserPosition,
+            reloaded.browserScoreVisible
+        )
+    }
+
+    #expect(values.0 == false)
+    #expect(values.1 == false)
+    #expect(values.2 == 160)
+    #expect(values.3 == true)
+    #expect(values.4 == BrowserInlineEditorPosition.browserRight.rawValue)
+    #expect(values.5 == true)
+}
+
+@Test func browserFontAndOtherSettingsPersistWhenEditedDirectly() async throws {
+    let suiteName = "FrieveEditorMacTests.browserFontAndOtherSettings"
+
+    let values = await MainActor.run { () -> (String, Int, String, String, Bool, Int, Bool, Bool, Int) in
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let settings = AppSettings(userDefaults: defaults)
+        settings.browserFontFamily = "Helvetica"
+        settings.browserFontSize = 17
+        settings.browserForegroundColorHex = "224466"
+        settings.browserBackgroundColorHex = "E8EEF8"
+        settings.browserWallpaperTiled = true
+        settings.browserBackgroundAnimation = true
+        settings.browserBackgroundAnimationType = BrowserBackgroundAnimationType.snow.rawValue
+        settings.browserNoScrollLag = false
+        settings.browserAntialiasingEnabled = true
+        settings.browserAntialiasingSampleCount = 4
+
+        let reloaded = AppSettings(userDefaults: defaults)
+        return (
+            reloaded.browserFontFamily,
+            reloaded.browserFontSize,
+            reloaded.browserForegroundColorHex,
+            reloaded.browserBackgroundColorHex,
+            reloaded.browserWallpaperTiled,
+            reloaded.browserBackgroundAnimationType,
+            reloaded.browserBackgroundAnimation,
+            reloaded.browserAntialiasingEnabled,
+            reloaded.browserAntialiasingSampleCount
+        )
+    }
+
+    #expect(values.0 == "Helvetica")
+    #expect(values.1 == 17)
+    #expect(values.2 == "224466")
+    #expect(values.3 == "E8EEF8")
+    #expect(values.4 == true)
+    #expect(values.5 == BrowserBackgroundAnimationType.snow.rawValue)
+    #expect(values.6 == true)
+    #expect(values.7 == true)
+    #expect(values.8 == 4)
+}
+
+@Test func browserFontColorAndRenderingHelpersUseConfiguredSettings() async throws {
+    let values = await MainActor.run { () -> (CGFloat, NSColor, NSColor, NSColor, NSColor, Int, CFTimeInterval) in
+        let defaults = UserDefaults(suiteName: "FrieveEditorMacTests.browserHelperSettings")!
+        defaults.removePersistentDomain(forName: "FrieveEditorMacTests.browserHelperSettings")
+        let settings = AppSettings(userDefaults: defaults)
+        settings.browserFontFamily = "Helvetica"
+        settings.browserFontSize = 16
+        settings.browserForegroundColorHex = "335577"
+        settings.browserBackgroundColorHex = "F0E8D8"
+        settings.browserNoScrollLag = true
+        settings.browserAntialiasingEnabled = true
+        settings.browserAntialiasingSampleCount = 4
+
+        let model = WorkspaceViewModel(settings: settings)
+        let defaultSuiteName = "FrieveEditorMacTests.browserDefaultHelperSettings"
+        let defaultDefaults = UserDefaults(suiteName: defaultSuiteName)!
+        defaultDefaults.removePersistentDomain(forName: defaultSuiteName)
+        let defaultModel = WorkspaceViewModel(settings: AppSettings(userDefaults: defaultDefaults))
+        let card = FrieveCard(
+            id: 1,
+            title: "Font",
+            bodyText: "",
+            drawingEncoded: "",
+            visible: true,
+            shape: 2,
+            size: 100,
+            isTop: false,
+            isFixed: false,
+            isFolded: false,
+            position: FrievePoint(x: 0.5, y: 0.5),
+            created: "2026-04-14T00:00:00Z",
+            updated: "2026-04-14T00:00:00Z",
+            viewed: "2026-04-14T00:00:00Z",
+            labelIDs: [],
+            score: 0,
+            imagePath: nil,
+            videoPath: nil
+        )
+        let titleFont = model.browserCardTitleNSFont(for: card)
+        return (
+            titleFont.pointSize,
+            model.browserForegroundColor(for: .light),
+            model.browserCanvasBackgroundColor(for: .light),
+            defaultModel.browserForegroundColor(for: .light),
+            defaultModel.browserCanvasBackgroundColor(for: .light),
+            model.browserAntialiasingSampleCount,
+            model.browserChromeRefreshMinimumInterval()
+        )
+    }
+
+    #expect(values.0 == 16)
+    #expect(browserTestRGBComponents(values.1) != browserTestRGBComponents(values.3))
+    #expect(browserTestRGBComponents(values.2) != browserTestRGBComponents(values.4))
+    #expect(values.5 == 4)
+    #expect(values.6 == 0)
+}
+
+@Test func browserSurfaceAppliesConfiguredAntialiasingSampleCount() async throws {
+    let sampleCount = await MainActor.run { () -> Int in
+        let settings = AppSettings(userDefaults: UserDefaults(suiteName: "FrieveEditorMacTests.browserSampleCount")!)
+        settings.browserAntialiasingEnabled = true
+        settings.browserAntialiasingSampleCount = 4
+
+        let model = WorkspaceViewModel(settings: settings)
+        let view = BrowserSurfaceNSView(frame: .init(x: 0, y: 0, width: 640, height: 480))
+        view.viewModel = model
+        view.applyBrowserRenderingSettings()
+        return view.browserSampleCount
+    }
+
+    #expect(sampleCount == 4)
+}
+
+@Test func browserRenderingHonorsConfiguredDisplaySettings() async throws {
+    let suiteName = "FrieveEditorMacTests.browserRenderingSettings"
+
+    let values = await MainActor.run { () -> (String, String?, Int, BrowserLabelOutlineStyle, Bool) in
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let settings = AppSettings(userDefaults: defaults)
+        settings.browserTextVisible = false
+        settings.browserLinkVisible = false
+        settings.browserLabelCircleVisible = true
+        settings.browserLabelRectangleVisible = false
+        settings.browserLabelNameVisible = false
+        settings.browserScoreVisible = true
+        settings.browserScoreType = BrowserScoreDisplayType.textLength.rawValue
+
+        let model = WorkspaceViewModel(settings: settings)
+        model.document = FrieveDocument(
+            title: "Display",
+            metadata: [:],
+            focusedCardID: 1,
+            cards: [
+                FrieveCard(
+                    id: 1,
+                    title: "Alpha",
+                    bodyText: "Alpha body for score text",
+                    drawingEncoded: "",
+                    visible: true,
+                    shape: 2,
+                    size: 100,
+                    isTop: false,
+                    isFixed: false,
+                    isFolded: false,
+                    position: FrievePoint(x: 0.4, y: 0.5),
+                    created: "2026-04-13T00:00:00Z",
+                    updated: "2026-04-13T00:00:00Z",
+                    viewed: "2026-04-13T00:00:00Z",
+                    labelIDs: [1],
+                    score: 0.75,
+                    imagePath: nil,
+                    videoPath: nil
+                ),
+                FrieveCard(
+                    id: 2,
+                    title: "Beta",
+                    bodyText: "Beta body",
+                    drawingEncoded: "",
+                    visible: true,
+                    shape: 2,
+                    size: 100,
+                    isTop: false,
+                    isFixed: false,
+                    isFolded: false,
+                    position: FrievePoint(x: 0.7, y: 0.5),
+                    created: "2026-04-13T00:00:00Z",
+                    updated: "2026-04-13T00:00:00Z",
+                    viewed: "2026-04-13T00:00:00Z",
+                    labelIDs: [],
+                    score: 0.25,
+                    imagePath: nil,
+                    videoPath: nil
+                )
+            ],
+            links: [
+                FrieveLink(fromCardID: 1, toCardID: 2, directionVisible: true, shape: 5, labelIDs: [], name: "Related")
+            ],
+            cardLabels: [
+                FrieveLabel(id: 1, name: "Topic", color: 0x3366AA, enabled: true, show: true, hide: false, fold: false, size: 100)
+            ],
+            linkLabels: [],
+            sourcePath: nil
+        )
+        model.selectedCardID = 1
+        model.selectedCardIDs = [1]
+        model.invalidateDocumentCaches()
+
+        let metadata = model.metadata(for: model.document.cards[0])
+        let scene = model.browserSurfaceScene(in: CGSize(width: 1200, height: 800))
+        let labelGroup = scene.labelGroups.first
+        return (
+            metadata.summaryText,
+            metadata.scoreText,
+            scene.links.count,
+            labelGroup?.outlineStyle ?? .none,
+            labelGroup?.showsName ?? true
+        )
+    }
+
+    #expect(values.0.isEmpty)
+    #expect(values.1 == "Text 25")
+    #expect(values.2 == 0)
+    #expect(values.3 == .circle)
+    #expect(values.4 == false)
+}
+
+@Test func browserInlineEditorSettingsControlAlwaysShowAndPlacement() async throws {
+    let suiteName = "FrieveEditorMacTests.browserInlineEditorSettings"
+
+    let values = await MainActor.run { () -> (Int?, CGRect) in
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let settings = AppSettings(userDefaults: defaults)
+        settings.browserEditInBrowser = true
+        settings.browserEditInBrowserAlways = true
+        settings.browserEditInBrowserPosition = BrowserInlineEditorPosition.browserRight.rawValue
+
+        let model = WorkspaceViewModel(settings: settings)
+        let rootID = model.document.sortedCards.first?.id ?? 0
+        model.selectCard(rootID)
+        let card = model.document.card(withID: rootID)!
+        let frame = model.browserInlineEditorFrame(for: card, in: CGSize(width: 900, height: 600))
+        return (model.browserInlineEditorCard?.id, frame)
+    }
+
+    #expect(values.0 != nil)
+    #expect(values.1.maxX > 860)
+    #expect(values.1.width >= 320)
 }
 
 @Test func legacyReadSpeedSettingMigratesIntoNewIntegerRange() async throws {
@@ -2040,13 +2313,10 @@ import Testing
 
 @MainActor
 @Test func browserRefreshSynchronizesAppearanceBeforeRedraw() throws {
-    guard let lightAppearance = NSAppearance(named: .aqua),
-          let darkAppearance = NSAppearance(named: .darkAqua) else {
-        Issue.record("Expected standard Aqua appearances to be available")
-        return
-    }
-
-    let model = WorkspaceViewModel()
+    let suiteName = "FrieveEditorMacTests.browserAppearanceRefresh"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defaults.removePersistentDomain(forName: suiteName)
+    let model = WorkspaceViewModel(settings: AppSettings(userDefaults: defaults))
     let view = BrowserSurfaceNSView(frame: CGRect(x: 0, y: 0, width: 1200, height: 800))
     view.viewModel = model
     model.newDocument()
@@ -2128,4 +2398,13 @@ private func browserTestLuminance(from color: CGColor?) -> Double? {
 
 private func browserTestLuminance(from color: MTLClearColor) -> Double? {
     (color.red * 0.2126) + (color.green * 0.7152) + (color.blue * 0.0722)
+}
+
+private func browserTestRGBComponents(_ color: NSColor) -> (red: Int, green: Int, blue: Int) {
+    let resolved = color.usingColorSpace(.deviceRGB) ?? color
+    return (
+        Int(round(resolved.redComponent * 255)),
+        Int(round(resolved.greenComponent * 255)),
+        Int(round(resolved.blueComponent * 255))
+    )
 }

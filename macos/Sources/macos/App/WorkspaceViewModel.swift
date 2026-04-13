@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import AVFoundation
+import Combine
 
 enum CardSortOrder: String, CaseIterable, Identifiable {
     case title
@@ -90,6 +91,7 @@ struct BrowserCardMetadata: Hashable {
     let labelLine: String
     let summaryText: String
     let detailSummary: String
+    let scoreText: String?
     let badges: [String]
     let canvasSize: CGSize
     let linkCount: Int
@@ -104,6 +106,12 @@ struct BrowserCardRenderData: Identifiable {
     let metadata: BrowserCardMetadata
 
     var id: Int { card.id }
+}
+
+enum BrowserLabelOutlineStyle: String, Hashable {
+    case none
+    case rectangle
+    case circle
 }
 
 struct BrowserLinkRenderData: Identifiable {
@@ -155,6 +163,8 @@ struct BrowserLabelGroupLayerSnapshot: Identifiable, Hashable {
     let worldRect: CGRect
     let labelSize: Int
     let prefersNameAbove: Bool
+    let outlineStyle: BrowserLabelOutlineStyle
+    let showsName: Bool
 }
 
 struct BrowserOverlaySnapshot {
@@ -280,6 +290,7 @@ struct EditorRelatedCardLine: Identifiable, Hashable {
 @MainActor
 final class WorkspaceViewModel: ObservableObject {
     var settings: AppSettings
+    private var settingsObserver: AnyCancellable?
 
     @Published var document: FrieveDocument {
         didSet { invalidateDocumentCaches() }
@@ -290,6 +301,7 @@ final class WorkspaceViewModel: ObservableObject {
         didSet {
             syncDocumentMetadataFromSettings()
             updateBrowserAutoArrangeTimerState()
+            updateBrowserInlineEditorForCurrentSelection()
         }
     }
     @Published var searchQuery: String = ""
@@ -314,8 +326,12 @@ final class WorkspaceViewModel: ObservableObject {
             zoomToSelection(in: resolvedBrowserCanvasSize())
         }
     }
-    @Published var linkLabelsVisible: Bool = true
-    @Published var labelRectanglesVisible: Bool = true
+    @Published var linkLabelsVisible: Bool = true {
+        didSet { settings.browserLinkNameVisible = linkLabelsVisible }
+    }
+    @Published var labelRectanglesVisible: Bool = true {
+        didSet { settings.browserLabelRectangleVisible = labelRectanglesVisible }
+    }
     @Published var activeBrowserAnimation: BrowserAnimationMode?
     @Published var animationPaused: Bool = false {
         didSet { settings.animationPaused = animationPaused }
@@ -481,6 +497,8 @@ final class WorkspaceViewModel: ObservableObject {
         showCardList = settings.showCardList
         showInspector = settings.showInspector
         showStatusBar = settings.showStatusBar
+        linkLabelsVisible = settings.browserLinkNameVisible
+        labelRectanglesVisible = settings.browserLabelRectangleVisible
         animationVisibleCardCount = min(max(settings.animationVisibleCardCount, 1), 30)
         animationSpeed = min(max(settings.animationSpeed, 1), 100)
         animationPaused = settings.animationPaused
@@ -508,6 +526,65 @@ final class WorkspaceViewModel: ObservableObject {
         }
         syncDocumentMetadataFromSettings()
         resetCanvasStateFromDocument()
+        bindSettings()
+    }
+
+    private func bindSettings() {
+        settingsObserver = settings.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                DispatchQueue.main.async {
+                    self.applySettingsToWorkspace()
+                }
+            }
+    }
+
+    private func applySettingsToWorkspace() {
+        if showOverview != settings.showOverview {
+            showOverview = settings.showOverview
+        }
+        if showFileList != settings.showFileList {
+            showFileList = settings.showFileList
+        }
+        if showCardList != settings.showCardList {
+            showCardList = settings.showCardList
+        }
+        if showInspector != settings.showInspector {
+            showInspector = settings.showInspector
+        }
+        if showStatusBar != settings.showStatusBar {
+            showStatusBar = settings.showStatusBar
+        }
+        if linkLabelsVisible != settings.browserLinkNameVisible {
+            linkLabelsVisible = settings.browserLinkNameVisible
+        }
+        if labelRectanglesVisible != settings.browserLabelRectangleVisible {
+            labelRectanglesVisible = settings.browserLabelRectangleVisible
+        }
+        if animationVisibleCardCount != min(max(settings.animationVisibleCardCount, 1), 30) {
+            animationVisibleCardCount = min(max(settings.animationVisibleCardCount, 1), 30)
+        }
+        if animationSpeed != min(max(settings.animationSpeed, 1), 100) {
+            animationSpeed = min(max(settings.animationSpeed, 1), 100)
+        }
+        if animationPaused != settings.animationPaused {
+            animationPaused = settings.animationPaused
+        }
+        recentFiles = settings.recentFiles
+
+        if !settings.browserEditInBrowser {
+            browserInlineEditorCardID = nil
+        } else if settings.browserEditInBrowserAlways,
+                  selectedTab == .browser,
+                  let selectedCardID {
+            browserInlineEditorCardID = selectedCardID
+        }
+
+        clearRenderingCaches()
+        markBrowserSurfaceContentDirty()
+        markBrowserSurfacePresentationDirty()
+        markBrowserSurfaceViewportDirty()
     }
 
     var filteredCards: [FrieveCard] {

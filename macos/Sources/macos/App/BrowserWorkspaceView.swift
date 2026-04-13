@@ -28,13 +28,19 @@ struct BrowserWorkspaceView: View {
 private struct BrowserLayerSurfaceView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
     @FocusState private var browserFocused: Bool
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         GeometryReader { proxy in
             let canvasSize = proxy.size
             let _ = viewModel.browserChromeRevision
             ZStack {
+                BrowserCanvasBackgroundView(viewModel: viewModel, colorScheme: colorScheme)
                 BrowserSurfaceRepresentable(viewModel: viewModel, canvasSize: canvasSize)
+
+                if viewModel.settings.browserCursorAnimation {
+                    BrowserCursorPulseOverlay(viewModel: viewModel, canvasSize: canvasSize, colorScheme: colorScheme)
+                }
 
                 if let editingCard = viewModel.browserInlineEditorCard {
                     if let connector = viewModel.inlineEditorConnectorPoints(for: editingCard, in: canvasSize) {
@@ -90,6 +96,175 @@ private struct BrowserLayerSurfaceView: View {
                 viewModel.resetCanvasToFit(in: canvasSize)
             }
         }
+    }
+}
+
+private struct BrowserCanvasBackgroundView: View {
+    @ObservedObject var viewModel: WorkspaceViewModel
+    let colorScheme: ColorScheme
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(Color(nsColor: viewModel.browserCanvasBackgroundColor(for: colorScheme)))
+
+            if let image = wallpaperImage {
+                if viewModel.settings.browserWallpaperTiled {
+                    GeometryReader { proxy in
+                        Canvas { context, size in
+                            let tileSize = image.size
+                            guard tileSize.width > 0, tileSize.height > 0 else { return }
+                            let columns = Int(ceil(size.width / tileSize.width)) + 1
+                            let rows = Int(ceil(size.height / tileSize.height)) + 1
+                            for row in 0..<rows {
+                                for column in 0..<columns {
+                                    let origin = CGPoint(
+                                        x: CGFloat(column) * tileSize.width,
+                                        y: CGFloat(row) * tileSize.height
+                                    )
+                                    context.draw(Image(nsImage: image), at: origin, anchor: .topLeading)
+                                }
+                            }
+                        }
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                    }
+                } else {
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: viewModel.settings.browserWallpaperFixed ? .fill : .fit)
+                        .opacity(0.30)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
+                }
+            }
+
+            if viewModel.settings.browserBackgroundAnimation {
+                BrowserAnimatedBackgroundOverlay(
+                    viewModel: viewModel,
+                    colorScheme: colorScheme
+                )
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    private var wallpaperImage: NSImage? {
+        guard let url = viewModel.browserWallpaperURL() else { return nil }
+        return NSImage(contentsOf: url)
+    }
+}
+
+private struct BrowserAnimatedBackgroundOverlay: View {
+    @ObservedObject var viewModel: WorkspaceViewModel
+    let colorScheme: ColorScheme
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 24.0)) { timeline in
+            Canvas { context, size in
+                let time = timeline.date.timeIntervalSinceReferenceDate
+                switch viewModel.browserBackgroundAnimationType {
+                case .flowingLines:
+                    drawFlowingLines(context: &context, size: size, time: time)
+                case .bubbles:
+                    drawBubbles(context: &context, size: size, time: time)
+                case .snow:
+                    drawSnow(context: &context, size: size, time: time)
+                case .petals:
+                    drawPetals(context: &context, size: size, time: time)
+                }
+            }
+        }
+        .opacity(colorScheme == .dark ? 0.55 : 0.35)
+        .allowsHitTesting(false)
+    }
+
+    private func drawFlowingLines(context: inout GraphicsContext, size: CGSize, time: TimeInterval) {
+        let base = viewModel.browserForegroundSecondaryColor(for: colorScheme).withAlphaComponent(0.22)
+        for index in 0..<18 {
+            let progress = CGFloat(((time * 36) + Double(index * 41)).truncatingRemainder(dividingBy: 900)) - 120
+            var path = Path()
+            path.move(to: CGPoint(x: progress, y: CGFloat(index) * 44))
+            path.addLine(to: CGPoint(x: progress + 220, y: CGFloat(index) * 44 + 70))
+            context.stroke(path, with: .color(Color(nsColor: base)), lineWidth: index.isMultiple(of: 3) ? 2.5 : 1.2)
+        }
+    }
+
+    private func drawBubbles(context: inout GraphicsContext, size: CGSize, time: TimeInterval) {
+        let color = Color(nsColor: viewModel.browserForegroundSecondaryColor(for: colorScheme))
+        for index in 0..<28 {
+            let normalized = Double(index) / 28
+            let x = CGFloat((normalized * 1_137).truncatingRemainder(dividingBy: 1)) * max(size.width, 1)
+            let yProgress = CGFloat(((time * 0.08) + normalized).truncatingRemainder(dividingBy: 1))
+            let y = size.height - (size.height + 80) * yProgress
+            let diameter = CGFloat(10 + (index % 5) * 6)
+            context.fill(
+                Path(ellipseIn: CGRect(x: x, y: y, width: diameter, height: diameter)),
+                with: .color(color.opacity(0.18))
+            )
+        }
+    }
+
+    private func drawSnow(context: inout GraphicsContext, size: CGSize, time: TimeInterval) {
+        let color = Color.white.opacity(colorScheme == .dark ? 0.24 : 0.18)
+        for index in 0..<40 {
+            let normalized = Double(index) / 40
+            let xOffset = CGFloat(sin(time * 0.7 + normalized * 12) * 18)
+            let x = CGFloat((normalized * 927).truncatingRemainder(dividingBy: 1)) * max(size.width, 1) + xOffset
+            let yProgress = CGFloat(((time * 0.06) + normalized * 1.7).truncatingRemainder(dividingBy: 1))
+            let y = (size.height + 40) * yProgress - 20
+            let diameter = CGFloat(3 + index % 4)
+            context.fill(
+                Path(ellipseIn: CGRect(x: x, y: y, width: diameter, height: diameter)),
+                with: .color(color)
+            )
+        }
+    }
+
+    private func drawPetals(context: inout GraphicsContext, size: CGSize, time: TimeInterval) {
+        let color = Color.pink.opacity(colorScheme == .dark ? 0.20 : 0.16)
+        for index in 0..<24 {
+            let normalized = Double(index) / 24
+            let x = CGFloat((normalized * 743 + time * 18).truncatingRemainder(dividingBy: 1)) * max(size.width, 1)
+            let yProgress = CGFloat(((time * 0.04) + normalized * 1.3).truncatingRemainder(dividingBy: 1))
+            let y = (size.height + 60) * yProgress - 30
+            let width = CGFloat(10 + index % 5)
+            let height = width * 0.66
+            let rect = CGRect(x: x, y: y, width: width, height: height)
+            context.rotate(by: .degrees(Double(index * 17) + time * 15))
+            context.fill(Path(ellipseIn: rect), with: .color(color))
+            context.rotate(by: .degrees(-(Double(index * 17) + time * 15)))
+        }
+    }
+}
+
+private struct BrowserCursorPulseOverlay: View {
+    @ObservedObject var viewModel: WorkspaceViewModel
+    let canvasSize: CGSize
+    let colorScheme: ColorScheme
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 24.0)) { timeline in
+            if let pulseFrame {
+                let phase = (sin(timeline.date.timeIntervalSinceReferenceDate * 4) + 1) / 2
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        viewModel.browserCursorPulseColor(for: colorScheme),
+                        lineWidth: 2 + phase * 3
+                    )
+                    .frame(width: pulseFrame.width + 18 + phase * 14, height: pulseFrame.height + 18 + phase * 14)
+                    .position(x: pulseFrame.midX, y: pulseFrame.midY)
+                    .blur(radius: 0.5 + phase * 1.4)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    private var pulseFrame: CGRect? {
+        if let hoverCard = viewModel.browserHoverCard {
+            return viewModel.cardFrame(for: hoverCard, in: canvasSize)
+        }
+        guard let selectedCard = viewModel.selectedCard else { return nil }
+        return viewModel.cardFrame(for: selectedCard, in: canvasSize)
     }
 }
 

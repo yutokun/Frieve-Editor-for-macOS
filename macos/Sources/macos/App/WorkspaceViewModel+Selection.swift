@@ -124,9 +124,7 @@ extension WorkspaceViewModel {
             selectedCardIDs = [id]
             selectedCardID = id
         }
-        if browserInlineEditorCardID != nil, browserInlineEditorCardID != selectedCardID {
-            browserInlineEditorCardID = nil
-        }
+        updateBrowserInlineEditorForCurrentSelection()
         document.focusedCardID = selectedCardID
         document.touchFocusedCard()
         if autoZoom, selectedTab == .browser {
@@ -258,9 +256,29 @@ extension WorkspaceViewModel {
     }
 
     private func openBrowserInlineEditor(for cardID: Int) {
+        guard settings.browserEditInBrowser else {
+            browserInlineEditorCardID = nil
+            selectedTab = .editor
+            statusMessage = "Opened the card in the editor"
+            return
+        }
         browserInlineEditorCardID = cardID
         markBrowserSurfacePresentationDirty()
         statusMessage = "Opened inline browser editor"
+    }
+
+    func updateBrowserInlineEditorForCurrentSelection() {
+        guard settings.browserEditInBrowser else {
+            browserInlineEditorCardID = nil
+            return
+        }
+        if settings.browserEditInBrowserAlways,
+           selectedTab == .browser,
+           let selectedCardID {
+            browserInlineEditorCardID = selectedCardID
+        } else if browserInlineEditorCardID != nil, browserInlineEditorCardID != selectedCardID {
+            browserInlineEditorCardID = nil
+        }
     }
 
     private func directionalSelectionScore(

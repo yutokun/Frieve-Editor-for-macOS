@@ -86,6 +86,7 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
 
     private func configure(_ view: BrowserSurfaceNSView) {
         view.viewModel = viewModel
+        view.applyBrowserRenderingSettings()
         view.updateColorScheme(colorScheme)
         view.updateInteractionMode(viewModel.browserInteractionModeEnabled)
         viewModel.browserInteractionModeRefreshHandler = { [weak view] isEnabled in
@@ -174,15 +175,19 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
 
     private let pointerDragActivationDistance: CGFloat = 4
     weak var viewModel: WorkspaceViewModel? {
-        didSet { renderer.viewModel = viewModel }
+        didSet {
+            renderer.viewModel = viewModel
+            applyBrowserRenderingSettings()
+        }
     }
 
+    private let metalDevice: MTLDevice
     private let metalView: MTKView
     private let overlayView = BrowserOverlayHostView(frame: .zero)
     private let selectionOverlayLayer = CAShapeLayer()
     private let marqueeOverlayLayer = CAShapeLayer()
     private let linkPreviewLayer = CAShapeLayer()
-    private let renderer: BrowserMetalRenderer
+    private var renderer: BrowserMetalRenderer
     private var trackingAreaRef: NSTrackingArea?
     private var mouseDownPoint: CGPoint?
     private var mouseDownCardID: Int?
@@ -206,10 +211,15 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         metalView.clearColor
     }
 
+    var browserSampleCount: Int {
+        metalView.sampleCount
+    }
+
     override init(frame frameRect: NSRect) {
         guard let device = MTLCreateSystemDefaultDevice() else {
             fatalError("Metal is required for BrowserSurfaceNSView")
         }
+        metalDevice = device
         metalView = MTKView(frame: .zero, device: device)
         renderer = BrowserMetalRenderer(device: device, metalView: metalView)
         super.init(frame: frameRect)
@@ -220,6 +230,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         guard let device = MTLCreateSystemDefaultDevice() else {
             fatalError("Metal is required for BrowserSurfaceNSView")
         }
+        metalDevice = device
         metalView = MTKView(frame: .zero, device: device)
         renderer = BrowserMetalRenderer(device: device, metalView: metalView)
         super.init(coder: coder)
@@ -562,6 +573,22 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         handleAppearanceChangeIfNeeded(force: true)
     }
 
+    func applyBrowserRenderingSettings() {
+        let desiredSampleCount = max(1, viewModel?.browserAntialiasingSampleCount ?? 1)
+        guard metalView.sampleCount != desiredSampleCount else { return }
+        metalView.sampleCount = desiredSampleCount
+        renderer = BrowserMetalRenderer(device: metalDevice, metalView: metalView)
+        renderer.viewModel = viewModel
+        renderer.handleAppearanceChange(
+            signature: resolvedAppearanceSignature,
+            appearance: resolvedAppearance,
+            canvasBackgroundColor: resolvedCanvasBackgroundColor
+        )
+        lastSceneSnapshot = nil
+        lastOverlaySignature = nil
+        refreshFromViewModel(syncAppearance: false)
+    }
+
     func updateInteractionMode(_ isEnabled: Bool) {
         if isEnabled {
             if metalView.enableSetNeedsDisplay {
@@ -706,7 +733,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         let colorScheme: ColorScheme = signature == 1 ? .dark : .light
         applyResolvedAppearance(
             appearance,
-            canvasBackgroundColor: browserCanvasBackgroundColor(for: colorScheme),
+            canvasBackgroundColor: viewModel?.browserCanvasBackgroundColor(for: colorScheme) ?? browserCanvasBackgroundColor(for: colorScheme),
             force: force
         )
     }
@@ -716,14 +743,16 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         self.appearance = appearance
         applyResolvedAppearance(
             appearance,
-            canvasBackgroundColor: browserCanvasBackgroundColor(for: colorScheme),
+            canvasBackgroundColor: viewModel?.browserCanvasBackgroundColor(for: colorScheme) ?? browserCanvasBackgroundColor(for: colorScheme),
             force: false
         )
     }
 
     private func applyDynamicAppearanceColors() {
         let appearance = resolvedAppearance
-        metalView.clearColor = MTLClearColor(color: resolvedCanvasBackgroundColor)
+        let backgroundAlpha: CGFloat =
+            ((viewModel?.browserWallpaperURL() != nil) || (viewModel?.settings.browserBackgroundAnimation == true)) ? 0.70 : 1
+        metalView.clearColor = MTLClearColor(color: resolvedCanvasBackgroundColor.withAlphaComponent(backgroundAlpha))
         marqueeOverlayLayer.fillColor = resolvedColor(for: appearance, NSColor.controlAccentColor).withAlphaComponent(0.10).cgColor
         marqueeOverlayLayer.strokeColor = resolvedColor(for: appearance, NSColor.controlAccentColor).withAlphaComponent(0.9).cgColor
         linkPreviewLayer.strokeColor = resolvedColor(for: appearance, NSColor.controlAccentColor).withAlphaComponent(0.65).cgColor
@@ -1306,13 +1335,28 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     }
 
     private func buildLabelGroupInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalLabelGroupInstance] {
-        return scene.labelGroups.map { snapshot in
+        scene.labelGroups.compactMap { snapshot in
+            guard snapshot.outlineStyle != .none else { return nil }
+            let halfSize: SIMD2<Float>
+            let cornerRadius: Float
+            switch snapshot.outlineStyle {
+            case .circle:
+                let radius = Float(max(snapshot.worldRect.width, snapshot.worldRect.height) / 2)
+                halfSize = SIMD2(repeating: radius)
+                cornerRadius = radius
+            case .rectangle:
+                halfSize = SIMD2(Float(snapshot.worldRect.width / 2), Float(snapshot.worldRect.height / 2))
+                cornerRadius = 14
+            case .none:
+                return nil
+            }
+
             return BrowserMetalLabelGroupInstance(
                 center: SIMD2(Float(snapshot.worldRect.midX), Float(snapshot.worldRect.midY)),
-                halfSize: SIMD2(Float(snapshot.worldRect.width / 2), Float(snapshot.worldRect.height / 2)),
+                halfSize: halfSize,
                 color: NSColor(Color(frieveRGB: snapshot.color)).withAlphaComponent(0.72).rgbaVector,
                 strokeWidth: 3,
-                cornerRadius: 14,
+                cornerRadius: cornerRadius,
                 padding: SIMD2(repeating: 14)
             )
         }
@@ -1393,14 +1437,30 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             0.0001
         )
         return scene.links.flatMap { snapshot -> [BrowserMetalLinkInstance] in
-            let color = browserLinkStrokeColor(for: colorScheme, highlighted: snapshot.isHighlighted).rgbaVector
+            let color = (viewModel?.browserLinkStrokeColor(for: colorScheme, highlighted: snapshot.isHighlighted)
+                ?? browserLinkStrokeColor(for: colorScheme, highlighted: snapshot.isHighlighted)).rgbaVector
             let width: Float = snapshot.isHighlighted ? 3 : 2
-            var instances = makeLinkSegmentInstances(
-                start: snapshot.startPoint,
-                end: snapshot.endPoint,
-                shapeIndex: snapshot.shapeIndex,
-                lineWidth: width,
-                color: color
+            var instances: [BrowserMetalLinkInstance] = []
+            if viewModel?.settings.browserLinkHemming == true {
+                let hemmingColor = SIMD4<Float>(0, 0, 0, appearanceSignature == 1 ? 0.36 : 0.22)
+                instances.append(
+                    contentsOf: makeLinkSegmentInstances(
+                        start: snapshot.startPoint,
+                        end: snapshot.endPoint,
+                        shapeIndex: snapshot.shapeIndex,
+                        lineWidth: width + 2,
+                        color: hemmingColor
+                    )
+                )
+            }
+            instances.append(
+                contentsOf: makeLinkSegmentInstances(
+                    start: snapshot.startPoint,
+                    end: snapshot.endPoint,
+                    shapeIndex: snapshot.shapeIndex,
+                    lineWidth: width,
+                    color: color
+                )
             )
             if snapshot.directionVisible {
                 instances.append(
@@ -1444,8 +1504,8 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             let glowColor = NSColor(viewModel.browserCardGlow(for: snapshot.card, isSelected: snapshot.isSelected)).rgbaVector
             let shadowColor = NSColor(viewModel.browserCardShadow(for: snapshot.card, isSelected: snapshot.isSelected, isHovered: snapshot.isHovered)).rgbaVector
             let strokeWidth = viewModel.browserCardStrokeWidth(isSelected: snapshot.isSelected)
-            let shadowRadius: Float = 0
-            let shadowOffset = SIMD2<Float>(0, 0)
+            let shadowRadius: Float = viewModel.settings.browserCardShadow ? (snapshot.isSelected ? 10 : 7) : 0
+            let shadowOffset = SIMD2<Float>(0, viewModel.settings.browserCardShadow ? 4 : 0)
             let padding: Float = 6
             instances.append(
                 BrowserMetalCardInstance(
@@ -1864,7 +1924,7 @@ private struct BrowserMetalCardInstance {
 private extension BrowserMetalRenderer {
     func buildTextInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalTextInstance] {
         let hasLinkLabels = scene.links.contains(where: { ($0.labelText?.isEmpty == false) && $0.labelPoint != nil })
-        let hasLabelGroupNames = !scene.labelGroups.isEmpty
+        let hasLabelGroupNames = scene.labelGroups.contains(where: \.showsName)
         guard hasLinkLabels || hasLabelGroupNames else {
             return []
         }
@@ -1907,6 +1967,7 @@ private extension BrowserMetalRenderer {
 
         // Label group names
         for snapshot in scene.labelGroups {
+            guard snapshot.showsName else { continue }
             let pointSize = max(10, min(CGFloat(snapshot.labelSize) * 0.12, 22))
             let labelKey = "label-group-name|\(snapshot.id)|\(snapshot.name)|\(snapshot.color)|\(Int(pointSize))"
             let strokeColor = NSColor(Color(frieveRGB: snapshot.color)).withAlphaComponent(0.72)
@@ -2038,18 +2099,23 @@ private extension BrowserMetalRenderer {
     }
 
     func atlasLabelImage(text: String, highlighted: Bool) -> NSImage {
-        let cacheKey = "\(appearanceSignature)|\(highlighted ? 1 : 0)|\(text)"
+        let colorScheme: ColorScheme = appearanceSignature == 1 ? .dark : .light
+        let configuredForeground = viewModel?.browserForegroundColor(for: colorScheme)
+            ?? resolvedColor(NSColor.labelColor)
+        let configuredSecondary = viewModel?.browserForegroundSecondaryColor(for: colorScheme)
+            ?? resolvedColor(NSColor.secondaryLabelColor)
+        let cacheKey = "\(appearanceSignature)|\(configuredForeground.hashValue)|\(configuredSecondary.hashValue)|\(highlighted ? 1 : 0)|\(text)"
         if let cached = labelImageCache[cacheKey] {
             touchLabelImageOrder(cacheKey)
             return cached
         }
 
         let font = NSFont.systemFont(ofSize: 11, weight: .semibold)
-        let foreground = highlighted ? NSColor.white : resolvedColor(NSColor.secondaryLabelColor)
+        let foreground = highlighted ? NSColor.white : configuredSecondary
         let background = highlighted
-            ? resolvedColor(NSColor.controlAccentColor).withAlphaComponent(0.92)
+            ? configuredForeground.withAlphaComponent(0.92)
             : resolvedColor(NSColor.windowBackgroundColor).withAlphaComponent(0.92)
-        let border = highlighted ? resolvedColor(NSColor.controlAccentColor) : resolvedColor(NSColor.separatorColor).withAlphaComponent(0.55)
+        let border = highlighted ? configuredForeground : resolvedColor(NSColor.separatorColor).withAlphaComponent(0.55)
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
         paragraph.lineBreakMode = .byTruncatingTail
@@ -2085,7 +2151,9 @@ private extension BrowserMetalRenderer {
     }
 
     func atlasLabelGroupNameImage(name: String, color: NSColor, pointSize: CGFloat) -> NSImage {
-        let cacheKey = "lg|\(color.hashValue)|\(Int(pointSize))|\(name)"
+        let colorScheme: ColorScheme = appearanceSignature == 1 ? .dark : .light
+        let configuredForeground = viewModel?.browserForegroundColor(for: colorScheme) ?? color
+        let cacheKey = "lg|\(configuredForeground.hashValue)|\(Int(pointSize))|\(name)"
         if let cached = labelImageCache[cacheKey] {
             touchLabelImageOrder(cacheKey)
             return cached
@@ -2097,7 +2165,7 @@ private extension BrowserMetalRenderer {
         paragraph.lineBreakMode = .byClipping
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: color,
+            .foregroundColor: configuredForeground,
             .paragraphStyle: paragraph
         ]
         let attributed = NSAttributedString(string: name, attributes: attributes)

@@ -47,12 +47,223 @@ func browserCardTitleNSFont(for card: FrieveCard) -> NSFont {
     NSFont.systemFont(ofSize: browserCardTitlePointSize(for: card), weight: .medium)
 }
 
+func browserColor(fromHex hex: String) -> NSColor? {
+    let sanitized = hex
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+        .replacingOccurrences(of: "#", with: "")
+    guard sanitized.count == 6, let rgb = Int(sanitized, radix: 16) else { return nil }
+    return NSColor(
+        calibratedRed: CGFloat((rgb >> 16) & 0xFF) / 255,
+        green: CGFloat((rgb >> 8) & 0xFF) / 255,
+        blue: CGFloat(rgb & 0xFF) / 255,
+        alpha: 1
+    )
+}
+
+func browserHexString(from color: NSColor) -> String? {
+    guard let converted = color.usingColorSpace(.deviceRGB) else { return nil }
+    let red = Int(round(converted.redComponent * 255))
+    let green = Int(round(converted.greenComponent * 255))
+    let blue = Int(round(converted.blueComponent * 255))
+    return String(format: "%02X%02X%02X", red, green, blue)
+}
+
 func browserCardVisualShapeIndex(for card: FrieveCard) -> Int {
     _ = card
     return 0
 }
 
 extension WorkspaceViewModel {
+    var browserDisplaySettingsSignature: Int {
+        var hasher = Hasher()
+        hasher.combine(settings.browserCardShadow)
+        hasher.combine(settings.browserCardGradation)
+        hasher.combine(settings.browserTickerVisible)
+        hasher.combine(settings.browserTickerLines)
+        hasher.combine(settings.browserImageVisible)
+        hasher.combine(settings.browserVideoVisible)
+        hasher.combine(settings.browserDrawingVisible)
+        hasher.combine(settings.browserImageLimitation)
+        hasher.combine(settings.browserLinkVisible)
+        hasher.combine(settings.browserLinkHemming)
+        hasher.combine(settings.browserLinkDirectionVisible)
+        hasher.combine(settings.browserLinkNameVisible)
+        hasher.combine(settings.browserLabelCircleVisible)
+        hasher.combine(settings.browserLabelRectangleVisible)
+        hasher.combine(settings.browserLabelNameVisible)
+        hasher.combine(settings.browserTextVisible)
+        hasher.combine(settings.browserTextCentering)
+        hasher.combine(settings.browserTextWordWrap)
+        hasher.combine(settings.browserEditInBrowser)
+        hasher.combine(settings.browserEditInBrowserAlways)
+        hasher.combine(settings.browserEditInBrowserPosition)
+        hasher.combine(settings.browserScoreVisible)
+        hasher.combine(settings.browserScoreType)
+        hasher.combine(settings.browserFontFamily)
+        hasher.combine(settings.browserFontSize)
+        hasher.combine(settings.browserForegroundColorHex)
+        hasher.combine(settings.browserBackgroundColorHex)
+        hasher.combine(settings.browserWallpaperPath)
+        hasher.combine(settings.browserWallpaperFixed)
+        hasher.combine(settings.browserWallpaperTiled)
+        hasher.combine(settings.browserBackgroundAnimation)
+        hasher.combine(settings.browserBackgroundAnimationType)
+        hasher.combine(settings.browserCursorAnimation)
+        hasher.combine(settings.browserNoScrollLag)
+        hasher.combine(settings.browserAntialiasingEnabled)
+        hasher.combine(settings.browserAntialiasingSampleCount)
+        return hasher.finalize()
+    }
+
+    var browserLabelOutlineStyle: BrowserLabelOutlineStyle {
+        if settings.browserLabelCircleVisible {
+            return .circle
+        }
+        if settings.browserLabelRectangleVisible {
+            return .rectangle
+        }
+        return .none
+    }
+
+    var browserConfiguredFontFamily: String? {
+        let trimmed = settings.browserFontFamily.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    func browserCardTitlePointSize(for card: FrieveCard) -> CGFloat {
+        CGFloat(settings.browserFontSize) * browserCardScale(for: card)
+    }
+
+    func browserCardTitleNSFont(for card: FrieveCard) -> NSFont {
+        let pointSize = browserCardTitlePointSize(for: card)
+        guard let family = browserConfiguredFontFamily,
+              let font = NSFont(name: family, size: pointSize)
+                ?? NSFontManager.shared.font(withFamily: family, traits: [], weight: 5, size: pointSize) else {
+            return NSFont.systemFont(ofSize: pointSize, weight: .medium)
+        }
+        return font
+    }
+
+    func browserCardBodyNSFont(for card: FrieveCard) -> NSFont {
+        let pointSize = max(browserCardTitlePointSize(for: card) * 0.9, 11)
+        guard let family = browserConfiguredFontFamily,
+              let font = NSFont(name: family, size: pointSize)
+                ?? NSFontManager.shared.font(withFamily: family, traits: [], weight: 5, size: pointSize) else {
+            return NSFont.systemFont(ofSize: pointSize)
+        }
+        return font
+    }
+
+    func browserForegroundColor(for colorScheme: ColorScheme) -> NSColor {
+        browserColor(fromHex: settings.browserForegroundColorHex)
+        ?? (colorScheme == .dark ? NSColor(calibratedWhite: 0.92, alpha: 1) : NSColor(calibratedWhite: 0.12, alpha: 1))
+    }
+
+    func browserForegroundSecondaryColor(for colorScheme: ColorScheme) -> NSColor {
+        browserForegroundColor(for: colorScheme).withAlphaComponent(colorScheme == .dark ? 0.78 : 0.70)
+    }
+
+    func browserCanvasBackgroundColor(for colorScheme: ColorScheme) -> NSColor {
+        browserColor(fromHex: settings.browserBackgroundColorHex)
+        ?? {
+            switch colorScheme {
+            case .dark:
+                return NSColor(calibratedRed: 0.09, green: 0.09, blue: 0.09, alpha: 1)
+            default:
+                return NSColor(calibratedRed: 0.97, green: 0.97, blue: 0.965, alpha: 1)
+            }
+        }()
+    }
+
+    func browserWallpaperURL() -> URL? {
+        let trimmed = settings.browserWallpaperPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return URL(fileURLWithPath: trimmed)
+    }
+
+    var browserBackgroundAnimationType: BrowserBackgroundAnimationType {
+        BrowserBackgroundAnimationType(rawValue: settings.browserBackgroundAnimationType) ?? .flowingLines
+    }
+
+    var browserAntialiasingSampleCount: Int {
+        settings.browserAntialiasingEnabled ? settings.browserAntialiasingSampleCount : 1
+    }
+
+    func browserChromeRefreshMinimumInterval() -> CFTimeInterval {
+        guard !settings.browserNoScrollLag else { return 0 }
+        return browserInteractionModeEnabled ? 1.0 / 6.0 : 1.0 / 12.0
+    }
+
+    func browserLinkStrokeColor(for colorScheme: ColorScheme, highlighted: Bool) -> NSColor {
+        if highlighted {
+            return browserForegroundColor(for: colorScheme)
+        }
+        return browserForegroundSecondaryColor(for: colorScheme)
+    }
+
+    func browserCursorPulseColor(for colorScheme: ColorScheme) -> Color {
+        Color(nsColor: browserForegroundColor(for: colorScheme)).opacity(colorScheme == .dark ? 0.75 : 0.55)
+    }
+
+    func browserShowsMediaPreview(for card: FrieveCard) -> Bool {
+        (settings.browserImageVisible && !(card.imagePath?.trimmed.isEmpty ?? true)) ||
+        (settings.browserVideoVisible && !(card.videoPath?.trimmed.isEmpty ?? true))
+    }
+
+    func browserShowsDrawingPreview(for card: FrieveCard, hasDrawingPreview: Bool? = nil) -> Bool {
+        settings.browserDrawingVisible && (hasDrawingPreview ?? !drawingPreviewItems(for: card).isEmpty)
+    }
+
+    func browserMediaPreviewSize(for card: FrieveCard) -> CGSize {
+        let limit = CGFloat(settings.browserImageLimitation)
+        let width = min(max(limit * 1.6, 72), 320)
+        let height = min(max(limit, 48), 220)
+        return CGSize(width: width, height: height)
+    }
+
+    func browserDrawingPreviewSize(for card: FrieveCard) -> CGSize {
+        let limit = CGFloat(settings.browserImageLimitation)
+        let width = min(max(limit * 1.2, 72), 220)
+        let height = min(max(limit * 0.9, 54), 180)
+        return CGSize(width: width, height: height)
+    }
+
+    func browserCardTickerText(for card: FrieveCard) -> String? {
+        guard settings.browserTickerVisible else { return nil }
+        let lines = card.bodyLines
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard !lines.isEmpty else { return nil }
+        return lines.prefix(settings.browserTickerLines).joined(separator: "  •  ")
+    }
+
+    func browserCardScoreText(for card: FrieveCard) -> String? {
+        guard settings.browserScoreVisible else { return nil }
+
+        let outgoing = document.links.filter { $0.fromCardID == card.id }.count
+        let incoming = document.links.filter { $0.toCardID == card.id }.count
+        let type = BrowserScoreDisplayType(rawValue: settings.browserScoreType) ?? .authenticity
+
+        switch type {
+        case .authenticity:
+            return String(format: "Score %.2f", card.score)
+        case .startingPoint:
+            return "Starting \(outgoing)"
+        case .destination:
+            return "Destination \(incoming)"
+        case .linksOut:
+            return "Out \(outgoing)"
+        case .linksIn:
+            return "In \(incoming)"
+        case .linksTotal:
+            return "Links \(incoming + outgoing)"
+        case .linksInOut:
+            return "In-Out \(incoming - outgoing)"
+        case .textLength:
+            return "Text \(card.bodyText.count)"
+        }
+    }
+
     func persistDocument(to url: URL, isAutomatic: Bool) {
         do {
             syncDocumentMetadataFromSettings()
@@ -364,12 +575,14 @@ extension WorkspaceViewModel {
             let summaryText = buildBrowserSummaryText(for: card)
             let detailSummary = buildBrowserDetailSummary(for: card, hasDrawingPreview: hasDrawingPreview)
             let badges = buildBrowserBadgeItems(for: card, labelNames: labelNames, linkCount: linkCount, hasDrawingPreview: hasDrawingPreview)
+            let scoreText = browserCardScoreText(for: card)
             let canvasSize = buildCardCanvasSize(for: card, summaryText: summaryText, labelLine: labelLine, badges: badges, detailSummary: detailSummary)
             metadataCache[card.id] = BrowserCardMetadata(
                 labelNames: labelNames,
                 labelLine: labelLine,
                 summaryText: summaryText,
                 detailSummary: detailSummary,
+                scoreText: scoreText,
                 badges: badges,
                 canvasSize: canvasSize,
                 linkCount: linkCount,
@@ -435,11 +648,13 @@ extension WorkspaceViewModel {
         let summaryText = buildBrowserSummaryText(for: card)
         let detailSummary = buildBrowserDetailSummary(for: card, hasDrawingPreview: hasDrawingPreview)
         let badges = buildBrowserBadgeItems(for: card, labelNames: labelNames, linkCount: linkCount, hasDrawingPreview: hasDrawingPreview)
+        let scoreText = browserCardScoreText(for: card)
         return BrowserCardMetadata(
             labelNames: labelNames,
             labelLine: labelLine,
             summaryText: summaryText,
             detailSummary: detailSummary,
+            scoreText: scoreText,
             badges: badges,
             canvasSize: buildCardCanvasSize(for: card, summaryText: summaryText, labelLine: labelLine, badges: badges, detailSummary: detailSummary),
             linkCount: linkCount,
@@ -538,25 +753,23 @@ extension WorkspaceViewModel {
         if linkCount > 0 {
             badges.append("Links \(linkCount)")
         }
-        if !labelNames.isEmpty {
-            badges.append(contentsOf: labelNames.prefix(2))
-        }
         return Array(badges.prefix(6))
     }
 
     func buildBrowserSummaryText(for card: FrieveCard) -> String {
+        guard settings.browserTextVisible else { return "" }
         let compact = card.bodyText
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return compact.isEmpty ? "No body text" : String(compact.prefix(96))
+        return compact.isEmpty ? "" : String(compact.prefix(96))
     }
 
     func buildBrowserDetailSummary(for card: FrieveCard, hasDrawingPreview: Bool) -> String {
-        var segments = [card.shapeName]
-        if card.hasMedia {
+        var segments: [String] = []
+        if browserShowsMediaPreview(for: card) {
             segments.append("Media")
         }
-        if hasDrawingPreview {
+        if browserShowsDrawingPreview(for: card, hasDrawingPreview: hasDrawingPreview) {
             segments.append("Drawing")
         }
         if card.isFixed {
@@ -570,7 +783,7 @@ extension WorkspaceViewModel {
 
     func buildCardCanvasSize(for card: FrieveCard, summaryText: String, labelLine: String, badges: [String], detailSummary: String) -> CGSize {
         let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : card.title
-        let font = browserCardTitleNSFont(for: card)
+        let font = self.browserCardTitleNSFont(for: card)
         let maxTextWidth = browserCardMaximumTextWidth(for: card)
         let padding = browserCardContentPadding(for: card)
         let maxTextHeight = ceil((font.ascender - font.descender + font.leading) * 3)
@@ -583,8 +796,21 @@ extension WorkspaceViewModel {
         )
         let textWidth = min(ceil(textBounds.width), maxTextWidth)
         let textHeight = min(ceil(textBounds.height), maxTextHeight)
-        let width = max(padding * 2, textWidth + padding * 2)
-        let height = max(padding * 2, textHeight + padding * 2)
+        var width = max(padding * 2, textWidth + padding * 2)
+        var height = max(padding * 2, textHeight + padding * 2)
+
+        if browserShowsMediaPreview(for: card) {
+            let previewSize = browserMediaPreviewSize(for: card)
+            width = max(width, previewSize.width + padding * 2)
+            height += previewSize.height + 10
+        }
+
+        if browserShowsDrawingPreview(for: card, hasDrawingPreview: !drawingPreviewItems(for: card).isEmpty) {
+            let previewSize = browserDrawingPreviewSize(for: card)
+            width = max(width, previewSize.width + padding * 2)
+            height += previewSize.height + 10
+        }
+
         return CGSize(width: width, height: height)
     }
 

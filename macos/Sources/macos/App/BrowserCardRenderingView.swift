@@ -132,6 +132,7 @@ struct BrowserCardShape: Shape {
 }
 
 struct BrowserCardRasterContentView: View {
+    @ObservedObject var viewModel: WorkspaceViewModel
     let card: FrieveCard
     let metadata: BrowserCardMetadata
     let detailLevel: BrowserCardDetailLevel
@@ -141,15 +142,90 @@ struct BrowserCardRasterContentView: View {
 
     var body: some View {
         let _ = (metadata, detailLevel, fillColor, previewImage, drawingPreviewImage)
-        Text(card.title)
-            .font(.system(size: browserCardTitlePointSize(for: card), weight: .medium))
-            .foregroundStyle(.primary)
-            .multilineTextAlignment(.leading)
-            .lineLimit(3)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .padding(browserCardContentPadding(for: card))
-            .frame(width: metadata.canvasSize.width, height: metadata.canvasSize.height, alignment: .topLeading)
+        let isCentered = viewModel.settings.browserTextCentering
+        let horizontalAlignment: HorizontalAlignment = isCentered ? .center : .leading
+        let titleAlignment: TextAlignment = isCentered ? .center : .leading
+        let padding = browserCardContentPadding(for: card)
+        let previewSize = viewModel.browserMediaPreviewSize(for: card)
+        let drawingSize = viewModel.browserDrawingPreviewSize(for: card)
+        let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : card.title
+        let titleFont = Font(viewModel.browserCardTitleNSFont(for: card))
+        let bodyFont = Font(viewModel.browserCardBodyNSFont(for: card))
+        let primaryForeground = Color(nsColor: viewModel.browserForegroundColor(for: .light))
+        let secondaryForeground = Color(nsColor: viewModel.browserForegroundSecondaryColor(for: .light))
+
+        VStack(alignment: horizontalAlignment, spacing: 8) {
+            Text(title)
+                .font(titleFont)
+                .foregroundStyle(primaryForeground)
+                .multilineTextAlignment(titleAlignment)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
+
+            if let scoreText = metadata.scoreText, !scoreText.isEmpty {
+                Text(scoreText)
+                    .font(.caption.bold())
+                    .foregroundStyle(primaryForeground)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.thinMaterial, in: Capsule())
+                    .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
+            }
+
+            if viewModel.settings.browserTextVisible, !metadata.summaryText.isEmpty {
+                Text(metadata.summaryText)
+                    .font(bodyFont)
+                    .foregroundStyle(secondaryForeground)
+                    .multilineTextAlignment(titleAlignment)
+                    .lineLimit(viewModel.settings.browserTextWordWrap ? 3 : 1)
+                    .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
+            }
+
+            if !metadata.badges.isEmpty {
+                Text(metadata.badges.joined(separator: "  ·  "))
+                    .font(.caption2)
+                    .foregroundStyle(secondaryForeground)
+                    .multilineTextAlignment(titleAlignment)
+                    .lineLimit(viewModel.settings.browserTextWordWrap ? 2 : 1)
+                    .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
+            }
+
+            if viewModel.browserShowsMediaPreview(for: card) {
+                BrowserMediaPreviewView(
+                    viewModel: viewModel,
+                    card: card,
+                    badgeText: metadata.mediaBadgeText,
+                    previewImage: previewImage
+                )
+                .frame(width: previewSize.width, height: previewSize.height)
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
+
+            if viewModel.browserShowsDrawingPreview(for: card, hasDrawingPreview: metadata.hasDrawingPreview) {
+                BrowserDrawingOverlay(
+                    viewModel: viewModel,
+                    card: card,
+                    targetSize: drawingSize,
+                    drawingPreviewImage: drawingPreviewImage
+                )
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
+
+            if let tickerText = viewModel.browserCardTickerText(for: card), !tickerText.isEmpty {
+                Text(tickerText)
+                    .font(.caption2)
+                    .foregroundStyle(secondaryForeground)
+                    .multilineTextAlignment(titleAlignment)
+                    .lineLimit(viewModel.settings.browserTickerLines)
+                    .padding(.top, 2)
+                    .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(padding)
+        .frame(width: metadata.canvasSize.width, height: metadata.canvasSize.height, alignment: .topLeading)
     }
 }
 
@@ -157,10 +233,27 @@ private struct BrowserMediaPreviewView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
     let card: FrieveCard
     let badgeText: String
+    let previewImage: NSImage?
 
     var body: some View {
+        let secondaryForeground = Color(nsColor: viewModel.browserForegroundSecondaryColor(for: .light))
         Group {
-            if let image = viewModel.cachedPreviewImage(for: card) {
+            if let previewImage {
+                Image(nsImage: previewImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+                    .overlay(alignment: .bottomTrailing) {
+                        if !badgeText.isEmpty {
+                            Label(badgeText, systemImage: "photo")
+                                .font(.caption2)
+                                .padding(6)
+                                .background(.ultraThinMaterial, in: Capsule())
+                                .padding(6)
+                        }
+                    }
+            } else if let image = viewModel.cachedPreviewImage(for: card) {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFill()
@@ -184,7 +277,7 @@ private struct BrowserMediaPreviewView: View {
                             .lineLimit(2)
                             .multilineTextAlignment(.center)
                     }
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(secondaryForeground)
                 }
             }
         }
@@ -196,10 +289,17 @@ private struct BrowserMediaPreviewView: View {
 private struct BrowserDrawingOverlay: View {
     @ObservedObject var viewModel: WorkspaceViewModel
     let card: FrieveCard
+    let targetSize: CGSize
+    let drawingPreviewImage: NSImage?
 
     var body: some View {
         Group {
-            if let image = viewModel.cachedDrawingPreviewImage(for: card, targetSize: CGSize(width: 96, height: 72)) {
+            if let drawingPreviewImage {
+                Image(nsImage: drawingPreviewImage)
+                    .resizable()
+                    .interpolation(.medium)
+                    .scaledToFit()
+            } else if let image = viewModel.cachedDrawingPreviewImage(for: card, targetSize: targetSize) {
                 Image(nsImage: image)
                     .resizable()
                     .interpolation(.medium)
@@ -208,7 +308,7 @@ private struct BrowserDrawingOverlay: View {
                 EmptyView()
             }
         }
-        .frame(width: 96, height: 72)
+        .frame(width: targetSize.width, height: targetSize.height)
         .allowsHitTesting(false)
     }
 }

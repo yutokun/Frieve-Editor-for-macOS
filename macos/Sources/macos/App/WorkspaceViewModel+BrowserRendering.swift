@@ -106,6 +106,7 @@ extension WorkspaceViewModel {
             String(snapshot.card.id),
             snapshot.card.updated,
             snapshot.card.title,
+            "\(browserDisplaySettingsSignature)",
             "\(Int(snapshot.metadata.canvasSize.width.rounded()))x\(Int(snapshot.metadata.canvasSize.height.rounded()))"
         ].joined(separator: "::")
     }
@@ -149,43 +150,43 @@ extension WorkspaceViewModel {
 
     private func rasterizeBrowserCardTitle(for card: FrieveCard, canvasSize: CGSize) -> NSImage? {
         guard canvasSize.width > 0, canvasSize.height > 0 else { return nil }
-        let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : card.title
-        let image = NSImage(size: canvasSize)
-        image.lockFocusFlipped(true)
-        defer { image.unlockFocus() }
-
-        NSColor.clear.setFill()
-        CGRect(origin: .zero, size: canvasSize).fill()
-
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .left
-        paragraph.lineBreakMode = .byWordWrapping
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: browserCardTitleNSFont(for: card),
-            .foregroundColor: NSColor(calibratedWhite: 0.08, alpha: 0.96),
-            .paragraphStyle: paragraph
-        ]
-        let attributed = NSAttributedString(string: title, attributes: attributes)
-        let padding = browserCardContentPadding(for: card)
-        let rect = CGRect(
-            x: padding,
-            y: padding,
-            width: max(canvasSize.width - padding * 2, 1),
-            height: max(canvasSize.height - padding * 2, 1)
+        let metadata = cardMetadataByID[card.id] ?? metadata(for: card)
+        let renderer = ImageRenderer(
+            content: BrowserCardRasterContentView(
+                viewModel: self,
+                card: card,
+                metadata: metadata,
+                detailLevel: browserCardDetailLevel(),
+                fillColor: Color.clear,
+                previewImage: cachedPreviewImage(for: card),
+                drawingPreviewImage: cachedDrawingPreviewImage(for: card, targetSize: browserDrawingPreviewSize(for: card))
+            )
+            .frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
         )
-        attributed.draw(
-            with: rect,
-            options: [.usesLineFragmentOrigin, .usesFontLeading, .truncatesLastVisibleLine]
-        )
-        return image
+        renderer.scale = NSScreen.main?.backingScaleFactor ?? 2
+        renderer.isOpaque = false
+        return renderer.nsImage
     }
 
     func browserInlineEditorFrame(for card: FrieveCard, in size: CGSize) -> CGRect {
         let cardFrame = self.cardFrame(for: card, in: size)
-        let width: CGFloat = 360
-        let height: CGFloat = 230
-        let desiredX = min(max(cardFrame.midX, width / 2 + 18), size.width - width / 2 - 18)
-        let desiredY = min(max(cardFrame.maxY + height / 2 + 12, height / 2 + 18), size.height - height / 2 - 18)
+        let width: CGFloat = settings.browserEditInBrowserPosition == BrowserInlineEditorPosition.browserRight.rawValue ? min(max(size.width * 0.34, 320), 460) : 360
+        let height: CGFloat = settings.browserEditInBrowserPosition == BrowserInlineEditorPosition.browserBottom.rawValue ? min(max(size.height * 0.28, 220), 320) : 230
+        let desiredX: CGFloat
+        let desiredY: CGFloat
+
+        switch BrowserInlineEditorPosition(rawValue: settings.browserEditInBrowserPosition) ?? .underCard {
+        case .underCard:
+            desiredX = min(max(cardFrame.midX, width / 2 + 18), size.width - width / 2 - 18)
+            desiredY = min(max(cardFrame.maxY + height / 2 + 12, height / 2 + 18), size.height - height / 2 - 18)
+        case .browserRight:
+            desiredX = size.width - width / 2 - 18
+            desiredY = min(max(size.height / 2, height / 2 + 18), size.height - height / 2 - 18)
+        case .browserBottom:
+            desiredX = size.width / 2
+            desiredY = size.height - height / 2 - 18
+        }
+
         return CGRect(
             x: desiredX - width / 2,
             y: desiredY - height / 2,
@@ -204,9 +205,9 @@ extension WorkspaceViewModel {
 
     func browserFillColor(for card: FrieveCard) -> NSColor {
         if let labelColor = metadata(for: card).primaryLabelColor {
-            return browserCardFillColor(from: Color(frieveRGB: labelColor))
+            return browserCardFillColor(from: Color(frieveRGB: labelColor), gradation: settings.browserCardGradation)
         }
-        return browserCardFillColor(from: Color(white: 0.55))
+        return browserCardFillColor(from: Color(white: 0.55), gradation: settings.browserCardGradation)
     }
 
     func drawingColor(rawValue: Int?, fallback: Color) -> Color {
@@ -246,7 +247,7 @@ extension Color {
     }
 }
 
-private func browserCardFillColor(from accent: Color) -> NSColor {
+private func browserCardFillColor(from accent: Color, gradation: Bool) -> NSColor {
     let accentRGB = (NSColor(accent).usingColorSpace(.deviceRGB) ?? NSColor(accent))
     let referenceBackground = NSColor(
         calibratedRed: 0.96,
@@ -255,7 +256,7 @@ private func browserCardFillColor(from accent: Color) -> NSColor {
         alpha: 1
     )
     let outlineBlend: CGFloat = 0.33
-    let fillBlend: CGFloat = 0.5
+    let fillBlend: CGFloat = gradation ? 0.5 : 0.66
     let outlineLikeColor = accentRGB.blended(withFraction: outlineBlend, of: referenceBackground) ?? accentRGB
     let fillColor = outlineLikeColor.blended(withFraction: fillBlend, of: referenceBackground) ?? outlineLikeColor
     return fillColor
