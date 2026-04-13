@@ -924,18 +924,45 @@ extension WorkspaceViewModel {
     }
 
     func zoomToSelection(in size: CGSize) {
-        guard let selectionBounds = selectionWorldBounds() else {
+        guard let primaryCard = cardByID(selectedCardID) else {
             resetCanvasToFit(in: size)
             return
         }
-        canvasCenter = FrievePoint(x: selectionBounds.midX, y: selectionBounds.midY)
-        let targetScale = min(
-            Double(size.width * 0.72) / max(selectionBounds.width, 0.0001),
-            Double(size.height * 0.72) / max(selectionBounds.height, 0.0001)
-        )
-        let minDimension = max(Double(min(size.width, size.height)), 1.0)
-        let targetZoom = targetScale / (minDimension * browserBaseScaleFactor)
-        zoom = min(max(targetZoom, 0.2), 6.0)
+
+        // Collect selected card + directly linked cards (Windows "related cards")
+        let linkedIDs = Set(document.links
+            .filter { $0.fromCardID == primaryCard.id || $0.toCardID == primaryCard.id }
+            .flatMap { [$0.fromCardID, $0.toCardID] })
+        let relatedCards = document.cards.filter { linkedIDs.contains($0.id) || $0.id == primaryCard.id }
+
+        let center = primaryCard.position
+        canvasCenter = center
+
+        let currentScale = browserScale(in: size)
+        let W = max(Double(size.width), 1.0)
+        let H = max(Double(size.height), 1.0)
+
+        // Windows algorithm: RMS spread of related cards normalized by screen dimensions,
+        // targeting m_fZoomSD = 0.21 (cards span ~42% of screen as RMS spread)
+        var xdSum = 0.0
+        var ydSum = 0.0
+        var maxd = 0.0
+        for card in relatedCards {
+            let dx = (card.position.x - center.x) * currentScale / W
+            let dy = (card.position.y - center.y) * currentScale / H
+            xdSum += dx * dx
+            ydSum += dy * dy
+            maxd = max(maxd, max(abs(dx), abs(dy)))
+        }
+        let n = max(Double(relatedCards.count), 1.0)
+        let spread = max(sqrt(max(xdSum, ydSum) / n), 0.0001)
+
+        // target zoom multiplier: make RMS spread = 0.21 of screen
+        var zoomMultiplier = 0.21 / spread
+        // Also clamp so the farthest card doesn't exceed 40% from center
+        if maxd > 0 { zoomMultiplier = min(zoomMultiplier, 0.4 / maxd) }
+
+        zoom = min(max(zoom * zoomMultiplier, 0.2), 6.0)
         suspendBrowserAutoScroll()
         markBrowserSurfaceViewportDirty()
     }
