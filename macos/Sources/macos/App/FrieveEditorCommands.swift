@@ -40,6 +40,12 @@ struct FrieveEditorCommands: Commands {
             Button("Save As…") { viewModel.saveDocumentAs() }
                 .keyboardShortcut("S", modifiers: [.command, .shift])
             Divider()
+            Menu("Import") {
+                Button("Txt File(s)…") { viewModel.importTextFiles() }
+                Button("Hierarchical Text File…") { viewModel.importHierarchicalTextFiles() }
+                Button("Hierarchical Text File 2…") { viewModel.importHierarchicalTextFilesWithBodies() }
+                Button("Txt Files in a Folder…") { viewModel.importTextFilesInFolder() }
+            }
             Menu("Export") {
                 Button("Txt File (Card Title)…") { viewModel.exportCardTitles() }
                 Button("Txt File (Text)…") { viewModel.exportCardBodies() }

@@ -79,6 +79,86 @@ import Testing
     #expect(decoded.metadata["Title"] == decoded.title)
 }
 
+@MainActor
+@Test func importingTextFilesAddsCardsUsingFilenamesAndBodies() throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+
+    let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tempDirectory) }
+
+    let alphaURL = tempDirectory.appendingPathComponent("Alpha.txt")
+    let betaURL = tempDirectory.appendingPathComponent("Beta.txt")
+    try "First body".write(to: alphaURL, atomically: true, encoding: .utf8)
+    try "Second body".write(to: betaURL, atomically: true, encoding: .utf8)
+
+    try model.importTextFiles(from: [betaURL, alphaURL])
+
+    #expect(model.document.cardCount == 3)
+    #expect(model.document.cards.suffix(2).map(\.title) == ["Alpha", "Beta"])
+    #expect(model.document.cards.suffix(2).map(\.bodyText) == ["First body", "Second body"])
+    #expect(model.selectedCardID == model.document.cards.last?.id)
+}
+
+@MainActor
+@Test func importingHierarchicalTextFile2BuildsTreeAndBodies() throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+
+    let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tempDirectory) }
+
+    let treeURL = tempDirectory.appendingPathComponent("Tree.txt")
+    try "*Parent\n**Child\nBody line 1\nBody line 2\n*Sibling\n".write(to: treeURL, atomically: true, encoding: .utf8)
+
+    try model.importHierarchicalTextFiles(from: [treeURL], bodyFollowsIndentedHeadings: true)
+
+    let importedCards = Array(model.document.cards.suffix(4))
+    let topCard = importedCards[0]
+    let parentCard = importedCards[1]
+    let childCard = importedCards[2]
+    let siblingCard = importedCards[3]
+
+    #expect(topCard.title == "Tree")
+    #expect(parentCard.title == "Parent")
+    #expect(childCard.title == "Child")
+    #expect(childCard.bodyText == "Body line 1\nBody line 2")
+    #expect(siblingCard.title == "Sibling")
+    #expect(model.document.links.contains { $0.fromCardID == topCard.id && $0.toCardID == parentCard.id })
+    #expect(model.document.links.contains { $0.fromCardID == parentCard.id && $0.toCardID == childCard.id })
+    #expect(model.document.links.contains { $0.fromCardID == topCard.id && $0.toCardID == siblingCard.id })
+}
+
+@MainActor
+@Test func importingTextFilesFolderBuildsFolderHierarchy() throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+
+    let tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    let childDirectory = tempDirectory.appendingPathComponent("Child", isDirectory: true)
+    try FileManager.default.createDirectory(at: childDirectory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tempDirectory) }
+
+    try "Root body".write(to: tempDirectory.appendingPathComponent("RootNote.txt"), atomically: true, encoding: .utf8)
+    try "Nested body".write(to: childDirectory.appendingPathComponent("Nested.txt"), atomically: true, encoding: .utf8)
+
+    let topFolderID = try model.importTextFilesInFolder(from: tempDirectory)
+
+    let folderCard = try #require(model.document.card(withID: topFolderID))
+    let rootNoteCard = try #require(model.document.cards.first { $0.title == "RootNote" })
+    let childFolderCard = try #require(model.document.cards.first { $0.title == "Child" })
+    let nestedCard = try #require(model.document.cards.first { $0.title == "Nested" })
+
+    #expect(folderCard.title == tempDirectory.lastPathComponent)
+    #expect(rootNoteCard.bodyText == "Root body")
+    #expect(nestedCard.bodyText == "Nested body")
+    #expect(model.document.links.contains { $0.fromCardID == folderCard.id && $0.toCardID == rootNoteCard.id })
+    #expect(model.document.links.contains { $0.fromCardID == folderCard.id && $0.toCardID == childFolderCard.id })
+    #expect(model.document.links.contains { $0.fromCardID == childFolderCard.id && $0.toCardID == nestedCard.id })
+}
+
 @Test func statisticsBucketsAggregateLabelsLinksAndDatesLikeWindows() async throws {
     var document = FrieveDocument.placeholder()
     let firstChildID = document.addCard(title: "First", linkedFrom: 0)

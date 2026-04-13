@@ -71,6 +71,117 @@ extension WorkspaceViewModel {
         }
     }
 
+    func importTextFiles() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.prompt = "Import"
+        if panel.runModal() == .OK {
+            do {
+                try importTextFiles(from: panel.urls)
+            } catch {
+                statusMessage = error.localizedDescription
+            }
+        }
+    }
+
+    func importHierarchicalTextFiles() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.prompt = "Import"
+        if panel.runModal() == .OK {
+            do {
+                try importHierarchicalTextFiles(from: panel.urls, bodyFollowsIndentedHeadings: false)
+            } catch {
+                statusMessage = error.localizedDescription
+            }
+        }
+    }
+
+    func importHierarchicalTextFilesWithBodies() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.prompt = "Import"
+        if panel.runModal() == .OK {
+            do {
+                try importHierarchicalTextFiles(from: panel.urls, bodyFollowsIndentedHeadings: true)
+            } catch {
+                statusMessage = error.localizedDescription
+            }
+        }
+    }
+
+    func importTextFilesInFolder() {
+        guard let directory = chooseExportDirectory(prompt: "Import") else { return }
+        do {
+            let importedTopID = try importTextFilesInFolder(from: directory)
+            selectedCardID = importedTopID
+            selectedCardIDs = [importedTopID]
+            browserInlineEditorCardID = nil
+            noteDocumentMutation(status: "Imported text files from folder")
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    func importTextFiles(from urls: [URL]) throws {
+        let importURLs = urls.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+        guard !importURLs.isEmpty else { return }
+
+        var importedCardIDs: [Int] = []
+        for url in importURLs {
+            let bodyText = try importedTextContents(from: url)
+            let cardID = document.addCard(title: url.deletingPathExtension().lastPathComponent)
+            document.updateCard(cardID) { card in
+                card.bodyText = bodyText
+                card.updated = sharedISOTimestamp()
+            }
+            importedCardIDs.append(cardID)
+        }
+
+        selectedCardID = importedCardIDs.last
+        selectedCardIDs = selectedCardID.map { [$0] } ?? []
+        browserInlineEditorCardID = nil
+        noteDocumentMutation(status: "Imported \(importedCardIDs.count) text file\(importedCardIDs.count == 1 ? "" : "s")")
+    }
+
+    func importHierarchicalTextFiles(from urls: [URL], bodyFollowsIndentedHeadings: Bool) throws {
+        let importURLs = urls.sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+        guard !importURLs.isEmpty else { return }
+
+        var importedTopIDs: [Int] = []
+        for url in importURLs {
+            let text = try importedTextContents(from: url)
+            let lines = text
+                .replacingOccurrences(of: "\r\n", with: "\n")
+                .replacingOccurrences(of: "\r", with: "\n")
+                .split(separator: "\n", omittingEmptySubsequences: false)
+                .map(String.init)
+            let topID = importHierarchicalTextDocument(
+                named: url.deletingPathExtension().lastPathComponent,
+                lines: lines,
+                bodyFollowsIndentedHeadings: bodyFollowsIndentedHeadings
+            )
+            importedTopIDs.append(topID)
+        }
+
+        selectedCardID = importedTopIDs.last
+        selectedCardIDs = selectedCardID.map { [$0] } ?? []
+        browserInlineEditorCardID = nil
+        let suffix = bodyFollowsIndentedHeadings ? " with bodies" : ""
+        noteDocumentMutation(status: "Imported \(importedTopIDs.count) hierarchical text file\(importedTopIDs.count == 1 ? "" : "s")\(suffix)")
+    }
+
+    @discardableResult
+    func importTextFilesInFolder(from directory: URL) throws -> Int {
+        try importTextFilesInFolderRecursively(from: directory, parentID: nil)
+    }
+
     func exportCardTitles() {
         saveTextExport(cardTitlesExportText(), defaultName: "CardTitles.txt")
     }
@@ -1605,5 +1716,123 @@ func browseHelp() {
             document.links[i].labelIDs.removeAll { $0 == id }
         }
         noteDocumentMutation(status: "Deleted link label")
+    }
+
+    private func importedTextContents(from url: URL) throws -> String {
+        let data = try Data(contentsOf: url)
+        let encodings: [String.Encoding] = [
+            .utf8,
+            .utf16,
+            .utf16LittleEndian,
+            .utf16BigEndian,
+            .shiftJIS,
+            .japaneseEUC,
+            .iso2022JP
+        ]
+        for encoding in encodings {
+            if let text = String(data: data, encoding: encoding) {
+                return text
+                    .replacingOccurrences(of: "\r\n", with: "\n")
+                    .replacingOccurrences(of: "\r", with: "\n")
+            }
+        }
+        throw CocoaError(.fileReadUnknownStringEncoding)
+    }
+
+    @discardableResult
+    private func importHierarchicalTextDocument(named title: String, lines: [String], bodyFollowsIndentedHeadings: Bool) -> Int {
+        let hierarchyMarker: Character? = if bodyFollowsIndentedHeadings {
+            lines.first?.first
+        } else {
+            lines
+                .filter { !$0.isEmpty }
+                .reduce(into: [Character: Int]()) { counts, line in
+                    if let marker = line.first {
+                        counts[marker, default: 0] += 1
+                    }
+                }
+                .max(by: { $0.value < $1.value })?
+                .key
+        }
+
+        let topID = document.addCard(title: title)
+        var levelCardIDs: [Int?] = [topID]
+        var lineIndex = 0
+
+        while lineIndex < lines.count {
+            let rawLine = lines[lineIndex]
+            guard !rawLine.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                lineIndex += 1
+                continue
+            }
+
+            var titleLine = rawLine
+            var level = 1
+            while let hierarchyMarker, titleLine.first == hierarchyMarker {
+                titleLine.removeFirst()
+                level += 1
+            }
+
+            let parentID = stride(from: min(level - 1, levelCardIDs.count - 1), through: 0, by: -1)
+                .compactMap { levelCardIDs[$0] }
+                .first
+            let cardID = document.addCard(title: titleLine, linkedFrom: parentID)
+
+            if levelCardIDs.count > level {
+                levelCardIDs.removeSubrange(level ..< levelCardIDs.count)
+            } else if levelCardIDs.count < level {
+                levelCardIDs.append(contentsOf: Array(repeating: nil, count: level - levelCardIDs.count))
+            }
+            levelCardIDs.append(cardID)
+
+            if bodyFollowsIndentedHeadings, let hierarchyMarker {
+                var bodyLines: [String] = []
+                while lineIndex + 1 < lines.count {
+                    let nextLine = lines[lineIndex + 1]
+                    if nextLine.first == hierarchyMarker {
+                        break
+                    }
+                    bodyLines.append(nextLine)
+                    lineIndex += 1
+                }
+                if !bodyLines.isEmpty {
+                    document.updateCard(cardID) { card in
+                        card.bodyText = bodyLines.joined(separator: "\n")
+                        card.updated = sharedISOTimestamp()
+                    }
+                }
+            }
+
+            lineIndex += 1
+        }
+
+        return topID
+    }
+
+    @discardableResult
+    private func importTextFilesInFolderRecursively(from directory: URL, parentID: Int?) throws -> Int {
+        let folderName = directory.lastPathComponent.isEmpty ? directory.path : directory.lastPathComponent
+        let folderCardID = parentID.map { document.addCard(title: folderName, linkedFrom: $0) } ?? document.addCard(title: folderName)
+        let entries = try FileManager.default.contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ).sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+
+        for entry in entries {
+            let values = try entry.resourceValues(forKeys: [.isDirectoryKey])
+            if values.isDirectory == true {
+                _ = try importTextFilesInFolderRecursively(from: entry, parentID: folderCardID)
+            } else if entry.pathExtension.localizedCaseInsensitiveCompare("txt") == .orderedSame {
+                let bodyText = try importedTextContents(from: entry)
+                let cardID = document.addCard(title: entry.deletingPathExtension().lastPathComponent, linkedFrom: folderCardID)
+                document.updateCard(cardID) { card in
+                    card.bodyText = bodyText
+                    card.updated = sharedISOTimestamp()
+                }
+            }
+        }
+
+        return folderCardID
     }
 }
