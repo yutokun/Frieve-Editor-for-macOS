@@ -58,6 +58,8 @@ private struct FrieveEditorSettingsView: View {
 
                 TextField("GPT Model", text: $settings.gptModel)
                     .textFieldStyle(.roundedBorder)
+                SecureField("GPT API Key", text: $settings.gptAPIKey)
+                    .textFieldStyle(.roundedBorder)
             }
         }
         .formStyle(.grouped)
