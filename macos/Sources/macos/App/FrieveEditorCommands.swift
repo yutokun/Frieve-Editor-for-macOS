@@ -158,6 +158,7 @@ struct FrieveEditorCommands: Commands {
         }
 
         CommandGroup(after: .help) {
+            Button("Frieve Website") { viewModel.browseFrieveSite() }
             Button("Frieve Editor Website") { viewModel.browseHelp() }
             Button("Check Latest Release") { viewModel.checkLatestRelease() }
         }

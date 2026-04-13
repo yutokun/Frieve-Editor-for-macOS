@@ -1526,7 +1526,13 @@ extension WorkspaceViewModel {
         markBrowserSurfaceContentDirty()
     }
 
-func browseHelp() {
+func browseFrieveSite() {
+        if let url = URL(string: "https://www.frieve.com/") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    func browseHelp() {
         if let url = URL(string: "https://www.frieve.com/software/frieve-editor") {
             NSWorkspace.shared.open(url)
         }
