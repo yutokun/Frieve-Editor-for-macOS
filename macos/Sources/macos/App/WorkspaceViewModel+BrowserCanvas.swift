@@ -929,13 +929,13 @@ extension WorkspaceViewModel {
             return
         }
         canvasCenter = FrievePoint(x: selectionBounds.midX, y: selectionBounds.midY)
-        let fittedScale = min(
-            (size.width * 0.72) / max(selectionBounds.width, 0.0001),
-            (size.height * 0.72) / max(selectionBounds.height, 0.0001)
+        let targetScale = min(
+            Double(size.width * 0.72) / max(selectionBounds.width, 0.0001),
+            Double(size.height * 0.72) / max(selectionBounds.height, 0.0001)
         )
-        let minDimension = max(min(size.width, size.height), 1)
-        browserBaseScaleFactor = max(Double(fittedScale) / Double(minDimension), 0.05)
-        zoom = 1.0
+        let minDimension = max(Double(min(size.width, size.height)), 1.0)
+        let targetZoom = targetScale / (minDimension * browserBaseScaleFactor)
+        zoom = min(max(targetZoom, 0.2), 6.0)
         suspendBrowserAutoScroll()
         markBrowserSurfaceViewportDirty()
     }
