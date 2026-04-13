@@ -211,19 +211,50 @@ struct BrowserCardRasterContentView: View {
             }
 
             if let tickerText = viewModel.browserCardTickerText(for: card), !tickerText.isEmpty {
-                Text(tickerText)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(titleAlignment)
-                    .lineLimit(viewModel.settings.browserTickerLines)
-                    .padding(.top, 2)
-                    .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
+                BrowserTickerMarqueeView(
+                    text: tickerText,
+                    font: viewModel.browserCardTickerNSFont(for: card),
+                    tint: .secondary
+                )
+                .padding(.top, 2)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             Spacer(minLength: 0)
         }
         .padding(padding)
         .frame(width: metadata.canvasSize.width, height: metadata.canvasSize.height, alignment: .topLeading)
+    }
+}
+
+private struct BrowserTickerMarqueeView: View {
+    let text: String
+    let font: NSFont
+    let tint: Color
+
+    var body: some View {
+        Canvas { context, size in
+            guard size.width > 0, size.height > 0 else { return }
+
+            let textWidth = max(
+                ceil(NSAttributedString(string: text, attributes: [.font: font]).size().width),
+                1
+            )
+            let travelDistance = textWidth + size.width
+            let speed = max(font.pointSize * 0.85, 10)
+            let elapsed = CGFloat(CACurrentMediaTime() * Double(speed))
+            let offset = elapsed.truncatingRemainder(dividingBy: max(travelDistance, 1))
+
+            context.clip(to: Path(CGRect(origin: .zero, size: size)))
+            context.draw(
+                Text(text)
+                    .font(Font(font))
+                    .foregroundStyle(tint),
+                at: CGPoint(x: size.width - offset, y: size.height / 2),
+                anchor: .leading
+            )
+        }
+        .frame(height: ceil(font.ascender - font.descender + font.leading))
     }
 }
 

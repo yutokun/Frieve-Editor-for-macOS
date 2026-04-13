@@ -301,6 +301,7 @@ final class WorkspaceViewModel: ObservableObject {
         didSet {
             syncDocumentMetadataFromSettings()
             updateBrowserAutoArrangeTimerState()
+            updateBrowserTickerTimerState()
             updateBrowserInlineEditorForCurrentSelection()
         }
     }
@@ -435,6 +436,7 @@ final class WorkspaceViewModel: ObservableObject {
     var browserAutoArrangeSuspendedUntil: CFTimeInterval = 0
     var browserAutoArrangeResumeWorkItem: DispatchWorkItem?
     var browserAnimationTimer: Timer?
+    var browserTickerTimer: Timer?
     var browserAnimationCountdownMilliseconds: Double = 0
     var browserAnimationBackupDocument: FrieveDocument?
     var browserAnimationBackupSelectedCardID: Int?
@@ -489,6 +491,7 @@ final class WorkspaceViewModel: ObservableObject {
     var cachedOverviewSnapshot: BrowserOverviewSnapshot?
     var cachedBrowserSurfaceContentKey: BrowserSurfaceContentCacheKey?
     var cachedBrowserSurfaceContent: BrowserSurfaceContentCacheEntry?
+    var lastAppliedBrowserDisplaySettingsSignature: Int = 0
 
     init(settings: AppSettings = AppSettings()) {
         self.settings = settings
@@ -528,6 +531,8 @@ final class WorkspaceViewModel: ObservableObject {
         }
         syncDocumentMetadataFromSettings()
         resetCanvasStateFromDocument()
+        lastAppliedBrowserDisplaySettingsSignature = browserDisplaySettingsSignature
+        updateBrowserTickerTimerState()
         bindSettings()
     }
 
@@ -564,6 +569,12 @@ final class WorkspaceViewModel: ObservableObject {
         if showStatusBar != settings.showStatusBar {
             showStatusBar = settings.showStatusBar
         }
+        let displaySettingsSignature = browserDisplaySettingsSignature
+        if displaySettingsSignature != lastAppliedBrowserDisplaySettingsSignature {
+            lastAppliedBrowserDisplaySettingsSignature = displaySettingsSignature
+            markBrowserSurfaceContentDirty()
+        }
+        updateBrowserTickerTimerState()
         if linkLabelsVisible != settings.browserLinkNameVisible {
             linkLabelsVisible = settings.browserLinkNameVisible
         }

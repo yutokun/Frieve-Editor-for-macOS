@@ -187,6 +187,18 @@ extension WorkspaceViewModel {
         return lines.prefix(settings.browserTickerLines).joined(separator: "  •  ")
     }
 
+    func browserCardTickerNSFont(for card: FrieveCard) -> NSFont {
+        let bodyFont = browserCardBodyNSFont(for: card)
+        let pointSize = max(bodyFont.pointSize * 0.8, 9)
+        return NSFont(descriptor: bodyFont.fontDescriptor, size: pointSize) ?? NSFont.systemFont(ofSize: pointSize)
+    }
+
+    func browserCardTickerHeight(for card: FrieveCard) -> CGFloat {
+        guard browserCardTickerText(for: card) != nil else { return 0 }
+        let font = browserCardTickerNSFont(for: card)
+        return ceil(font.ascender - font.descender + font.leading)
+    }
+
     func browserCardScoreText(for card: FrieveCard) -> String? {
         guard settings.browserScoreVisible else { return nil }
 
@@ -756,6 +768,11 @@ extension WorkspaceViewModel {
             let previewSize = browserDrawingPreviewSize(for: card)
             width = max(width, previewSize.width + padding * 2)
             height += previewSize.height + 10
+        }
+
+        let tickerHeight = browserCardTickerHeight(for: card)
+        if tickerHeight > 0 {
+            height += tickerHeight + 6
         }
 
         return CGSize(width: width, height: height)

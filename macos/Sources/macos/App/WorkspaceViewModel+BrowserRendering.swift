@@ -120,6 +120,15 @@ extension WorkspaceViewModel {
     }
 
     func cachedBrowserCardRaster(for snapshot: BrowserCardLayerSnapshot, cacheKey: String) -> NSImage? {
+        if browserCardTickerText(for: snapshot.card) != nil {
+            let rasterStart = CACurrentMediaTime()
+            guard let image = rasterizeBrowserCardTitle(for: snapshot.card, canvasSize: snapshot.metadata.canvasSize) else {
+                return nil
+            }
+            recordBrowserCardRasterMetric((CACurrentMediaTime() - rasterStart) * 1000)
+            return image
+        }
+
         if let cached = browserCardRasterCache[cacheKey] {
             touchBrowserCardRasterCacheKey(cacheKey)
             return cached
@@ -137,6 +146,9 @@ extension WorkspaceViewModel {
     }
 
     func browserCardRasterIfReady(for snapshot: BrowserCardLayerSnapshot, cacheKey: String) -> NSImage? {
+        if browserCardTickerText(for: snapshot.card) != nil {
+            return cachedBrowserCardRaster(for: snapshot, cacheKey: cacheKey)
+        }
         if let cached = browserCardRasterCache[cacheKey] {
             touchBrowserCardRasterCacheKey(cacheKey)
             return cached

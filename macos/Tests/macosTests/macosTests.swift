@@ -75,6 +75,28 @@ import Testing
     #expect(selectedScene.cards.map(\.id) == [0, childID])
 }
 
+@MainActor
+@Test func browserTickerExpandsCardHeightAndUsesBodyLines() throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.document.updateCard(0) { card in
+        card.bodyText = "First line\nSecond line\nThird line"
+    }
+
+    let baseCard = try #require(model.document.card(withID: 0))
+    let baseHeight = model.metadata(for: baseCard).canvasSize.height
+
+    model.settings.browserTickerVisible = true
+    model.settings.browserTickerLines = 2
+    model.invalidateDocumentCaches()
+
+    let tickerCard = try #require(model.document.card(withID: 0))
+    let tickerHeight = model.metadata(for: tickerCard).canvasSize.height
+
+    #expect(model.browserCardTickerText(for: tickerCard) == "First line  •  Second line")
+    #expect(tickerHeight > baseHeight)
+}
+
 @Test func fip2RoundTripPreservesCardAndLinkData() async throws {
     var document = FrieveDocument.placeholder()
     let childID = document.addCard(title: "Child", linkedFrom: 0)

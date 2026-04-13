@@ -295,6 +295,22 @@ extension WorkspaceViewModel {
         DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: workItem)
     }
 
+    func updateBrowserTickerTimerState() {
+        let shouldRun = selectedTab == .browser && settings.browserTickerVisible
+        guard shouldRun else {
+            browserTickerTimer?.invalidate()
+            browserTickerTimer = nil
+            return
+        }
+        guard browserTickerTimer == nil else { return }
+
+        let timer = Timer(timeInterval: 1.0 / 24.0, repeats: true) { [weak self] _ in
+            self?.markBrowserSurfacePresentationDirty()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        browserTickerTimer = timer
+    }
+
     func setBrowserLinkLabelsVisible(_ isVisible: Bool) {
         guard linkLabelsVisible != isVisible else { return }
         linkLabelsVisible = isVisible
