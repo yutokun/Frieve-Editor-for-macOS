@@ -57,20 +57,6 @@ private struct FrieveEditorSettingsView: View {
         )
     }
 
-    private var foregroundColorBinding: Binding<NSColor> {
-        Binding(
-            get: { browserColor(fromHex: settings.browserForegroundColorHex) ?? NSColor.labelColor },
-            set: { settings.browserForegroundColorHex = browserHexString(from: $0) ?? settings.browserForegroundColorHex }
-        )
-    }
-
-    private var backgroundColorBinding: Binding<NSColor> {
-        Binding(
-            get: { browserColor(fromHex: settings.browserBackgroundColorHex) ?? NSColor.textBackgroundColor },
-            set: { settings.browserBackgroundColorHex = browserHexString(from: $0) ?? settings.browserBackgroundColorHex }
-        )
-    }
-
     var body: some View {
         TabView {
             Form {
@@ -203,13 +189,6 @@ private struct FrieveEditorSettingsView: View {
                 }
 
                 Section("Others") {
-                    BrowserColorWell(title: "Foreground Color", color: foregroundColorBinding)
-                    BrowserColorWell(title: "Background Color", color: backgroundColorBinding)
-                    Button("Use Default Colors") {
-                        settings.browserForegroundColorHex = ""
-                        settings.browserBackgroundColorHex = ""
-                    }
-
                     HStack {
                         Text("Wallpaper")
                         Spacer()
@@ -260,48 +239,5 @@ private struct FrieveEditorSettingsView: View {
         .formStyle(.grouped)
         .padding(20)
         .frame(minWidth: 560, idealWidth: 640, minHeight: 560)
-    }
-}
-
-private struct BrowserColorWell: NSViewRepresentable {
-    let title: String
-    @Binding var color: NSColor
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(color: $color)
-    }
-
-    func makeNSView(context: Context) -> NSStackView {
-        let label = NSTextField(labelWithString: title)
-        let spacer = NSView()
-        let colorWell = NSColorWell()
-        colorWell.color = color
-        colorWell.target = context.coordinator
-        colorWell.action = #selector(Coordinator.updateColor(_:))
-        context.coordinator.colorWell = colorWell
-
-        let stack = NSStackView(views: [label, spacer, colorWell])
-        stack.orientation = .horizontal
-        stack.alignment = .centerY
-        stack.spacing = 12
-        return stack
-    }
-
-    func updateNSView(_ nsView: NSStackView, context: Context) {
-        context.coordinator.color = $color
-        context.coordinator.colorWell?.color = color
-    }
-
-    final class Coordinator: NSObject {
-        var color: Binding<NSColor>
-        weak var colorWell: NSColorWell?
-
-        init(color: Binding<NSColor>) {
-            self.color = color
-        }
-
-        @MainActor @objc func updateColor(_ sender: NSColorWell) {
-            color.wrappedValue = sender.color
-        }
     }
 }

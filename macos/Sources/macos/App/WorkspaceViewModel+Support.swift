@@ -47,27 +47,6 @@ func browserCardTitleNSFont(for card: FrieveCard) -> NSFont {
     NSFont.systemFont(ofSize: browserCardTitlePointSize(for: card), weight: .medium)
 }
 
-func browserColor(fromHex hex: String) -> NSColor? {
-    let sanitized = hex
-        .trimmingCharacters(in: .whitespacesAndNewlines)
-        .replacingOccurrences(of: "#", with: "")
-    guard sanitized.count == 6, let rgb = Int(sanitized, radix: 16) else { return nil }
-    return NSColor(
-        calibratedRed: CGFloat((rgb >> 16) & 0xFF) / 255,
-        green: CGFloat((rgb >> 8) & 0xFF) / 255,
-        blue: CGFloat(rgb & 0xFF) / 255,
-        alpha: 1
-    )
-}
-
-func browserHexString(from color: NSColor) -> String? {
-    guard let converted = color.usingColorSpace(.deviceRGB) else { return nil }
-    let red = Int(round(converted.redComponent * 255))
-    let green = Int(round(converted.greenComponent * 255))
-    let blue = Int(round(converted.blueComponent * 255))
-    return String(format: "%02X%02X%02X", red, green, blue)
-}
-
 func browserCardVisualShapeIndex(for card: FrieveCard) -> Int {
     _ = card
     return 0
@@ -101,8 +80,6 @@ extension WorkspaceViewModel {
         hasher.combine(settings.browserScoreType)
         hasher.combine(settings.browserFontFamily)
         hasher.combine(settings.browserFontSize)
-        hasher.combine(settings.browserForegroundColorHex)
-        hasher.combine(settings.browserBackgroundColorHex)
         hasher.combine(settings.browserWallpaperPath)
         hasher.combine(settings.browserWallpaperFixed)
         hasher.combine(settings.browserWallpaperTiled)
@@ -154,27 +131,6 @@ extension WorkspaceViewModel {
         return font
     }
 
-    func browserForegroundColor(for colorScheme: ColorScheme) -> NSColor {
-        browserColor(fromHex: settings.browserForegroundColorHex)
-        ?? (colorScheme == .dark ? NSColor(calibratedWhite: 0.92, alpha: 1) : NSColor(calibratedWhite: 0.12, alpha: 1))
-    }
-
-    func browserForegroundSecondaryColor(for colorScheme: ColorScheme) -> NSColor {
-        browserForegroundColor(for: colorScheme).withAlphaComponent(colorScheme == .dark ? 0.78 : 0.70)
-    }
-
-    func browserCanvasBackgroundColor(for colorScheme: ColorScheme) -> NSColor {
-        browserColor(fromHex: settings.browserBackgroundColorHex)
-        ?? {
-            switch colorScheme {
-            case .dark:
-                return NSColor(calibratedRed: 0.09, green: 0.09, blue: 0.09, alpha: 1)
-            default:
-                return NSColor(calibratedRed: 0.97, green: 0.97, blue: 0.965, alpha: 1)
-            }
-        }()
-    }
-
     func browserWallpaperURL() -> URL? {
         let trimmed = settings.browserWallpaperPath.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -194,15 +150,9 @@ extension WorkspaceViewModel {
         return browserInteractionModeEnabled ? 1.0 / 6.0 : 1.0 / 12.0
     }
 
-    func browserLinkStrokeColor(for colorScheme: ColorScheme, highlighted: Bool) -> NSColor {
-        if highlighted {
-            return browserForegroundColor(for: colorScheme)
-        }
-        return browserForegroundSecondaryColor(for: colorScheme)
-    }
-
     func browserCursorPulseColor(for colorScheme: ColorScheme) -> Color {
-        Color(nsColor: browserForegroundColor(for: colorScheme)).opacity(colorScheme == .dark ? 0.75 : 0.55)
+        _ = colorScheme
+        return Color.accentColor.opacity(0.6)
     }
 
     func browserShowsMediaPreview(for card: FrieveCard) -> Bool {

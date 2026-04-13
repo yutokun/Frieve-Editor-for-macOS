@@ -137,8 +137,6 @@ final class AppSettings: ObservableObject {
         static let browserScoreType = "FrieveEditorMac.browserScoreType"
         static let browserFontFamily = "FrieveEditorMac.browserFontFamily"
         static let browserFontSize = "FrieveEditorMac.browserFontSize"
-        static let browserForegroundColorHex = "FrieveEditorMac.browserForegroundColorHex"
-        static let browserBackgroundColorHex = "FrieveEditorMac.browserBackgroundColorHex"
         static let browserWallpaperPath = "FrieveEditorMac.browserWallpaperPath"
         static let browserWallpaperFixed = "FrieveEditorMac.browserWallpaperFixed"
         static let browserWallpaperTiled = "FrieveEditorMac.browserWallpaperTiled"
@@ -396,28 +394,6 @@ final class AppSettings: ObservableObject {
         }
     }
 
-    @Published var browserForegroundColorHex: String {
-        didSet {
-            let normalized = Self.normalizedBrowserColorHex(from: browserForegroundColorHex, fallback: "")
-            guard normalized == browserForegroundColorHex else {
-                browserForegroundColorHex = normalized
-                return
-            }
-            persistIfReady()
-        }
-    }
-
-    @Published var browserBackgroundColorHex: String {
-        didSet {
-            let normalized = Self.normalizedBrowserColorHex(from: browserBackgroundColorHex, fallback: "")
-            guard normalized == browserBackgroundColorHex else {
-                browserBackgroundColorHex = normalized
-                return
-            }
-            persistIfReady()
-        }
-    }
-
     @Published var browserWallpaperPath: String {
         didSet { persistIfReady() }
     }
@@ -524,14 +500,6 @@ final class AppSettings: ObservableObject {
         browserScoreType = min(max(userDefaults.object(forKey: Keys.browserScoreType) as? Int ?? 0, 0), 7)
         browserFontFamily = userDefaults.string(forKey: Keys.browserFontFamily)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         browserFontSize = Self.normalizedBrowserFontSize(from: userDefaults.object(forKey: Keys.browserFontSize))
-        browserForegroundColorHex = Self.normalizedBrowserColorHex(
-            from: userDefaults.string(forKey: Keys.browserForegroundColorHex),
-            fallback: ""
-        )
-        browserBackgroundColorHex = Self.normalizedBrowserColorHex(
-            from: userDefaults.string(forKey: Keys.browserBackgroundColorHex),
-            fallback: ""
-        )
         browserWallpaperPath = userDefaults.string(forKey: Keys.browserWallpaperPath) ?? ""
         browserWallpaperFixed = userDefaults.object(forKey: Keys.browserWallpaperFixed) as? Bool ?? true
         browserWallpaperTiled = userDefaults.object(forKey: Keys.browserWallpaperTiled) as? Bool ?? false
@@ -623,8 +591,6 @@ final class AppSettings: ObservableObject {
         userDefaults.set(browserScoreType, forKey: Keys.browserScoreType)
         userDefaults.set(browserFontFamily, forKey: Keys.browserFontFamily)
         userDefaults.set(browserFontSize, forKey: Keys.browserFontSize)
-        userDefaults.set(browserForegroundColorHex, forKey: Keys.browserForegroundColorHex)
-        userDefaults.set(browserBackgroundColorHex, forKey: Keys.browserBackgroundColorHex)
         userDefaults.set(browserWallpaperPath, forKey: Keys.browserWallpaperPath)
         userDefaults.set(browserWallpaperFixed, forKey: Keys.browserWallpaperFixed)
         userDefaults.set(browserWallpaperTiled, forKey: Keys.browserWallpaperTiled)
@@ -701,24 +667,6 @@ final class AppSettings: ObservableObject {
             return 13
         }
         return min(max(numericValue, 8), 36)
-    }
-
-    private static func normalizedBrowserColorHex(from storedValue: Any?, fallback: String) -> String {
-        let rawString: String
-        switch storedValue {
-        case let value as String:
-            rawString = value
-        case let value as NSString:
-            rawString = value as String
-        default:
-            return fallback
-        }
-        let normalized = rawString
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "#", with: "")
-            .uppercased()
-        guard normalized.count == 6, normalized.allSatisfy(\.isHexDigit) else { return fallback }
-        return normalized
     }
 
     private static func normalizedBrowserAntialiasingSampleCount(from storedValue: Any?) -> Int {

@@ -1654,15 +1654,13 @@ import Testing
 @Test func browserFontAndOtherSettingsPersistWhenEditedDirectly() async throws {
     let suiteName = "FrieveEditorMacTests.browserFontAndOtherSettings"
 
-    let values = await MainActor.run { () -> (String, Int, String, String, Bool, Int, Bool, Bool, Int) in
+    let values = await MainActor.run { () -> (String, Int, Bool, Int, Bool, Bool, Int) in
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
 
         let settings = AppSettings(userDefaults: defaults)
         settings.browserFontFamily = "Helvetica"
         settings.browserFontSize = 17
-        settings.browserForegroundColorHex = "224466"
-        settings.browserBackgroundColorHex = "E8EEF8"
         settings.browserWallpaperTiled = true
         settings.browserBackgroundAnimation = true
         settings.browserBackgroundAnimationType = BrowserBackgroundAnimationType.snow.rawValue
@@ -1674,8 +1672,6 @@ import Testing
         return (
             reloaded.browserFontFamily,
             reloaded.browserFontSize,
-            reloaded.browserForegroundColorHex,
-            reloaded.browserBackgroundColorHex,
             reloaded.browserWallpaperTiled,
             reloaded.browserBackgroundAnimationType,
             reloaded.browserBackgroundAnimation,
@@ -1686,33 +1682,25 @@ import Testing
 
     #expect(values.0 == "Helvetica")
     #expect(values.1 == 17)
-    #expect(values.2 == "224466")
-    #expect(values.3 == "E8EEF8")
+    #expect(values.2 == true)
+    #expect(values.3 == BrowserBackgroundAnimationType.snow.rawValue)
     #expect(values.4 == true)
-    #expect(values.5 == BrowserBackgroundAnimationType.snow.rawValue)
-    #expect(values.6 == true)
-    #expect(values.7 == true)
-    #expect(values.8 == 4)
+    #expect(values.5 == true)
+    #expect(values.6 == 4)
 }
 
-@Test func browserFontColorAndRenderingHelpersUseConfiguredSettings() async throws {
-    let values = await MainActor.run { () -> (CGFloat, NSColor, NSColor, NSColor, NSColor, Int, CFTimeInterval) in
+@Test func browserFontAndRenderingHelpersUseConfiguredSettings() async throws {
+    let values = await MainActor.run { () -> (CGFloat, Int, CFTimeInterval) in
         let defaults = UserDefaults(suiteName: "FrieveEditorMacTests.browserHelperSettings")!
         defaults.removePersistentDomain(forName: "FrieveEditorMacTests.browserHelperSettings")
         let settings = AppSettings(userDefaults: defaults)
         settings.browserFontFamily = "Helvetica"
         settings.browserFontSize = 16
-        settings.browserForegroundColorHex = "335577"
-        settings.browserBackgroundColorHex = "F0E8D8"
         settings.browserNoScrollLag = true
         settings.browserAntialiasingEnabled = true
         settings.browserAntialiasingSampleCount = 4
 
         let model = WorkspaceViewModel(settings: settings)
-        let defaultSuiteName = "FrieveEditorMacTests.browserDefaultHelperSettings"
-        let defaultDefaults = UserDefaults(suiteName: defaultSuiteName)!
-        defaultDefaults.removePersistentDomain(forName: defaultSuiteName)
-        let defaultModel = WorkspaceViewModel(settings: AppSettings(userDefaults: defaultDefaults))
         let card = FrieveCard(
             id: 1,
             title: "Font",
@@ -1736,20 +1724,14 @@ import Testing
         let titleFont = model.browserCardTitleNSFont(for: card)
         return (
             titleFont.pointSize,
-            model.browserForegroundColor(for: .light),
-            model.browserCanvasBackgroundColor(for: .light),
-            defaultModel.browserForegroundColor(for: .light),
-            defaultModel.browserCanvasBackgroundColor(for: .light),
             model.browserAntialiasingSampleCount,
             model.browserChromeRefreshMinimumInterval()
         )
     }
 
     #expect(values.0 == 16)
-    #expect(browserTestRGBComponents(values.1) != browserTestRGBComponents(values.3))
-    #expect(browserTestRGBComponents(values.2) != browserTestRGBComponents(values.4))
-    #expect(values.5 == 4)
-    #expect(values.6 == 0)
+    #expect(values.1 == 4)
+    #expect(values.2 == 0)
 }
 
 @Test func browserSurfaceAppliesConfiguredAntialiasingSampleCount() async throws {
@@ -2398,13 +2380,4 @@ private func browserTestLuminance(from color: CGColor?) -> Double? {
 
 private func browserTestLuminance(from color: MTLClearColor) -> Double? {
     (color.red * 0.2126) + (color.green * 0.7152) + (color.blue * 0.0722)
-}
-
-private func browserTestRGBComponents(_ color: NSColor) -> (red: Int, green: Int, blue: Int) {
-    let resolved = color.usingColorSpace(.deviceRGB) ?? color
-    return (
-        Int(round(resolved.redComponent * 255)),
-        Int(round(resolved.greenComponent * 255)),
-        Int(round(resolved.blueComponent * 255))
-    )
 }

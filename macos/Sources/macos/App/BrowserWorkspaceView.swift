@@ -106,7 +106,7 @@ private struct BrowserCanvasBackgroundView: View {
     var body: some View {
         ZStack {
             Rectangle()
-                .fill(Color(nsColor: viewModel.browserCanvasBackgroundColor(for: colorScheme)))
+                .fill(Color(nsColor: browserCanvasBackgroundColor(for: colorScheme)))
 
             if let image = wallpaperImage {
                 if viewModel.settings.browserWallpaperTiled {
@@ -179,7 +179,7 @@ private struct BrowserAnimatedBackgroundOverlay: View {
     }
 
     private func drawFlowingLines(context: inout GraphicsContext, size: CGSize, time: TimeInterval) {
-        let base = viewModel.browserForegroundSecondaryColor(for: colorScheme).withAlphaComponent(0.22)
+        let base = browserLinkStrokeColor(for: colorScheme, highlighted: false).withAlphaComponent(0.22)
         for index in 0..<18 {
             let progress = CGFloat(((time * 36) + Double(index * 41)).truncatingRemainder(dividingBy: 900)) - 120
             var path = Path()
@@ -190,7 +190,7 @@ private struct BrowserAnimatedBackgroundOverlay: View {
     }
 
     private func drawBubbles(context: inout GraphicsContext, size: CGSize, time: TimeInterval) {
-        let color = Color(nsColor: viewModel.browserForegroundSecondaryColor(for: colorScheme))
+        let color = Color(nsColor: browserLinkStrokeColor(for: colorScheme, highlighted: false))
         for index in 0..<28 {
             let normalized = Double(index) / 28
             let x = CGFloat((normalized * 1_137).truncatingRemainder(dividingBy: 1)) * max(size.width, 1)

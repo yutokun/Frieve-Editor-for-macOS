@@ -733,7 +733,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         let colorScheme: ColorScheme = signature == 1 ? .dark : .light
         applyResolvedAppearance(
             appearance,
-            canvasBackgroundColor: viewModel?.browserCanvasBackgroundColor(for: colorScheme) ?? browserCanvasBackgroundColor(for: colorScheme),
+            canvasBackgroundColor: browserCanvasBackgroundColor(for: colorScheme),
             force: force
         )
     }
@@ -743,7 +743,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         self.appearance = appearance
         applyResolvedAppearance(
             appearance,
-            canvasBackgroundColor: viewModel?.browserCanvasBackgroundColor(for: colorScheme) ?? browserCanvasBackgroundColor(for: colorScheme),
+            canvasBackgroundColor: browserCanvasBackgroundColor(for: colorScheme),
             force: false
         )
     }
@@ -1437,8 +1437,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             0.0001
         )
         return scene.links.flatMap { snapshot -> [BrowserMetalLinkInstance] in
-            let color = (viewModel?.browserLinkStrokeColor(for: colorScheme, highlighted: snapshot.isHighlighted)
-                ?? browserLinkStrokeColor(for: colorScheme, highlighted: snapshot.isHighlighted)).rgbaVector
+            let color = browserLinkStrokeColor(for: colorScheme, highlighted: snapshot.isHighlighted).rgbaVector
             let width: Float = snapshot.isHighlighted ? 3 : 2
             var instances: [BrowserMetalLinkInstance] = []
             if viewModel?.settings.browserLinkHemming == true {
@@ -2099,23 +2098,18 @@ private extension BrowserMetalRenderer {
     }
 
     func atlasLabelImage(text: String, highlighted: Bool) -> NSImage {
-        let colorScheme: ColorScheme = appearanceSignature == 1 ? .dark : .light
-        let configuredForeground = viewModel?.browserForegroundColor(for: colorScheme)
-            ?? resolvedColor(NSColor.labelColor)
-        let configuredSecondary = viewModel?.browserForegroundSecondaryColor(for: colorScheme)
-            ?? resolvedColor(NSColor.secondaryLabelColor)
-        let cacheKey = "\(appearanceSignature)|\(configuredForeground.hashValue)|\(configuredSecondary.hashValue)|\(highlighted ? 1 : 0)|\(text)"
+        let cacheKey = "\(appearanceSignature)|\(highlighted ? 1 : 0)|\(text)"
         if let cached = labelImageCache[cacheKey] {
             touchLabelImageOrder(cacheKey)
             return cached
         }
 
         let font = NSFont.systemFont(ofSize: 11, weight: .semibold)
-        let foreground = highlighted ? NSColor.white : configuredSecondary
+        let foreground = highlighted ? NSColor.white : resolvedColor(NSColor.secondaryLabelColor)
         let background = highlighted
-            ? configuredForeground.withAlphaComponent(0.92)
+            ? resolvedColor(NSColor.controlAccentColor).withAlphaComponent(0.92)
             : resolvedColor(NSColor.windowBackgroundColor).withAlphaComponent(0.92)
-        let border = highlighted ? configuredForeground : resolvedColor(NSColor.separatorColor).withAlphaComponent(0.55)
+        let border = highlighted ? resolvedColor(NSColor.controlAccentColor) : resolvedColor(NSColor.separatorColor).withAlphaComponent(0.55)
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
         paragraph.lineBreakMode = .byTruncatingTail

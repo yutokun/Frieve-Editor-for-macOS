@@ -151,13 +151,11 @@ struct BrowserCardRasterContentView: View {
         let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : card.title
         let titleFont = Font(viewModel.browserCardTitleNSFont(for: card))
         let bodyFont = Font(viewModel.browserCardBodyNSFont(for: card))
-        let primaryForeground = Color(nsColor: viewModel.browserForegroundColor(for: .light))
-        let secondaryForeground = Color(nsColor: viewModel.browserForegroundSecondaryColor(for: .light))
 
         VStack(alignment: horizontalAlignment, spacing: 8) {
             Text(title)
                 .font(titleFont)
-                .foregroundStyle(primaryForeground)
+                .foregroundStyle(.primary)
                 .multilineTextAlignment(titleAlignment)
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
@@ -166,7 +164,7 @@ struct BrowserCardRasterContentView: View {
             if let scoreText = metadata.scoreText, !scoreText.isEmpty {
                 Text(scoreText)
                     .font(.caption.bold())
-                    .foregroundStyle(primaryForeground)
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(.thinMaterial, in: Capsule())
@@ -176,7 +174,7 @@ struct BrowserCardRasterContentView: View {
             if viewModel.settings.browserTextVisible, !metadata.summaryText.isEmpty {
                 Text(metadata.summaryText)
                     .font(bodyFont)
-                    .foregroundStyle(secondaryForeground)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(titleAlignment)
                     .lineLimit(viewModel.settings.browserTextWordWrap ? 3 : 1)
                     .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
@@ -185,7 +183,7 @@ struct BrowserCardRasterContentView: View {
             if !metadata.badges.isEmpty {
                 Text(metadata.badges.joined(separator: "  ·  "))
                     .font(.caption2)
-                    .foregroundStyle(secondaryForeground)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(titleAlignment)
                     .lineLimit(viewModel.settings.browserTextWordWrap ? 2 : 1)
                     .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
@@ -215,7 +213,7 @@ struct BrowserCardRasterContentView: View {
             if let tickerText = viewModel.browserCardTickerText(for: card), !tickerText.isEmpty {
                 Text(tickerText)
                     .font(.caption2)
-                    .foregroundStyle(secondaryForeground)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(titleAlignment)
                     .lineLimit(viewModel.settings.browserTickerLines)
                     .padding(.top, 2)
@@ -236,7 +234,6 @@ private struct BrowserMediaPreviewView: View {
     let previewImage: NSImage?
 
     var body: some View {
-        let secondaryForeground = Color(nsColor: viewModel.browserForegroundSecondaryColor(for: .light))
         Group {
             if let previewImage {
                 Image(nsImage: previewImage)
@@ -277,7 +274,7 @@ private struct BrowserMediaPreviewView: View {
                             .lineLimit(2)
                             .multilineTextAlignment(.center)
                     }
-                    .foregroundStyle(secondaryForeground)
+                    .foregroundStyle(.secondary)
                 }
             }
         }
