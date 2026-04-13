@@ -2151,9 +2151,7 @@ private extension BrowserMetalRenderer {
     }
 
     func atlasLabelGroupNameImage(name: String, color: NSColor, pointSize: CGFloat) -> NSImage {
-        let colorScheme: ColorScheme = appearanceSignature == 1 ? .dark : .light
-        let configuredForeground = viewModel?.browserForegroundColor(for: colorScheme) ?? color
-        let cacheKey = "lg|\(configuredForeground.hashValue)|\(Int(pointSize))|\(name)"
+        let cacheKey = "lg|\(color.hashValue)|\(Int(pointSize))|\(name)"
         if let cached = labelImageCache[cacheKey] {
             touchLabelImageOrder(cacheKey)
             return cached
@@ -2165,7 +2163,7 @@ private extension BrowserMetalRenderer {
         paragraph.lineBreakMode = .byClipping
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: configuredForeground,
+            .foregroundColor: color,
             .paragraphStyle: paragraph
         ]
         let attributed = NSAttributedString(string: name, attributes: attributes)
