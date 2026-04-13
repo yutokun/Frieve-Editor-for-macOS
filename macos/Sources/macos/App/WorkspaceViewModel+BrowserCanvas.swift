@@ -938,8 +938,7 @@ extension WorkspaceViewModel {
             card.id == primaryCard.id || relatedIDs.contains(card.id) || selectedIDs.contains(card.id)
         }
 
-        let center = primaryCard.position
-        canvasCenter = center
+        let center = autoScroll ? primaryCard.position : canvasCenter
 
         let currentScale = browserScale(in: size)
         let W = max(Double(size.width), 1.0)

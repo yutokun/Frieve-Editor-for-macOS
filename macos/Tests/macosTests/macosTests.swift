@@ -925,10 +925,10 @@ import Testing
     #expect(result.1 > result.0)
 }
 
-@Test func browserAutoZoomCentersAndFitsSelectionWhenEnabled() async throws {
+@Test func browserAutoZoomKeepsViewportStillWhenAutoScrollIsOff() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
-    let result = await MainActor.run { () -> (Bool, Bool, Bool) in
+    let result = await MainActor.run { () -> (Bool, Bool, Bool, Bool) in
         model.newDocument()
         model.browserCanvasSize = CGSize(width: 1200, height: 800)
         let rootID = model.selectedCardID ?? 0
@@ -946,21 +946,25 @@ import Testing
         model.selectCard(childID)
         let centerWithoutAutoZoom = model.canvasCenter == beforeCenter
 
+        model.canvasCenter = FrievePoint(x: 0.50, y: 0.50)
         model.selectCard(rootID)
         model.autoZoom = true
+        let centerBeforeAutoZoomSelection = model.canvasCenter
+        let zoomBeforeAutoZoomSelection = model.zoom
         model.selectCard(childID)
-        let target = model.document.card(withID: childID)?.position ?? .zero
-        let centeredOnSelection = hypot(model.canvasCenter.x - target.x, model.canvasCenter.y - target.y) < 0.0001
+        let centerWithAutoZoom = model.canvasCenter == centerBeforeAutoZoomSelection
+        let zoomAdjustedForSelection = abs((model.browserAutoZoomTargetZoom ?? model.zoom) - zoomBeforeAutoZoomSelection) > 0.0001
         model.clearSelection()
         let bounds = model.browserDocumentBounds()
         let centeredOnDocumentAfterClear = hypot(model.canvasCenter.x - bounds.midX, model.canvasCenter.y - bounds.midY) < 0.001
 
-        return (centerWithoutAutoZoom, centeredOnSelection, centeredOnDocumentAfterClear)
+        return (centerWithoutAutoZoom, centerWithAutoZoom, zoomAdjustedForSelection, centeredOnDocumentAfterClear)
     }
 
     #expect(result.0)
     #expect(result.1)
     #expect(result.2)
+    #expect(result.3)
 }
 
 @Test func browserAutoZoomSkipsSingleAxisSpreadLikeWindows() async throws {
@@ -980,9 +984,10 @@ import Testing
         }
 
         let zoomBeforeSelection = model.zoom
+        let centerBeforeSelection = model.canvasCenter
         model.selectCard(childID)
-        let centeredOnSelection = model.canvasCenter == (model.document.card(withID: childID)?.position ?? .zero)
-        return (zoomBeforeSelection, model.zoom, centeredOnSelection)
+        let centerStayedStill = model.canvasCenter == centerBeforeSelection
+        return (zoomBeforeSelection, model.zoom, centerStayedStill)
     }
 
     #expect(result.0 == result.1)
@@ -1010,8 +1015,9 @@ import Testing
         }
 
         model.selectCard(rootID)
+        let centerBeforeSelection = model.canvasCenter
         model.selectCard(childID)
-        return (model.browserAutoZoomTargetZoom ?? model.zoom, model.canvasCenter == (model.document.card(withID: childID)?.position ?? .zero))
+        return (model.browserAutoZoomTargetZoom ?? model.zoom, model.canvasCenter == centerBeforeSelection)
     }
 
     #expect(result.0 > 2.0)
