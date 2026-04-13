@@ -15,6 +15,17 @@ func browserCanvasBackgroundColor(for colorScheme: ColorScheme) -> NSColor {
     }
 }
 
+func browserLinkStrokeColor(for colorScheme: ColorScheme, highlighted: Bool) -> NSColor {
+    if highlighted {
+        return colorScheme == .dark
+            ? NSColor(calibratedRed: 0.24, green: 0.46, blue: 0.80, alpha: 1)
+            : NSColor(calibratedRed: 0.24, green: 0.56, blue: 0.94, alpha: 1)
+    }
+    return colorScheme == .dark
+        ? NSColor(calibratedRed: 0.42, green: 0.42, blue: 0.44, alpha: 1)
+        : NSColor(calibratedRed: 0.54, green: 0.54, blue: 0.56, alpha: 1)
+}
+
 struct BrowserSurfaceState: Equatable {
     let contentRevision: Int
     let viewportRevision: Int
@@ -1377,15 +1388,13 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     }
 
     private func buildLinkInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalLinkInstance] {
-        let canvasBackground = canvasBackgroundColor
+        let colorScheme: ColorScheme = appearanceSignature == 1 ? .dark : .light
         let linkBaseScale = max(
             max(abs(CGFloat(scene.worldToCanvasTransform.a)), abs(CGFloat(scene.worldToCanvasTransform.d))),
             0.0001
         )
         return scene.links.flatMap { snapshot -> [BrowserMetalLinkInstance] in
-            let color = (snapshot.isHighlighted
-                ? resolvedColor(NSColor.controlAccentColor).browserOpaqueComposite(over: canvasBackground, opacity: 0.85, darkModeLift: 0.04)
-                : resolvedColor(NSColor.secondaryLabelColor).browserOpaqueComposite(over: canvasBackground, opacity: 0.42, darkModeLift: 0.10)).rgbaVector
+            let color = browserLinkStrokeColor(for: colorScheme, highlighted: snapshot.isHighlighted).rgbaVector
             let width: Float = snapshot.isHighlighted ? 3 : 2
             var instances = makeLinkSegmentInstances(
                 start: snapshot.startPoint,

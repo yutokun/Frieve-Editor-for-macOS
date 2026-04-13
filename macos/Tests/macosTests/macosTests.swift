@@ -27,6 +27,20 @@ import Testing
     #expect(dark?.redComponent != light?.redComponent || dark?.greenComponent != light?.greenComponent || dark?.blueComponent != light?.blueComponent)
 }
 
+@Test func browserLinkStrokePaletteMatchesColorScheme() throws {
+    let light = browserLinkStrokeColor(for: .light, highlighted: false).usingColorSpace(.deviceRGB)
+    let dark = browserLinkStrokeColor(for: .dark, highlighted: false).usingColorSpace(.deviceRGB)
+    let lightHighlighted = browserLinkStrokeColor(for: .light, highlighted: true).usingColorSpace(.deviceRGB)
+    let darkHighlighted = browserLinkStrokeColor(for: .dark, highlighted: true).usingColorSpace(.deviceRGB)
+
+    #expect(light != nil)
+    #expect(dark != nil)
+    #expect(lightHighlighted != nil)
+    #expect(darkHighlighted != nil)
+    #expect(light != dark)
+    #expect(lightHighlighted != darkHighlighted)
+}
+
 @MainActor
 @Test func browserCanvasClearColorVariesByAppearance() throws {
     let view = BrowserSurfaceNSView(frame: CGRect(x: 0, y: 0, width: 1200, height: 800))
