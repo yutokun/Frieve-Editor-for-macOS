@@ -1525,6 +1525,22 @@ import Testing
     #expect(states.1 == true)
 }
 
+@Test func statusBarVisibilityPersistsWhenToggled() async throws {
+    let settings = await MainActor.run { AppSettings(userDefaults: UserDefaults(suiteName: "FrieveEditorMacTests.statusBarToggle")!) }
+    let model = await MainActor.run { WorkspaceViewModel(settings: settings) }
+
+    let states = await MainActor.run { () -> (Bool, Bool) in
+        model.showStatusBar = false
+        let hidden = model.settings.showStatusBar
+        model.showStatusBar = true
+        let shown = model.settings.showStatusBar
+        return (hidden, shown)
+    }
+
+    #expect(states.0 == false)
+    #expect(states.1 == true)
+}
+
 @Test func automationSettingsPersistWhenEditedDirectly() async throws {
     let suiteName = "FrieveEditorMacTests.automationSettings"
 

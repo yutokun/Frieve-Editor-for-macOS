@@ -338,6 +338,9 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var showInspector: Bool = true {
         didSet { settings.showInspector = showInspector }
     }
+    @Published var showStatusBar: Bool = true {
+        didSet { settings.showStatusBar = showStatusBar }
+    }
     @Published var arrangeMode: String = "None" {
         didSet {
             guard arrangeMode != oldValue else { return }
@@ -477,6 +480,7 @@ final class WorkspaceViewModel: ObservableObject {
         showFileList = settings.showFileList
         showCardList = settings.showCardList
         showInspector = settings.showInspector
+        showStatusBar = settings.showStatusBar
         animationVisibleCardCount = min(max(settings.animationVisibleCardCount, 1), 30)
         animationSpeed = min(max(settings.animationSpeed, 1), 100)
         animationPaused = settings.animationPaused

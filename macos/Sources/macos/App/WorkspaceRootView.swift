@@ -197,7 +197,9 @@ private struct WorkspaceContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            StatusBarView(viewModel: viewModel)
+            if viewModel.showStatusBar {
+                StatusBarView(viewModel: viewModel)
+            }
         }
         .onReceive(maintenanceTimer) { now in
             viewModel.performAutomaticMaintenance(now: now)

@@ -35,6 +35,7 @@ final class AppSettings: ObservableObject {
         static let showFileList = "FrieveEditorMac.showFileList"
         static let showCardList = "FrieveEditorMac.showCardList"
         static let showInspector = "FrieveEditorMac.showInspector"
+        static let showStatusBar = "FrieveEditorMac.showStatusBar"
     }
 
     private let userDefaults: UserDefaults
@@ -118,6 +119,10 @@ final class AppSettings: ObservableObject {
         didSet { persistIfReady() }
     }
 
+    @Published var showStatusBar: Bool {
+        didSet { persistIfReady() }
+    }
+
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
         let providers = [
@@ -146,6 +151,7 @@ final class AppSettings: ObservableObject {
         showFileList = userDefaults.object(forKey: Keys.showFileList) as? Bool ?? true
         showCardList = userDefaults.object(forKey: Keys.showCardList) as? Bool ?? true
         showInspector = userDefaults.object(forKey: Keys.showInspector) as? Bool ?? true
+        showStatusBar = userDefaults.object(forKey: Keys.showStatusBar) as? Bool ?? true
         isBootstrapping = false
         persist()
     }
@@ -194,5 +200,6 @@ final class AppSettings: ObservableObject {
         userDefaults.set(showFileList, forKey: Keys.showFileList)
         userDefaults.set(showCardList, forKey: Keys.showCardList)
         userDefaults.set(showInspector, forKey: Keys.showInspector)
+        userDefaults.set(showStatusBar, forKey: Keys.showStatusBar)
     }
 }
