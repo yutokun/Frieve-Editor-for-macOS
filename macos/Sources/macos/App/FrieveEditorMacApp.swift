@@ -221,12 +221,6 @@ private struct FrieveEditorSettingsView: View {
                     .disabled(!settings.browserBackgroundAnimation)
                     Toggle("Cursor Animation", isOn: $settings.browserCursorAnimation)
                     Toggle("No Scroll Lag", isOn: $settings.browserNoScrollLag)
-                    Toggle("Anti-Aliasing", isOn: $settings.browserAntialiasingEnabled)
-                    Picker("AA Level", selection: $settings.browserAntialiasingSampleCount) {
-                        Text("2x").tag(2)
-                        Text("4x").tag(4)
-                    }
-                    .disabled(!settings.browserAntialiasingEnabled)
                 }
             }
             .tabItem {

@@ -142,7 +142,7 @@ extension WorkspaceViewModel {
     }
 
     var browserAntialiasingSampleCount: Int {
-        settings.browserAntialiasingEnabled ? settings.browserAntialiasingSampleCount : 1
+        4
     }
 
     func browserChromeRefreshMinimumInterval() -> CFTimeInterval {

@@ -430,14 +430,19 @@ final class AppSettings: ObservableObject {
     }
 
     @Published var browserAntialiasingEnabled: Bool {
-        didSet { persistIfReady() }
+        didSet {
+            guard browserAntialiasingEnabled else {
+                browserAntialiasingEnabled = true
+                return
+            }
+            persistIfReady()
+        }
     }
 
     @Published var browserAntialiasingSampleCount: Int {
         didSet {
-            let normalized = Self.normalizedBrowserAntialiasingSampleCount(from: browserAntialiasingSampleCount)
-            guard normalized == browserAntialiasingSampleCount else {
-                browserAntialiasingSampleCount = normalized
+            guard browserAntialiasingSampleCount == 4 else {
+                browserAntialiasingSampleCount = 4
                 return
             }
             persistIfReady()
@@ -507,10 +512,8 @@ final class AppSettings: ObservableObject {
         browserBackgroundAnimationType = min(max(userDefaults.object(forKey: Keys.browserBackgroundAnimationType) as? Int ?? 0, 0), 3)
         browserCursorAnimation = userDefaults.object(forKey: Keys.browserCursorAnimation) as? Bool ?? true
         browserNoScrollLag = userDefaults.object(forKey: Keys.browserNoScrollLag) as? Bool ?? true
-        browserAntialiasingEnabled = userDefaults.object(forKey: Keys.browserAntialiasingEnabled) as? Bool ?? false
-        browserAntialiasingSampleCount = Self.normalizedBrowserAntialiasingSampleCount(
-            from: userDefaults.object(forKey: Keys.browserAntialiasingSampleCount)
-        )
+        browserAntialiasingEnabled = true
+        browserAntialiasingSampleCount = 4
         isBootstrapping = false
         persist()
     }

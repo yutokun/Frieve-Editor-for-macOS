@@ -1775,8 +1775,8 @@ import Testing
         settings.browserBackgroundAnimation = true
         settings.browserBackgroundAnimationType = BrowserBackgroundAnimationType.snow.rawValue
         settings.browserNoScrollLag = false
-        settings.browserAntialiasingEnabled = true
-        settings.browserAntialiasingSampleCount = 4
+        settings.browserAntialiasingEnabled = false
+        settings.browserAntialiasingSampleCount = 2
 
         let reloaded = AppSettings(userDefaults: defaults)
         return (
@@ -1807,8 +1807,8 @@ import Testing
         settings.browserFontFamily = "Helvetica"
         settings.browserFontSize = 16
         settings.browserNoScrollLag = true
-        settings.browserAntialiasingEnabled = true
-        settings.browserAntialiasingSampleCount = 4
+        settings.browserAntialiasingEnabled = false
+        settings.browserAntialiasingSampleCount = 2
 
         let model = WorkspaceViewModel(settings: settings)
         let card = FrieveCard(
@@ -1846,9 +1846,11 @@ import Testing
 
 @Test func browserSurfaceAppliesConfiguredAntialiasingSampleCount() async throws {
     let sampleCount = await MainActor.run { () -> Int in
-        let settings = AppSettings(userDefaults: UserDefaults(suiteName: "FrieveEditorMacTests.browserSampleCount")!)
-        settings.browserAntialiasingEnabled = true
-        settings.browserAntialiasingSampleCount = 4
+        let defaults = UserDefaults(suiteName: "FrieveEditorMacTests.browserSampleCount")!
+        defaults.removePersistentDomain(forName: "FrieveEditorMacTests.browserSampleCount")
+        let settings = AppSettings(userDefaults: defaults)
+        settings.browserAntialiasingEnabled = false
+        settings.browserAntialiasingSampleCount = 2
 
         let model = WorkspaceViewModel(settings: settings)
         let view = BrowserSurfaceNSView(frame: .init(x: 0, y: 0, width: 640, height: 480))
