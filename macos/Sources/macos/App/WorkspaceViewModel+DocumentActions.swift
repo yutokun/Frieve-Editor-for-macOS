@@ -1539,7 +1539,7 @@ func browseFrieveSite() {
     }
 
     func checkLatestRelease() {
-        if let url = URL(string: "https://github.com/Frieve-A/Frieve-Editor/releases") {
+        if let url = URL(string: "https://github.com/yutokun/Frieve-Editor-for-macOS/releases") {
             NSWorkspace.shared.open(url)
         }
     }
