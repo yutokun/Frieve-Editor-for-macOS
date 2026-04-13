@@ -139,6 +139,9 @@ extension WorkspaceViewModel {
     }
 
     func clearSelection() {
+        guard !selectedCardIDs.isEmpty || selectedCardID != nil || browserInlineEditorCardID != nil || document.focusedCardID != nil else {
+            return
+        }
         finishUndoEditCoalescing()
         selectedCardIDs.removeAll()
         selectedCardID = nil

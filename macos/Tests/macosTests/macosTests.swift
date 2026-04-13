@@ -1052,6 +1052,42 @@ import Testing
     #expect(result.4)
 }
 
+@Test func browserAutoZoomRepeatedEmptyClicksDoNotRestartClearSelectionFit() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let result = await MainActor.run { () -> (Bool, Bool, Bool) in
+        model.newDocument()
+        model.browserCanvasSize = CGSize(width: 1200, height: 800)
+        model.autoZoom = true
+        let rootID = model.selectedCardID ?? 0
+        let childID = model.document.addCard(title: "Click Target", linkedFrom: rootID)
+        model.document.updateCard(rootID) { card in
+            card.position = FrievePoint(x: 0.25, y: 0.28)
+        }
+        model.document.updateCard(childID) { card in
+            card.position = FrievePoint(x: 0.78, y: 0.74)
+        }
+
+        model.selectCard(childID)
+        model.clearSelection()
+        let firstFitStartedAt = model.browserFitAnimationStartedAt
+        let firstTargetZoom = model.browserFitAnimationTargetZoom
+        let firstTargetCenter = model.browserFitAnimationTargetCenter
+
+        model.clearSelection()
+
+        return (
+            model.browserFitAnimationStartedAt == firstFitStartedAt,
+            model.browserFitAnimationTargetZoom == firstTargetZoom,
+            model.browserFitAnimationTargetCenter == firstTargetCenter
+        )
+    }
+
+    #expect(result.0)
+    #expect(result.1)
+    #expect(result.2)
+}
+
 @Test func browserAutoZoomSkipsSingleAxisSpreadLikeWindows() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
