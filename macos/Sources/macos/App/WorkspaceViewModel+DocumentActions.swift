@@ -340,6 +340,30 @@ extension WorkspaceViewModel {
         statusMessage = "Copied the browser image to the clipboard"
     }
 
+    func printBrowserView() {
+        guard let image = browserSnapshotProvider?() else {
+            statusMessage = "Browser image is unavailable"
+            return
+        }
+
+        let imageSize = image.size
+        let printView = NSImageView(frame: NSRect(origin: .zero, size: imageSize))
+        printView.image = image
+        printView.imageAlignment = .alignCenter
+        printView.imageScaling = .scaleProportionallyUpOrDown
+
+        let printInfo = NSPrintInfo.shared.copy() as? NSPrintInfo ?? NSPrintInfo.shared
+        printInfo.horizontalPagination = .automatic
+        printInfo.verticalPagination = .automatic
+        printInfo.isHorizontallyCentered = true
+        printInfo.isVerticallyCentered = true
+
+        let operation = NSPrintOperation(view: printView, printInfo: printInfo)
+        operation.showsPrintPanel = true
+        operation.showsProgressPanel = true
+        statusMessage = operation.run() ? "Opened the browser print dialog" : "Browser printing was cancelled"
+    }
+
     func exportFIP2ToClipboard() {
         copyTextToClipboard(FIP2Codec.save(document: document))
         statusMessage = "Copied FIP2 text to the clipboard"

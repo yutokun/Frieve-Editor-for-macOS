@@ -57,6 +57,7 @@ struct FrieveEditorCommands: Commands {
                 Button("Clipboard (Body)") { viewModel.copyCardBodiesToClipboard() }
                 Button("Clipboard (BMP)") { viewModel.copyBrowserImageToClipboard() }
             }
+            Button("Print Browser View…") { viewModel.printBrowserView() }
         }
 
         CommandGroup(after: .undoRedo) {

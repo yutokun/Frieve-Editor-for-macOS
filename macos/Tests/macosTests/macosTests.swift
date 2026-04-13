@@ -334,6 +334,16 @@ import Testing
     #expect(model.annotatedCardBodiesExportText().contains("# Topic"))
 }
 
+@MainActor
+@Test func printBrowserViewReportsMissingSnapshot() {
+    let model = WorkspaceViewModel()
+
+    model.browserSnapshotProvider = { nil }
+    model.printBrowserView()
+
+    #expect(model.statusMessage == "Browser image is unavailable")
+}
+
 @Test func windowsShapeMenusExposeFullWindowsOptionSets() {
     #expect(frieveCardShapeOptions.count == 16)
     #expect(frieveCardShapeOptions.map(\.name).contains("No Drawing"))
