@@ -1185,6 +1185,91 @@ func browseHelp() {
         }
     }
 
+    // MARK: - Insert Operations
+
+    func insertExtLink() {
+        guard selectedCardID != nil else { return }
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.prompt = "Link"
+        if panel.runModal() == .OK, let url = panel.url {
+            registerUndoCheckpoint()
+            let path = url.path
+            updateSelectedCardBody { body in
+                body.isEmpty ? path : body + "\n" + path
+            }
+            noteDocumentMutation(status: "Linked external file")
+        }
+    }
+
+    func assignCardLabelToSelection(labelID: Int) {
+        let ids = selectedCardIDs.isEmpty ? Set(selectedCardID.map { [$0] } ?? []) : selectedCardIDs
+        guard !ids.isEmpty else { return }
+        registerUndoCheckpoint()
+        for id in ids {
+            document.updateCard(id) { card in
+                if !card.labelIDs.contains(labelID) {
+                    card.labelIDs.append(labelID)
+                }
+            }
+        }
+        noteDocumentMutation(status: "Assigned label to selected cards")
+    }
+
+    func linkSelectionToAllCardsWithLabel(labelID: Int) {
+        guard let selectedID = selectedCardID else { return }
+        let targetCards = document.cards.filter { $0.labelIDs.contains(labelID) && $0.id != selectedID }
+        guard !targetCards.isEmpty else {
+            statusMessage = "No cards with this label"
+            return
+        }
+        registerUndoCheckpoint()
+        let existingLinks = Set(document.links.map { "\($0.fromCardID)-\($0.toCardID)" })
+        for card in targetCards {
+            let key1 = "\(selectedID)-\(card.id)"
+            let key2 = "\(card.id)-\(selectedID)"
+            if !existingLinks.contains(key1) && !existingLinks.contains(key2) {
+                document.links.append(FrieveLink(
+                    fromCardID: selectedID, toCardID: card.id,
+                    directionVisible: false, shape: 0, labelIDs: [], name: ""
+                ))
+            }
+        }
+        noteDocumentMutation(status: "Linked to \(targetCards.count) cards with label")
+    }
+
+    func addLabelToAllDestinationCards(labelID: Int) {
+        guard let selectedID = selectedCardID else { return }
+        let destinationIDs = document.links
+            .filter { $0.fromCardID == selectedID || $0.toCardID == selectedID }
+            .flatMap { [$0.fromCardID, $0.toCardID] }
+            .filter { $0 != selectedID }
+        let uniqueIDs = Set(destinationIDs)
+        guard !uniqueIDs.isEmpty else {
+            statusMessage = "No linked cards"
+            return
+        }
+        registerUndoCheckpoint()
+        for id in uniqueIDs {
+            document.updateCard(id) { card in
+                if !card.labelIDs.contains(labelID) {
+                    card.labelIDs.append(labelID)
+                }
+            }
+        }
+        noteDocumentMutation(status: "Added label to \(uniqueIDs.count) destination cards")
+    }
+
+    private func updateSelectedCardBody(_ transform: (String) -> String) {
+        guard let selectedCardID, let card = cardByID(selectedCardID) else { return }
+        document.updateCard(selectedCardID) { c in
+            c.bodyText = transform(card.bodyText)
+            c.updated = isoTimestamp()
+        }
+    }
+
     // MARK: - Batch Conversion
 
     func batchChangeAllCardsShape(to shape: Int) {

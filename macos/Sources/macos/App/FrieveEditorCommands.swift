@@ -64,7 +64,7 @@ struct FrieveEditorCommands: Commands {
             }
         }
 
-        CommandMenu("Cards") {
+        CommandMenu("Insert") {
             Button("New Root Card") { viewModel.addRootCard() }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
             Button("New Child Card") { viewModel.addChildCard() }
@@ -72,7 +72,28 @@ struct FrieveEditorCommands: Commands {
             Button("New Sibling Card") { viewModel.addSiblingCard() }
                 .keyboardShortcut(.return, modifiers: [.command, .shift])
             Divider()
+            Button("New Ext Link…") { viewModel.insertExtLink() }
+            Menu("New Label for Selected Cards") {
+                ForEach(viewModel.document.cardLabels) { label in
+                    Button(label.name) { viewModel.assignCardLabelToSelection(labelID: label.id) }
+                }
+            }
+            .disabled(viewModel.selectedCardIDs.isEmpty)
+            Divider()
             Button("Link to Root") { viewModel.addLinkBetweenSelectionAndRoot() }
+            Menu("Link to All Cards with Label") {
+                ForEach(viewModel.document.cardLabels) { label in
+                    Button(label.name) { viewModel.linkSelectionToAllCardsWithLabel(labelID: label.id) }
+                }
+            }
+            .disabled(viewModel.selectedCardID == nil)
+            Menu("Add Label to All Destination Cards") {
+                ForEach(viewModel.document.cardLabels) { label in
+                    Button(label.name) { viewModel.addLabelToAllDestinationCards(labelID: label.id) }
+                }
+            }
+            .disabled(viewModel.selectedCardID == nil)
+            Divider()
             Button("Delete Selected Card") { viewModel.deleteSelectedCard() }
                 .keyboardShortcut(.delete, modifiers: [.command])
         }
