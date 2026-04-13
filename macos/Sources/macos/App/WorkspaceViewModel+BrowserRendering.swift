@@ -104,7 +104,6 @@ extension WorkspaceViewModel {
     func browserCardRasterCacheKey(for snapshot: BrowserCardLayerSnapshot) -> String {
         [
             String(snapshot.card.id),
-            String(snapshot.detailLevel.rawValue),
             snapshot.card.updated,
             snapshot.card.title,
             "\(Int(snapshot.metadata.canvasSize.width.rounded()))x\(Int(snapshot.metadata.canvasSize.height.rounded()))"
