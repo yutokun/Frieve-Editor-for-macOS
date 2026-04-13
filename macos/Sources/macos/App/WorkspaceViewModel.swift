@@ -393,6 +393,9 @@ final class WorkspaceViewModel: ObservableObject {
     var browserAutoScrollStartedAt: CFTimeInterval?
     var browserAutoScrollSuspendedUntil: CFTimeInterval = 0
     var browserAutoScrollTimer: Timer?
+    var browserAutoZoomStartZoom: Double?
+    var browserAutoZoomTargetZoom: Double?
+    var browserAutoZoomStartedAt: CFTimeInterval?
     var browserInteractionModeEnabled: Bool = false
     var browserInteractionModeWorkItem: DispatchWorkItem?
     var browserInteractionModeRefreshHandler: ((Bool) -> Void)?
