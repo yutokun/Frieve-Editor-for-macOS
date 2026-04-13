@@ -663,9 +663,18 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         let signature = browserAppearanceSignature
         guard force || lastAppearanceSignature != signature else { return }
         lastAppearanceSignature = signature
+        lastOverlaySignature = nil
+        lastSceneSnapshot = nil
         renderer.handleAppearanceChange(signature: signature)
-        metalView.clearColor = MTLClearColor(color: NSColor.textBackgroundColor)
+        applyDynamicAppearanceColors()
         refreshFromViewModel()
+    }
+
+    private func applyDynamicAppearanceColors() {
+        metalView.clearColor = MTLClearColor(color: NSColor.textBackgroundColor)
+        marqueeOverlayLayer.fillColor = NSColor.controlAccentColor.withAlphaComponent(0.10).cgColor
+        marqueeOverlayLayer.strokeColor = NSColor.controlAccentColor.withAlphaComponent(0.9).cgColor
+        linkPreviewLayer.strokeColor = NSColor.controlAccentColor.withAlphaComponent(0.65).cgColor
     }
 
     @objc
