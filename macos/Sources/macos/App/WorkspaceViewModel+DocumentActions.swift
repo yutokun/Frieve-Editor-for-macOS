@@ -72,23 +72,161 @@ extension WorkspaceViewModel {
     }
 
     func exportCardTitles() {
-        let text = sortedCards().map { $0.title }.joined(separator: "\n")
-        saveTextExport(text, defaultName: "CardTitles.txt")
+        saveTextExport(cardTitlesExportText(), defaultName: "CardTitles.txt")
     }
 
     func exportCardBodies() {
-        let text = sortedCards()
-            .map { "# \($0.title)\n\($0.bodyText)" }
-            .joined(separator: "\n\n")
-        saveTextExport(text, defaultName: "CardBodies.txt")
+        saveTextExport(cardBodiesExportText(), defaultName: "CardTexts.txt")
+    }
+
+    func exportAnnotatedCardBodies() {
+        saveTextExport(annotatedCardBodiesExportText(), defaultName: "CardBodies.txt")
+    }
+
+    func exportCardBodiesPerFile() {
+        guard let directory = chooseExportDirectory(prompt: "Export") else { return }
+        var usedNames: Set<String> = []
+
+        do {
+            for card in sortedCards() {
+                let url = uniqueFileURL(in: directory, baseName: card.title, pathExtension: "txt", usedNames: &usedNames)
+                try card.bodyText.write(to: url, atomically: true, encoding: .utf8)
+            }
+            statusMessage = "Exported \(usedNames.count) text files"
+        } catch {
+            statusMessage = error.localizedDescription
+        }
     }
 
     func exportHierarchicalText() {
         saveTextExport(document.hierarchicalText(), defaultName: "Hierarchy.txt")
     }
 
+    func exportHTMLFiles() {
+        guard let directory = chooseExportDirectory(prompt: "Export") else { return }
+
+        do {
+            let cards = sortedCards()
+            var filenamesByCardID: [Int: String] = [:]
+            var usedNames: Set<String> = ["index.html", "style.css"]
+            for card in cards {
+                let url = uniqueFileURL(in: directory, baseName: card.title, pathExtension: "html", usedNames: &usedNames)
+                filenamesByCardID[card.id] = url.lastPathComponent
+            }
+
+            let style = """
+            body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 32px; background: #f7f7f9; color: #1f2937; }
+            a { color: #2563eb; text-decoration: none; }
+            a:hover { text-decoration: underline; }
+            .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+            .nav, .links { margin: 18px 0; color: #4b5563; }
+            .body { white-space: pre-wrap; line-height: 1.5; }
+            """
+            try style.write(to: directory.appendingPathComponent("style.css"), atomically: true, encoding: .utf8)
+
+            let listItems = cards.compactMap { card -> String? in
+                guard let filename = filenamesByCardID[card.id] else { return nil }
+                return "<li><a href=\"\(filename.htmlEscaped)\">\(card.title.htmlEscaped)</a></li>"
+            }.joined(separator: "\n")
+            let indexHTML = """
+            <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <title>\(document.title.htmlEscaped)</title>
+              <link rel="stylesheet" href="./style.css">
+            </head>
+            <body>
+              <div class="card">
+                <h1>\(document.title.htmlEscaped)</h1>
+                <ul>
+                \(listItems)
+                </ul>
+              </div>
+            </body>
+            </html>
+            """
+            try indexHTML.write(to: directory.appendingPathComponent("index.html"), atomically: true, encoding: .utf8)
+
+            for (index, card) in cards.enumerated() {
+                guard let filename = filenamesByCardID[card.id] else { continue }
+                let previousLink = index > 0 ? filenamesByCardID[cards[index - 1].id] : nil
+                let nextLink = index < cards.count - 1 ? filenamesByCardID[cards[index + 1].id] : nil
+                let relatedLinks = linksForCard(card.id).compactMap { link -> String? in
+                    let otherID = link.fromCardID == card.id ? link.toCardID : link.fromCardID
+                    guard let otherCard = cardByID(otherID),
+                          let otherFilename = filenamesByCardID[otherID] else { return nil }
+                    return "<a href=\"\(otherFilename.htmlEscaped)\">[\(otherCard.title.htmlEscaped)]</a>"
+                }.joined(separator: " ")
+
+                let page = """
+                <html lang="en">
+                <head>
+                  <meta charset="utf-8">
+                  <title>\(document.title.htmlEscaped) - \(card.title.htmlEscaped)</title>
+                  <link rel="stylesheet" href="./style.css">
+                </head>
+                <body>
+                  <div class="card">
+                    <div class="nav">
+                      <a href="./index.html">[Top]</a>
+                      \(previousLink.map { "<a href=\"\($0.htmlEscaped)\">[Prev]</a>" } ?? "[Prev]")
+                      \(nextLink.map { "<a href=\"\($0.htmlEscaped)\">[Next]</a>" } ?? "[Next]")
+                    </div>
+                    <h1>\(card.title.htmlEscaped)</h1>
+                    \(relatedLinks.isEmpty ? "" : "<div class=\"links\">\(relatedLinks)</div>")
+                    <div class="body">\(card.bodyText.htmlEscaped)</div>
+                  </div>
+                </body>
+                </html>
+                """
+                try page.write(to: directory.appendingPathComponent(filename), atomically: true, encoding: .utf8)
+            }
+
+            statusMessage = "Exported HTML files"
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
     func exportHTMLDocument() {
         saveTextExport(document.htmlDocument(title: document.title), defaultName: "FrieveDocument.html")
+    }
+
+    func exportBrowserBMP() {
+        guard let image = browserSnapshotProvider?() else {
+            statusMessage = "Browser image is unavailable"
+            return
+        }
+        saveImageExport(image, defaultName: "Browser.bmp", fileType: .bmp)
+    }
+
+    func exportBrowserJPEG() {
+        guard let image = browserSnapshotProvider?() else {
+            statusMessage = "Browser image is unavailable"
+            return
+        }
+        saveImageExport(image, defaultName: "Browser.jpg", fileType: .jpeg)
+    }
+
+    func copyCardTitlesToClipboard() {
+        copyTextToClipboard(cardTitlesExportText())
+        statusMessage = "Copied card titles to the clipboard"
+    }
+
+    func copyCardBodiesToClipboard() {
+        copyTextToClipboard(cardBodiesExportText())
+        statusMessage = "Copied card text to the clipboard"
+    }
+
+    func copyBrowserImageToClipboard() {
+        guard let image = browserSnapshotProvider?() else {
+            statusMessage = "Browser image is unavailable"
+            return
+        }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([image])
+        statusMessage = "Copied the browser image to the clipboard"
     }
 
     func exportFIP2ToClipboard() {
@@ -101,6 +239,20 @@ extension WorkspaceViewModel {
         lastGPTPrompt = prompt
         copyTextToClipboard(prompt)
         statusMessage = "Copied a GPT-ready prompt to the clipboard"
+    }
+
+    func cardTitlesExportText() -> String {
+        sortedCards().map(\.title).joined(separator: "\n")
+    }
+
+    func cardBodiesExportText() -> String {
+        sortedCards().map(\.bodyText).joined(separator: "\n")
+    }
+
+    func annotatedCardBodiesExportText() -> String {
+        sortedCards()
+            .map { "# \($0.title)\n\($0.bodyText)" }
+            .joined(separator: "\n\n")
     }
 
     func searchWebForSelection() {

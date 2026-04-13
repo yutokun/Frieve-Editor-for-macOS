@@ -14,6 +14,9 @@ struct BrowserWorkspaceView: View {
                         OverviewMiniMapView(viewModel: viewModel, size: geometry.size)
                             .frame(width: 220, height: 150)
                     }
+                    if let mode = viewModel.activeBrowserAnimation {
+                        BrowserAnimationHUD(viewModel: viewModel, mode: mode)
+                    }
                     BrowserCanvasHUD(viewModel: viewModel, canvasSize: geometry.size)
                 }
                 .padding(16)
@@ -194,6 +197,88 @@ private struct BrowserCanvasHUD: View {
         .font(.caption)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+private struct BrowserAnimationHUD: View {
+    @ObservedObject var viewModel: WorkspaceViewModel
+    let mode: BrowserAnimationMode
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label(mode.title, systemImage: "sparkles.rectangle.stack")
+                    .font(.headline)
+                Spacer()
+                Button(viewModel.animationPaused ? "Resume" : "Pause") {
+                    viewModel.toggleBrowserAnimationPause()
+                }
+                Button("Stop") {
+                    viewModel.stopBrowserAnimation()
+                }
+            }
+
+            HStack(spacing: 12) {
+                Button("Full Screen") {
+                    viewModel.toggleBrowserAnimationFullScreen()
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Zoom")
+                        Spacer()
+                        Text("\(viewModel.zoom.formatted(.number.precision(.fractionLength(2))))×")
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(
+                        value: Binding(
+                            get: { viewModel.zoom },
+                            set: { viewModel.setBrowserAnimationZoom($0) }
+                        ),
+                        in: 0.2 ... 4.0
+                    )
+                }
+            }
+
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Speed")
+                        Spacer()
+                        Text("\(viewModel.animationSpeed)")
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(
+                        value: Binding(
+                            get: { Double(viewModel.animationSpeed) },
+                            set: { viewModel.animationSpeed = Int($0.rounded()) }
+                        ),
+                        in: 1 ... 100,
+                        step: 1
+                    )
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Cards")
+                        Spacer()
+                        Text("\(viewModel.animationVisibleCardCount)")
+                            .foregroundStyle(.secondary)
+                    }
+                    Slider(
+                        value: Binding(
+                            get: { Double(viewModel.animationVisibleCardCount) },
+                            set: { viewModel.animationVisibleCardCount = Int($0.rounded()) }
+                        ),
+                        in: 1 ... 30,
+                        step: 1
+                    )
+                }
+            }
+        }
+        .font(.caption)
+        .padding(12)
+        .frame(width: 340)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }

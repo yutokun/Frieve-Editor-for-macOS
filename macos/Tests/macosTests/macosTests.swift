@@ -191,6 +191,75 @@ import Testing
     #expect(html.contains("Topic"))
 }
 
+@MainActor
+@Test func windowsStyleTextExportsMatchMenuExpectations() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.document.updateCard(0) { card in
+        card.bodyText = "Root body"
+    }
+    model.addChildCard()
+    let childID = try #require(model.selectedCardID)
+    model.document.updateCard(childID) { card in
+        card.title = "Topic"
+        card.bodyText = "Line 1\nLine 2"
+    }
+
+    #expect(model.cardTitlesExportText() == "Frieve Editor\nTopic")
+    #expect(model.cardBodiesExportText() == "Root body\nLine 1\nLine 2")
+    #expect(model.annotatedCardBodiesExportText().contains("# Topic"))
+}
+
+@MainActor
+@Test func randomFlashAnimationRestoresDocumentAndSelectionWhenStopped() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.addChildCard()
+    let childID = try #require(model.selectedCardID)
+    let originalDocument = model.document
+    model.canvasCenter = FrievePoint(x: 0.25, y: 0.75)
+    model.zoom = 1.8
+    model.selectedCardID = childID
+    model.selectedCardIDs = [childID]
+
+    model.startBrowserAnimation(.randomFlash)
+
+    #expect(model.activeBrowserAnimation == .randomFlash)
+    #expect(model.selectedTab == .browser)
+    #expect(model.document.cards.contains(where: { $0.visible }))
+
+    model.stopBrowserAnimation()
+
+    #expect(model.activeBrowserAnimation == nil)
+    #expect(model.document == originalDocument)
+    #expect(model.selectedCardID == childID)
+    #expect(model.selectedCardIDs == [childID])
+    #expect(model.canvasCenter == FrievePoint(x: 0.25, y: 0.75))
+    #expect(model.zoom == 1.8)
+}
+
+@MainActor
+@Test func randomTraceAnimationSelectsVisibleCardAndCanPause() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.addChildCard()
+    let childID = try #require(model.selectedCardID)
+    model.document.updateCard(childID) { card in
+        card.visible = true
+    }
+
+    model.startBrowserAnimation(.randomTrace)
+
+    #expect(model.activeBrowserAnimation == .randomTrace)
+    #expect(model.autoScroll)
+    #expect(model.autoZoom)
+    let selectedID = try #require(model.selectedCardID)
+    #expect(model.selectedCardIDs.contains(selectedID))
+
+    model.toggleBrowserAnimationPause()
+    #expect(model.animationPaused)
+}
+
 @Test func browserLinkArrowPlacementUsesMidLinkGeometry() async throws {
     let straight = browserLinkArrowPlacement(
         shapeIndex: 5,

@@ -218,6 +218,58 @@ extension WorkspaceViewModel {
         }
     }
 
+    func saveImageExport(_ image: NSImage, defaultName: String, fileType: NSBitmapImageRep.FileType) {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = defaultName
+        if panel.runModal() == .OK, let url = panel.url {
+            do {
+                try writeImage(image, to: url, fileType: fileType)
+                statusMessage = "Exported \(url.lastPathComponent)"
+            } catch {
+                statusMessage = error.localizedDescription
+            }
+        }
+    }
+
+    func chooseExportDirectory(prompt: String = "Export") -> URL? {
+        let panel = NSOpenPanel()
+        panel.prompt = prompt
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        return panel.runModal() == .OK ? panel.url : nil
+    }
+
+    func makeSafeFilename(_ value: String, fallback: String) -> String {
+        let trimmed = value.trimmed.nilIfEmpty ?? fallback
+        let invalid = CharacterSet(charactersIn: "/\\?%*|\"<>:")
+        let sanitizedScalars = trimmed.unicodeScalars.map { invalid.contains($0) ? "_" : Character($0) }
+        let sanitized = String(sanitizedScalars).trimmed
+        return sanitized.nilIfEmpty ?? fallback
+    }
+
+    func uniqueFileURL(in directory: URL, baseName: String, pathExtension: String, usedNames: inout Set<String>) -> URL {
+        let cleanBaseName = makeSafeFilename(baseName, fallback: "Card")
+        var index = 1
+        var candidate = "\(cleanBaseName).\(pathExtension)"
+        while usedNames.contains(candidate) || FileManager.default.fileExists(atPath: directory.appendingPathComponent(candidate).path) {
+            index += 1
+            candidate = "\(cleanBaseName)-\(index).\(pathExtension)"
+        }
+        usedNames.insert(candidate)
+        return directory.appendingPathComponent(candidate)
+    }
+
+    func writeImage(_ image: NSImage, to url: URL, fileType: NSBitmapImageRep.FileType) throws {
+        guard let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let data = bitmap.representation(using: fileType, properties: [:]) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        try data.write(to: url)
+    }
+
     func ensureDocumentCaches() {
         guard cachedDocumentCacheVersion != documentCacheVersion else { return }
 

@@ -28,6 +28,9 @@ final class AppSettings: ObservableObject {
         static let gptSystemPrompt = "FrieveEditorMac.gptSystemPrompt"
         static let readAloudRate = "FrieveEditorMac.readAloudRate"
         static let language = "FrieveEditorMac.language"
+        static let animationVisibleCardCount = "FrieveEditorMac.animationVisibleCardCount"
+        static let animationSpeed = "FrieveEditorMac.animationSpeed"
+        static let animationPaused = "FrieveEditorMac.animationPaused"
         static let showOverview = "FrieveEditorMac.showOverview"
         static let showFileList = "FrieveEditorMac.showFileList"
         static let showCardList = "FrieveEditorMac.showCardList"
@@ -87,6 +90,18 @@ final class AppSettings: ObservableObject {
         didSet { persistIfReady() }
     }
 
+    @Published var animationVisibleCardCount: Int {
+        didSet { persistIfReady() }
+    }
+
+    @Published var animationSpeed: Int {
+        didSet { persistIfReady() }
+    }
+
+    @Published var animationPaused: Bool {
+        didSet { persistIfReady() }
+    }
+
     @Published var showOverview: Bool {
         didSet { persistIfReady() }
     }
@@ -124,6 +139,9 @@ final class AppSettings: ObservableObject {
         gptSystemPrompt = userDefaults.string(forKey: Keys.gptSystemPrompt) ?? "Summarize the selected card, suggest related cards, and propose next writing steps."
         readAloudRate = userDefaults.object(forKey: Keys.readAloudRate) as? Double ?? 175
         language = userDefaults.string(forKey: Keys.language) ?? "English"
+        animationVisibleCardCount = userDefaults.object(forKey: Keys.animationVisibleCardCount) as? Int ?? 10
+        animationSpeed = userDefaults.object(forKey: Keys.animationSpeed) as? Int ?? 30
+        animationPaused = userDefaults.object(forKey: Keys.animationPaused) as? Bool ?? false
         showOverview = userDefaults.object(forKey: Keys.showOverview) as? Bool ?? true
         showFileList = userDefaults.object(forKey: Keys.showFileList) as? Bool ?? true
         showCardList = userDefaults.object(forKey: Keys.showCardList) as? Bool ?? true
@@ -169,6 +187,9 @@ final class AppSettings: ObservableObject {
         userDefaults.set(gptSystemPrompt, forKey: Keys.gptSystemPrompt)
         userDefaults.set(readAloudRate, forKey: Keys.readAloudRate)
         userDefaults.set(language, forKey: Keys.language)
+        userDefaults.set(animationVisibleCardCount, forKey: Keys.animationVisibleCardCount)
+        userDefaults.set(animationSpeed, forKey: Keys.animationSpeed)
+        userDefaults.set(animationPaused, forKey: Keys.animationPaused)
         userDefaults.set(showOverview, forKey: Keys.showOverview)
         userDefaults.set(showFileList, forKey: Keys.showFileList)
         userDefaults.set(showCardList, forKey: Keys.showCardList)

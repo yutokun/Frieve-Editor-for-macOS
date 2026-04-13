@@ -39,6 +39,26 @@ struct FrieveEditorCommands: Commands {
                 .keyboardShortcut("s", modifiers: [.command])
             Button("Save As…") { viewModel.saveDocumentAs() }
                 .keyboardShortcut("S", modifiers: [.command, .shift])
+            Divider()
+            Menu("Export") {
+                Button("Txt File (Card Title)…") { viewModel.exportCardTitles() }
+                Button("Txt File (Text)…") { viewModel.exportCardBodies() }
+                Button("Card Bodies (Annotated)…") { viewModel.exportAnnotatedCardBodies() }
+                Button("Txt Files…") { viewModel.exportCardBodiesPerFile() }
+                Button("Hierarchical Text File…") { viewModel.exportHierarchicalText() }
+                Button("HTML Files…") { viewModel.exportHTMLFiles() }
+                Button("HTML Document…") { viewModel.exportHTMLDocument() }
+                Divider()
+                Button("BMP File…") { viewModel.exportBrowserBMP() }
+                Button("JPEG File…") { viewModel.exportBrowserJPEG() }
+                Divider()
+                Button("Clipboard (Card Title)") { viewModel.copyCardTitlesToClipboard() }
+                Button("Clipboard (Text)") { viewModel.copyCardBodiesToClipboard() }
+                Button("Clipboard (BMP)") { viewModel.copyBrowserImageToClipboard() }
+                Divider()
+                Button("Copy FIP2 to Clipboard") { viewModel.exportFIP2ToClipboard() }
+                Button("Copy GPT Prompt") { viewModel.copyGPTPromptToClipboard() }
+            }
         }
 
         CommandGroup(after: .undoRedo) {
@@ -112,14 +132,12 @@ struct FrieveEditorCommands: Commands {
             Toggle("Show Inspector", isOn: $viewModel.showInspector)
         }
 
-        CommandMenu("Export") {
-            Button("Export Card Titles") { viewModel.exportCardTitles() }
-            Button("Export Card Bodies") { viewModel.exportCardBodies() }
-            Button("Export Hierarchical Text") { viewModel.exportHierarchicalText() }
-            Button("Export HTML") { viewModel.exportHTMLDocument() }
-            Divider()
-            Button("Copy FIP2 to Clipboard") { viewModel.exportFIP2ToClipboard() }
-            Button("Copy GPT Prompt") { viewModel.copyGPTPromptToClipboard() }
+        CommandMenu("Animation") {
+            Button("Random Flash") { viewModel.startBrowserAnimation(.randomFlash) }
+            Button("Random Map") { viewModel.startBrowserAnimation(.randomMap) }
+            Button("Random Scroll") { viewModel.startBrowserAnimation(.randomScroll) }
+            Button("Random Jump") { viewModel.startBrowserAnimation(.randomJump) }
+            Button("Random Trace") { viewModel.startBrowserAnimation(.randomTrace) }
         }
 
         CommandMenu("Services") {

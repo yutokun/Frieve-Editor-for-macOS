@@ -71,6 +71,9 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
         viewModel.browserSurfaceViewportRefreshHandler = { [weak view] in
             view?.refreshFromViewModel()
         }
+        viewModel.browserSnapshotProvider = { [weak view] in
+            view?.snapshotImage()
+        }
         view.onScroll = { deltaX, deltaY, location, modifiers in
             viewModel.handleScrollWheel(deltaX: deltaX, deltaY: deltaY, modifiers: modifiers, at: location, in: canvasSize)
         }
@@ -219,6 +222,18 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
             width: bounds.width * windowBackingScale,
             height: bounds.height * windowBackingScale
         )
+    }
+
+    func snapshotImage() -> NSImage? {
+        guard bounds.width > 0, bounds.height > 0,
+              let representation = bitmapImageRepForCachingDisplay(in: bounds) else {
+            return nil
+        }
+        representation.size = bounds.size
+        cacheDisplay(in: bounds, to: representation)
+        let image = NSImage(size: bounds.size)
+        image.addRepresentation(representation)
+        return image
     }
 
     override func mouseMoved(with event: NSEvent) {

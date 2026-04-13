@@ -222,6 +222,26 @@ struct BrowserOverviewCacheKey: Hashable {
     }
 }
 
+enum BrowserAnimationMode: String, Identifiable {
+    case randomFlash
+    case randomMap
+    case randomScroll
+    case randomJump
+    case randomTrace
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .randomFlash: "Random Flash"
+        case .randomMap: "Random Map"
+        case .randomScroll: "Random Scroll"
+        case .randomJump: "Random Jump"
+        case .randomTrace: "Random Trace"
+        }
+    }
+}
+
 struct BrowserSurfaceContentCacheKey: Hashable {
     let contentRevision: Int
     let sceneScale: UInt64
@@ -299,6 +319,16 @@ final class WorkspaceViewModel: ObservableObject {
     }
     @Published var linkLabelsVisible: Bool = true
     @Published var labelRectanglesVisible: Bool = true
+    @Published var activeBrowserAnimation: BrowserAnimationMode?
+    @Published var animationPaused: Bool = false {
+        didSet { settings.animationPaused = animationPaused }
+    }
+    @Published var animationVisibleCardCount: Int = 10 {
+        didSet { settings.animationVisibleCardCount = animationVisibleCardCount }
+    }
+    @Published var animationSpeed: Int = 30 {
+        didSet { settings.animationSpeed = animationSpeed }
+    }
     @Published var showOverview: Bool = true {
         didSet { settings.showOverview = showOverview }
     }
@@ -388,6 +418,21 @@ final class WorkspaceViewModel: ObservableObject {
     var browserAutoArrangeTimer: Timer?
     var browserAutoArrangeSuspendedUntil: CFTimeInterval = 0
     var browserAutoArrangeResumeWorkItem: DispatchWorkItem?
+    var browserAnimationTimer: Timer?
+    var browserAnimationCountdownMilliseconds: Double = 0
+    var browserAnimationBackupDocument: FrieveDocument?
+    var browserAnimationBackupSelectedCardID: Int?
+    var browserAnimationBackupSelectedCardIDs: Set<Int> = []
+    var browserAnimationBackupCanvasCenter: FrievePoint?
+    var browserAnimationBackupZoom: Double?
+    var browserAnimationBackupArrangeMode: String?
+    var browserAnimationBackupAutoArrangeEnabled: Bool?
+    var browserAnimationBackupAutoScroll: Bool?
+    var browserAnimationBackupAutoZoom: Bool?
+    var browserAnimationActiveCardIDs: [Int?] = Array(repeating: nil, count: 30)
+    var browserAnimationVelocityByCardID: [Int: FrievePoint] = [:]
+    var browserAnimationTracePreviousCardID: Int?
+    var browserSnapshotProvider: (() -> NSImage?)?
     var browserAutoScrollStartCenter: FrievePoint?
     var browserAutoScrollTargetCenter: FrievePoint?
     var browserAutoScrollStartedAt: CFTimeInterval?
@@ -429,6 +474,9 @@ final class WorkspaceViewModel: ObservableObject {
         showFileList = settings.showFileList
         showCardList = settings.showCardList
         showInspector = settings.showInspector
+        animationVisibleCardCount = min(max(settings.animationVisibleCardCount, 1), 30)
+        animationSpeed = min(max(settings.animationSpeed, 1), 100)
+        animationPaused = settings.animationPaused
         recentFiles = settings.recentFiles
 
         if let bundledHelp = Bundle.module.url(forResource: "help", withExtension: "fip"),
