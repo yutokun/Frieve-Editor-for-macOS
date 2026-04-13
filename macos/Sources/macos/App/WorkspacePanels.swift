@@ -1157,7 +1157,8 @@ struct DrawingCanvasViewport: Equatable {
     private func offsetBounds(contentLength: CGFloat, viewportLength: CGFloat) -> ClosedRange<CGFloat> {
         if contentLength <= viewportLength {
             let centeredOffset = (viewportLength - contentLength) * 0.5
-            return centeredOffset...centeredOffset
+            let padding = viewportLength
+            return (centeredOffset - padding)...(centeredOffset + padding)
         }
         return (viewportLength - contentLength)...0
     }

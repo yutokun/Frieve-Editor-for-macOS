@@ -323,12 +323,15 @@ extension WorkspaceViewModel {
     func addSiblingCard() {
         registerUndoCheckpoint()
         guard let siblingID = selectedCardID else { return }
+        let source = document.card(withID: siblingID)
         let id = document.addSiblingCard(for: siblingID)
-        // Place sibling near the parent card (or near the sibling itself if no parent)
         let parentID = document.links.first { $0.toCardID == siblingID }?.fromCardID
-        let anchor = document.card(withID: parentID) ?? document.card(withID: siblingID)
+        let anchor = document.card(withID: parentID) ?? source
         if let anchor {
-            let pos = nearbyPlacementPosition(near: anchor)
+            var pos = nearbyPlacementPosition(near: anchor)
+            if let source {
+                pos.y = source.position.y
+            }
             document.updateCard(id) { $0.position = pos }
         }
         selectCard(id)

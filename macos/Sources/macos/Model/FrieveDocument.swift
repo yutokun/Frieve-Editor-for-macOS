@@ -755,10 +755,12 @@ struct FrieveDocument: Codable, Hashable {
         guard let cardID, let source = card(withID: cardID) else {
             return addCard(title: "New Card")
         }
-        let siblingID = addCard(title: "Sibling of \(source.title)")
+        let parentID = links.first { $0.toCardID == cardID }?.fromCardID
+        let siblingID = addCard(title: "Sibling of \(source.title)", linkedFrom: parentID)
         updateCard(siblingID) { sibling in
             sibling.shape = source.shape
             sibling.size = source.size
+            sibling.isTop = parentID == nil
         }
         return siblingID
     }
