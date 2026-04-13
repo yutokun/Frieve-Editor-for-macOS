@@ -322,6 +322,44 @@ import Testing
     }
 }
 
+@Test func browserLinkArrowSegmentKeepsRendererArrowAnchoredAtMidLink() async throws {
+    let straight = browserLinkArrowSegment(
+        shapeIndex: 5,
+        start: CGPoint(x: 0, y: 0),
+        end: CGPoint(x: 120, y: 0)
+    )
+    #expect(straight != nil)
+    if let straight {
+        #expect(abs(straight.end.x - 60) < 0.01)
+        #expect(abs(straight.end.y) < 0.01)
+        #expect(straight.start.x < straight.end.x)
+        #expect(abs(straight.start.y - straight.end.y) < 0.001)
+    }
+
+    let elbow = browserLinkArrowSegment(
+        shapeIndex: 2,
+        start: CGPoint(x: 0, y: 0),
+        end: CGPoint(x: 120, y: 80)
+    )
+    #expect(elbow != nil)
+    if let elbow {
+        #expect(abs(elbow.end.x - 60) < 0.01)
+        #expect(abs(elbow.end.y - 40) < 0.01)
+        #expect(abs(elbow.start.x - elbow.end.x) < 0.001)
+        #expect(elbow.start.y < elbow.end.y)
+    }
+
+    let curve = browserLinkArrowSegment(
+        shapeIndex: 1,
+        start: CGPoint(x: 0, y: 0),
+        end: CGPoint(x: 140, y: 40)
+    )
+    #expect(curve != nil)
+    if let curve {
+        #expect(hypot(curve.end.x - 140, curve.end.y - 40) > 40)
+    }
+}
+
 @Test func browserTrimmedSegmentEndPullsChevronJointBackSlightly() async throws {
     let trimmed = browserTrimmedSegmentEnd(
         start: CGPoint(x: 48, y: -7),

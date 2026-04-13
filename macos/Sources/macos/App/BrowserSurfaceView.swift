@@ -1877,27 +1877,23 @@ private extension BrowserMetalRenderer {
         color: SIMD4<Float>
     ) -> [BrowserMetalLinkInstance] {
         let arrowLineWidth = max(lineWidth * 1.4, lineWidth + 1)
-        let arrowStart: CGPoint
-        let arrowEnd: CGPoint
-        switch abs(shapeIndex % 6) {
-        case 2, 4:
-            let midX = (start.x + end.x) / 2
-            arrowStart = CGPoint(x: midX, y: end.y)
-            arrowEnd = end
-        default:
-            arrowStart = start
-            arrowEnd = end
+        guard let arrowSegment = browserLinkArrowSegment(
+            shapeIndex: shapeIndex,
+            start: start,
+            end: end
+        ) else {
+            return []
         }
         guard distanceSquared(
-            from: SIMD2(Float(arrowStart.x), Float(arrowStart.y)),
-            to: SIMD2(Float(arrowEnd.x), Float(arrowEnd.y))
+            from: SIMD2(Float(arrowSegment.start.x), Float(arrowSegment.start.y)),
+            to: SIMD2(Float(arrowSegment.end.x), Float(arrowSegment.end.y))
         ) > 0.00000001 else {
             return []
         }
         return [
             BrowserMetalLinkInstance(
-                start: SIMD2(Float(arrowStart.x), Float(arrowStart.y)),
-                end: SIMD2(Float(arrowEnd.x), Float(arrowEnd.y)),
+                start: SIMD2(Float(arrowSegment.start.x), Float(arrowSegment.start.y)),
+                end: SIMD2(Float(arrowSegment.end.x), Float(arrowSegment.end.y)),
                 control1: .zero,
                 control2: .zero,
                 color: color,

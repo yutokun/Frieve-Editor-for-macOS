@@ -12,6 +12,11 @@ struct BrowserLinkArrowGeometry {
     let rightWing: CGPoint
 }
 
+struct BrowserLinkArrowSegment {
+    let start: CGPoint
+    let end: CGPoint
+}
+
 func browserTrimmedSegmentEnd(start: CGPoint, end: CGPoint, trimDistance: CGFloat) -> CGPoint {
     let dx = end.x - start.x
     let dy = end.y - start.y
@@ -116,6 +121,28 @@ func browserLinkArrowGeometry(
         leftWing: leftWing,
         rightWing: rightWing
     )
+}
+
+func browserLinkArrowSegment(
+    shapeIndex: Int,
+    start: CGPoint,
+    end: CGPoint,
+    baseScale: CGFloat = 1,
+    segmentLength: CGFloat = 1
+) -> BrowserLinkArrowSegment? {
+    guard let placement = browserLinkArrowPlacement(
+        shapeIndex: shapeIndex,
+        start: start,
+        end: end,
+        baseScale: baseScale
+    ) else { return nil }
+
+    let scaledSegmentLength = max(segmentLength / max(baseScale, 0.0001), 0.001)
+    let segmentStart = CGPoint(
+        x: placement.center.x - placement.direction.dx * scaledSegmentLength,
+        y: placement.center.y - placement.direction.dy * scaledSegmentLength
+    )
+    return BrowserLinkArrowSegment(start: segmentStart, end: placement.center)
 }
 
 private func browserLinkPolylinePoints(
