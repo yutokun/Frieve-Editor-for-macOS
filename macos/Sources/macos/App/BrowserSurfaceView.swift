@@ -1257,6 +1257,10 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
 
     private func buildLinkInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalLinkInstance] {
         let canvasBackground = NSColor.textBackgroundColor
+        let linkBaseScale = max(
+            max(abs(CGFloat(scene.worldToCanvasTransform.a)), abs(CGFloat(scene.worldToCanvasTransform.d))),
+            0.0001
+        )
         return scene.links.flatMap { snapshot -> [BrowserMetalLinkInstance] in
             let color = (snapshot.isHighlighted
                 ? NSColor.controlAccentColor.browserOpaqueComposite(over: canvasBackground, opacity: 0.85, darkModeLift: 0.04)
@@ -1275,6 +1279,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
                         start: snapshot.startPoint,
                         end: snapshot.endPoint,
                         shapeIndex: snapshot.shapeIndex,
+                        baseScale: linkBaseScale,
                         lineWidth: width,
                         color: color
                     )
@@ -1873,6 +1878,7 @@ private extension BrowserMetalRenderer {
         start: CGPoint,
         end: CGPoint,
         shapeIndex: Int,
+        baseScale: CGFloat = 1,
         lineWidth: Float,
         color: SIMD4<Float>
     ) -> [BrowserMetalLinkInstance] {
@@ -1880,7 +1886,8 @@ private extension BrowserMetalRenderer {
         guard let segments = browserLinkArrowStrokeSegments(
             shapeIndex: shapeIndex,
             start: start,
-            end: end
+            end: end,
+            baseScale: baseScale
         ) else {
             return []
         }

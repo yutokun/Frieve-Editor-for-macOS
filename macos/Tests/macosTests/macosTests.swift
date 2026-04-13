@@ -322,6 +322,20 @@ import Testing
     }
 }
 
+@Test func browserLinkArrowGeometryScalesChevronLengthForWorldSpaceRendering() async throws {
+    let geometry = browserLinkArrowGeometry(
+        shapeIndex: 5,
+        start: CGPoint(x: 0, y: 0),
+        end: CGPoint(x: 120, y: 0),
+        baseScale: 4
+    )
+    #expect(geometry != nil)
+    if let geometry {
+        #expect(abs(hypot(geometry.leftWing.x - geometry.tip.x, geometry.leftWing.y - geometry.tip.y) - 3) < 0.05)
+        #expect(abs(hypot(geometry.rightWing.x - geometry.tip.x, geometry.rightWing.y - geometry.tip.y) - 3) < 0.05)
+    }
+}
+
 @Test func browserLinkArrowStrokeSegmentsKeepRendererChevronAnchoredAtMidLink() async throws {
     let straight = browserLinkArrowStrokeSegments(
         shapeIndex: 5,
