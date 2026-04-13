@@ -47,9 +47,9 @@ struct FrieveEditorCommands: Commands {
                 Button("Txt Files in a Folder…") { viewModel.importTextFilesInFolder() }
             }
             Menu("Export") {
-                Button("Txt File (Card Title)…") { viewModel.exportCardTitles() }
-                Button("Txt File (Text)…") { viewModel.exportCardBodies() }
-                Button("Txt Files…") { viewModel.exportCardBodiesPerFile() }
+                Button("Text File (Card Title)…") { viewModel.exportCardTitles() }
+                Button("Text File (Text)…") { viewModel.exportCardBodies() }
+                Button("Text Files…") { viewModel.exportCardBodiesPerFile() }
                 Button("Hierarchical Text File…") { viewModel.exportHierarchicalText() }
                 Button("HTML Files…") { viewModel.exportHTMLFiles() }
                 Divider()
