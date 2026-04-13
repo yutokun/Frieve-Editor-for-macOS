@@ -6,6 +6,7 @@ struct BrowserSurfaceState: Equatable {
     let contentRevision: Int
     let viewportRevision: Int
     let presentationRevision: Int
+    let appearanceSignature: Int
     let dragTranslation: FrievePoint?
     let draggedCardIDs: Set<Int>
     let hoverCardID: Int?
@@ -38,6 +39,7 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
             contentRevision: viewModel.browserSurfaceContentRevision,
             viewportRevision: viewModel.browserSurfaceViewportRevision,
             presentationRevision: viewModel.browserSurfacePresentationRevision,
+            appearanceSignature: nsView.browserAppearanceSignature,
             dragTranslation: viewModel.currentDragTranslation,
             draggedCardIDs: Set(viewModel.dragOriginByCardID.keys),
             hoverCardID: viewModel.browserHoverCardID,
@@ -165,6 +167,11 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     private var lastSurfaceState: BrowserSurfaceState?
     private var lastSceneSnapshot: BrowserSurfaceSceneSnapshot?
     private var lastCanvasSize: CGSize = .zero
+    private var lastAppearanceSignature: Int?
+
+    var browserAppearanceSignature: Int {
+        effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? 1 : 0
+    }
 
     override init(frame frameRect: NSRect) {
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -189,6 +196,12 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         window?.acceptsMouseMovedEvents = true
+        handleAppearanceChangeIfNeeded(force: true)
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        handleAppearanceChangeIfNeeded(force: false)
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -350,6 +363,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         let lastState = lastSurfaceState
         let contentChanged = lastState.map {
             $0.contentRevision != state.contentRevision ||
+            $0.appearanceSignature != state.appearanceSignature ||
             $0.linkLabelsVisible != state.linkLabelsVisible ||
             $0.labelRectanglesVisible != state.labelRectanglesVisible
         } ?? true
@@ -422,6 +436,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
             contentRevision: viewModel.browserSurfaceContentRevision,
             viewportRevision: viewModel.browserSurfaceViewportRevision,
             presentationRevision: viewModel.browserSurfacePresentationRevision,
+            appearanceSignature: browserAppearanceSignature,
             dragTranslation: viewModel.currentDragTranslation,
             draggedCardIDs: Set(viewModel.dragOriginByCardID.keys),
             hoverCardID: viewModel.browserHoverCardID,
@@ -502,6 +517,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
 
         overlayView.layer?.addSublayer(marqueeOverlayLayer)
         overlayView.layer?.addSublayer(linkPreviewLayer)
+        handleAppearanceChangeIfNeeded(force: true)
     }
 
     func updateInteractionMode(_ isEnabled: Bool) {
@@ -641,6 +657,15 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         item.tag = action.rawValue
         item.isEnabled = enabled
         return item
+    }
+
+    private func handleAppearanceChangeIfNeeded(force: Bool) {
+        let signature = browserAppearanceSignature
+        guard force || lastAppearanceSignature != signature else { return }
+        lastAppearanceSignature = signature
+        renderer.handleAppearanceChange(signature: signature)
+        metalView.clearColor = MTLClearColor(color: NSColor.textBackgroundColor)
+        refreshFromViewModel()
     }
 
     @objc
@@ -937,6 +962,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     private var atlasCursorY: Int = 0
     private var atlasRowHeight: Int = 0
     private var frameCounter: UInt64 = 0
+    private var appearanceSignature: Int = 0
 
     private let maxAtlasUploadsPerFrame = 4
     private let maxAtlasUploadBytesPerFrame = 12 * 1024 * 1024
@@ -1034,6 +1060,15 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             rebuildCardResources(for: scene)
             rebuildTextResources(for: scene)
         }
+    }
+
+    fileprivate func handleAppearanceChange(signature: Int) {
+        appearanceSignature = signature
+        resetAtlas()
+        visibleAtlasKeys.removeAll(keepingCapacity: true)
+        desiredAtlasKeys.removeAll(keepingCapacity: true)
+        labelImageCache.removeAll(keepingCapacity: true)
+        labelImageOrder.removeAll(keepingCapacity: true)
     }
 
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
@@ -1917,11 +1952,11 @@ private extension BrowserMetalRenderer {
 
     func browserLabelAtlasKey(for snapshot: BrowserLinkLayerSnapshot) -> String {
         let state = snapshot.isHighlighted ? "selected" : "normal"
-        return "link-label|\(state)|\(snapshot.labelText ?? "")"
+        return "link-label|\(appearanceSignature)|\(state)|\(snapshot.labelText ?? "")"
     }
 
     func atlasLabelImage(text: String, highlighted: Bool) -> NSImage {
-        let cacheKey = "\(highlighted ? 1 : 0)|\(text)"
+        let cacheKey = "\(appearanceSignature)|\(highlighted ? 1 : 0)|\(text)"
         if let cached = labelImageCache[cacheKey] {
             touchLabelImageOrder(cacheKey)
             return cached

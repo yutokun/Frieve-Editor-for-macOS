@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(swift build:*)"
+      "Bash(swift build:*)",
+      "Bash(maestri list:*)",
+      "Bash(maestri note:*)",
+      "Bash(swift run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(grep:*)"
     ]
   }
 }

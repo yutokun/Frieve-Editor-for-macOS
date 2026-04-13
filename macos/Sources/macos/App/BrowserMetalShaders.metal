@@ -108,6 +108,13 @@ static float2 browserWorldToPixel(float2 worldPoint, constant BrowserMetalViewpo
     return worldPoint * viewport.worldScale + viewport.worldOffset;
 }
 
+static float3 browserStraightAlphaRGB(float4 sampled) {
+    if (sampled.a <= 0.0001f) {
+        return float3(0.0f);
+    }
+    return clamp(sampled.rgb / sampled.a, 0.0f, 1.0f);
+}
+
 vertex BrowserMetalColorOut browserColorVertex(
     const device BrowserMetalColorVertex *vertices [[buffer(0)]],
     constant BrowserMetalViewportUniforms &viewport [[buffer(1)]],
@@ -251,7 +258,7 @@ fragment float4 browserTextFragment(
     if (alpha < 0.001f) {
         discard_fragment();
     }
-    return float4(sampled.rgb * in.tintColor.rgb, alpha);
+    return float4(browserStraightAlphaRGB(sampled) * in.tintColor.rgb, alpha);
 }
 
 vertex BrowserMetalCardOut browserCardVertex(
@@ -353,7 +360,7 @@ fragment float4 browserCardFragment(
         float2 textureUV = clamp((contentPoint + halfContent) / max(in.contentSize, float2(1.0f)), 0.0f, 1.0f);
         float2 atlasUV = in.atlasUVOrigin + in.atlasUVSize * textureUV;
         float4 sampled = cardTexture.sample(textureSampler, atlasUV);
-        base.rgb = mix(in.fillColor.rgb, sampled.rgb, sampled.a);
+        base.rgb = mix(in.fillColor.rgb, browserStraightAlphaRGB(sampled), sampled.a);
         base.a = in.fillColor.a;
     }
 
