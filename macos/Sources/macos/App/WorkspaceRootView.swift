@@ -114,12 +114,12 @@ private struct CardListPane: View {
                 List(selection: Binding<Set<Int>>(get: {
                     viewModel.selectedCardIDs
                 }, set: { selection in
-                    if selection.isEmpty {
-                        viewModel.clearSelection()
-                    } else {
-                        viewModel.selectedCardIDs = selection
-                        viewModel.selectedCardID = selection.first
-                        if let id = selection.first {
+                    // AppKit delivers List selection changes from NSTableView delegate callbacks.
+                    // Defer model mutations until the next run loop to avoid reentrant delegate work.
+                    DispatchQueue.main.async {
+                        if selection.isEmpty {
+                            viewModel.clearSelection()
+                        } else if let id = selection.first {
                             viewModel.selectCard(id)
                         }
                     }

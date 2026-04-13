@@ -1564,7 +1564,11 @@ struct StatisticsWorkspaceView: View {
                         viewModel.statisticsCards(for: selectedBucket),
                         selection: Binding<Int?>(
                             get: { viewModel.selectedStatisticsCardID(in: selectedBucket) },
-                            set: { viewModel.selectStatisticsCard($0) }
+                            set: { cardID in
+                                DispatchQueue.main.async {
+                                    viewModel.selectStatisticsCard(cardID)
+                                }
+                            }
                         )
                     ) {
                         TableColumn("Title", value: \.title)
