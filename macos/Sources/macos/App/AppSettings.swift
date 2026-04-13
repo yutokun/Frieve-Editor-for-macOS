@@ -470,7 +470,7 @@ final class AppSettings: ObservableObject {
         animationPaused = userDefaults.object(forKey: Keys.animationPaused) as? Bool ?? false
         showOverview = userDefaults.object(forKey: Keys.showOverview) as? Bool ?? true
         showFileList = true
-        showCardList = userDefaults.object(forKey: Keys.showCardList) as? Bool ?? true
+        showCardList = true
         showInspector = userDefaults.object(forKey: Keys.showInspector) as? Bool ?? true
         showStatusBar = userDefaults.object(forKey: Keys.showStatusBar) as? Bool ?? true
         browserCardShadow = userDefaults.object(forKey: Keys.browserCardShadow) as? Bool ?? true

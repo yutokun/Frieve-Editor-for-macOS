@@ -108,65 +108,60 @@ private struct CardListPane: View {
             }
             .padding(12)
 
-            if viewModel.showCardList {
-                List(selection: Binding<Set<Int>>(get: {
-                    viewModel.selectedCardIDs
-                }, set: { selection in
-                    // AppKit delivers List selection changes from NSTableView delegate callbacks.
-                    // Defer model mutations until the next run loop to avoid reentrant delegate work.
-                    DispatchQueue.main.async {
-                        if selection.isEmpty {
-                            viewModel.clearSelection()
-                        } else if let id = selection.first {
-                            viewModel.selectCard(id)
-                        }
+            List(selection: Binding<Set<Int>>(get: {
+                viewModel.selectedCardIDs
+            }, set: { selection in
+                // AppKit delivers List selection changes from NSTableView delegate callbacks.
+                // Defer model mutations until the next run loop to avoid reentrant delegate work.
+                DispatchQueue.main.async {
+                    if selection.isEmpty {
+                        viewModel.clearSelection()
+                    } else if let id = selection.first {
+                        viewModel.selectCard(id)
                     }
-                })) {
-                    HStack(spacing: 4) {
-                        TextField("Filter cards", text: $viewModel.searchQuery)
-                            .textFieldStyle(.roundedBorder)
-                            .focused($filterFocused)
-                        Menu {
-                            ForEach(CardSortOrder.allCases) { order in
-                                Button {
-                                    viewModel.cardSortOrder = order
-                                } label: {
-                                    HStack {
-                                        Text(order.label)
-                                        if viewModel.cardSortOrder == order {
-                                            Image(systemName: "checkmark")
-                                        }
+                }
+            })) {
+                HStack(spacing: 4) {
+                    TextField("Filter cards", text: $viewModel.searchQuery)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($filterFocused)
+                    Menu {
+                        ForEach(CardSortOrder.allCases) { order in
+                            Button {
+                                viewModel.cardSortOrder = order
+                            } label: {
+                                HStack {
+                                    Text(order.label)
+                                    if viewModel.cardSortOrder == order {
+                                        Image(systemName: "checkmark")
                                     }
                                 }
                             }
-                        } label: {
-                            Image(systemName: "arrow.up.arrow.down")
-                                .font(.system(size: 12))
                         }
-                        .menuStyle(.borderlessButton)
-                        .fixedSize()
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down")
+                            .font(.system(size: 12))
                     }
-                    .listRowSeparator(.hidden)
-                    .padding(.vertical, 4)
-
-                    ForEach(viewModel.filteredCards) { card in
-                        Text(card.title)
-                            .fontWeight(viewModel.selectedCardIDs.contains(card.id) ? .semibold : .regular)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .tag(card.id)
-                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
                 }
-                .listStyle(.inset)
-                .scrollContentBackground(.hidden)
-            } else {
-                Spacer()
+                .listRowSeparator(.hidden)
+                .padding(.vertical, 4)
+
+                ForEach(viewModel.filteredCards) { card in
+                    Text(card.title)
+                        .fontWeight(viewModel.selectedCardIDs.contains(card.id) ? .semibold : .regular)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .tag(card.id)
+                }
             }
+            .listStyle(.inset)
+            .scrollContentBackground(.hidden)
         }
         .background(resolvedAppColor(NSColor.controlBackgroundColor))
         .onChange(of: viewModel.cardFilterFocusTrigger) { _, triggered in
             if triggered {
-                viewModel.showCardList = true
                 filterFocused = true
                 viewModel.cardFilterFocusTrigger = false
             }

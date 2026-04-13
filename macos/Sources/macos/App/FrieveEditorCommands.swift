@@ -175,7 +175,6 @@ struct FrieveEditorCommands: Commands {
             ))
             Divider()
             Toggle("Show Status Bar", isOn: $viewModel.showStatusBar)
-            Toggle("Show Card List", isOn: $viewModel.showCardList)
             Toggle("Show Inspector", isOn: $viewModel.showInspector)
         }
 
