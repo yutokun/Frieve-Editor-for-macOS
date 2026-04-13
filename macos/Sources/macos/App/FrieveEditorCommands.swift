@@ -89,6 +89,7 @@ struct FrieveEditorCommands: Commands {
         }
 
         CommandMenu("Insert") {
+            Button("New Card") { viewModel.addRootCard() }
             Button("New Root Card") { viewModel.addRootCard() }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
             Button("New Child Card") { viewModel.addChildCard() }
@@ -96,6 +97,14 @@ struct FrieveEditorCommands: Commands {
             Button("New Sibling Card") { viewModel.addSiblingCard() }
                 .keyboardShortcut(.return, modifiers: [.command])
             Divider()
+            Menu("New Link") {
+                ForEach(viewModel.document.cards.filter { $0.id != viewModel.selectedCardID }, id: \.id) { card in
+                    Button(card.title.nilIfEmpty ?? "Card \(card.id)") {
+                        viewModel.addLinkFromSelection(to: card.id)
+                    }
+                }
+            }
+            .disabled(viewModel.selectedCardID == nil || viewModel.document.cards.count <= 1)
             Button("New Ext Link…") { viewModel.insertExtLink() }
             Menu("New Label for Selected Cards") {
                 ForEach(viewModel.document.cardLabels) { label in
@@ -103,6 +112,7 @@ struct FrieveEditorCommands: Commands {
                 }
             }
             .disabled(viewModel.selectedCardIDs.isEmpty)
+            Button("New Link Label…") { viewModel.showLinkLabelEditor = true }
             Divider()
             Button("Link to Root") { viewModel.addLinkBetweenSelectionAndRoot() }
             Menu("Link to All Cards with Label") {
@@ -111,6 +121,12 @@ struct FrieveEditorCommands: Commands {
                 }
             }
             .disabled(viewModel.selectedCardID == nil)
+            Menu("New Card Links to All Cards with Label") {
+                ForEach(viewModel.document.cardLabels) { label in
+                    Button(label.name) { viewModel.addCardLinkedToAllCardsWithLabel(labelID: label.id) }
+                }
+            }
+            .disabled(viewModel.document.cardLabels.isEmpty)
             Menu("Add Label to All Destination Cards") {
                 ForEach(viewModel.document.cardLabels) { label in
                     Button(label.name) { viewModel.addLabelToAllDestinationCards(labelID: label.id) }

@@ -344,6 +344,30 @@ import Testing
 }
 
 @MainActor
+@Test func insertMenuActionsCanCreateLinksAndLabelDrivenCards() throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    let rootID = try #require(model.selectedCardID)
+    model.addRootCard()
+    let secondID = try #require(model.selectedCardID)
+    model.addCardLabel(name: "Topic")
+    let labelID = try #require(model.document.cardLabels.first?.id)
+    model.document.updateCard(rootID) { $0.labelIDs = [labelID] }
+    model.document.updateCard(secondID) { $0.labelIDs = [labelID] }
+
+    model.selectCard(rootID)
+    model.addLinkFromSelection(to: secondID)
+    #expect(model.document.links.contains(where: { $0.fromCardID == rootID && $0.toCardID == secondID }))
+
+    model.addCardLinkedToAllCardsWithLabel(labelID: labelID)
+    let createdID = try #require(model.selectedCardID)
+    #expect(createdID != rootID)
+    #expect(createdID != secondID)
+    #expect(model.document.links.contains(where: { $0.fromCardID == createdID && $0.toCardID == rootID }))
+    #expect(model.document.links.contains(where: { $0.fromCardID == createdID && $0.toCardID == secondID }))
+}
+
+@MainActor
 @Test func randomFlashAnimationRestoresDocumentAndSelectionWhenStopped() async throws {
     let model = WorkspaceViewModel()
     model.newDocument()

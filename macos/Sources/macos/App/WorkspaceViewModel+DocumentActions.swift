@@ -500,7 +500,14 @@ extension WorkspaceViewModel {
 
     func addLinkBetweenSelectionAndRoot() {
         guard let selectedCardID, let root = sortedCards().first?.id, selectedCardID != root else { return }
+        registerUndoCheckpoint()
         appendLinkIfNeeded(from: root, to: selectedCardID, name: "Related")
+    }
+
+    func addLinkFromSelection(to targetCardID: Int) {
+        guard let selectedCardID, selectedCardID != targetCardID else { return }
+        registerUndoCheckpoint()
+        appendLinkIfNeeded(from: selectedCardID, to: targetCardID, name: "Related")
     }
 
     func deleteSelectedCard() {
@@ -1606,6 +1613,26 @@ func browseHelp() {
             }
         }
         noteDocumentMutation(status: "Added label to \(uniqueIDs.count) destination cards")
+    }
+
+    func addCardLinkedToAllCardsWithLabel(labelID: Int) {
+        guard let label = document.cardLabels.first(where: { $0.id == labelID }) else { return }
+        let targetCards = document.cards.filter { $0.labelIDs.contains(labelID) }
+        registerUndoCheckpoint()
+        let newCardID = document.addCard(title: label.name)
+        if !targetCards.isEmpty {
+            let averageX = targetCards.map(\.position.x).reduce(0, +) / Double(targetCards.count)
+            let averageY = targetCards.map(\.position.y).reduce(0, +) / Double(targetCards.count)
+            document.updateCard(newCardID) { card in
+                card.position = FrievePoint(x: averageX, y: averageY)
+                card.updated = isoTimestamp()
+            }
+        }
+        for target in targetCards where target.id != newCardID {
+            appendLinkIfNeeded(from: newCardID, to: target.id, name: "Related")
+        }
+        selectCard(newCardID)
+        noteDocumentMutation(status: "Added a new card linked to cards with label")
     }
 
     private func updateSelectedCardBody(_ transform: (String) -> String) {
