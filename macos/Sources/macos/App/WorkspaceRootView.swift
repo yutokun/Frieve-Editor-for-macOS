@@ -17,15 +17,6 @@ struct WorkspaceRootView: View {
         .inspector(isPresented: $viewModel.showInspector) {
             InspectorPaneView(viewModel: viewModel)
                 .inspectorColumnWidth(min: 240, ideal: 280, max: 360)
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            viewModel.showInspector.toggle()
-                        } label: {
-                            Label("Inspector", systemImage: "sidebar.right")
-                        }
-                    }
-                }
         }
         .modifier(DocumentTitleModifier(fileDisplayName: viewModel.fileDisplayName,
                                         documentURL: viewModel.documentURL))
@@ -38,6 +29,13 @@ struct WorkspaceRootView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 330)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    viewModel.showInspector.toggle()
+                } label: {
+                    Label("Inspector", systemImage: "sidebar.right")
+                }
             }
         }
         .sheet(isPresented: $viewModel.showCardLabelEditor) {
