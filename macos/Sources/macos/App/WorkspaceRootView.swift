@@ -139,7 +139,7 @@ private struct CardListPane: View {
                         .fixedSize()
                     }
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 4, trailing: 8))
+                    .padding(.vertical, 4)
 
                     ForEach(viewModel.filteredCards) { card in
                         Text(card.title)
