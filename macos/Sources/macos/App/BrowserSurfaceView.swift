@@ -457,8 +457,8 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
 
     private func updateScene(_ scene: BrowserSurfaceSceneSnapshot, canvasSize: CGSize, mode: BrowserSceneUpdateMode) {
         let updateStart = CACurrentMediaTime()
-        layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
-        layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.10).cgColor
+        layer?.backgroundColor = resolvedColor(for: effectiveAppearance, NSColor.textBackgroundColor).cgColor
+        layer?.borderColor = resolvedColor(for: effectiveAppearance, NSColor.separatorColor).withAlphaComponent(0.10).cgColor
         layer?.borderWidth = 0.5
         currentHitRegions = scene.hitRegions
 
@@ -665,16 +665,25 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         lastAppearanceSignature = signature
         lastOverlaySignature = nil
         lastSceneSnapshot = nil
-        renderer.handleAppearanceChange(signature: signature)
+        renderer.handleAppearanceChange(signature: signature, appearance: effectiveAppearance)
         applyDynamicAppearanceColors()
         refreshFromViewModel()
     }
 
     private func applyDynamicAppearanceColors() {
-        metalView.clearColor = MTLClearColor(color: NSColor.textBackgroundColor)
-        marqueeOverlayLayer.fillColor = NSColor.controlAccentColor.withAlphaComponent(0.10).cgColor
-        marqueeOverlayLayer.strokeColor = NSColor.controlAccentColor.withAlphaComponent(0.9).cgColor
-        linkPreviewLayer.strokeColor = NSColor.controlAccentColor.withAlphaComponent(0.65).cgColor
+        let appearance = effectiveAppearance
+        metalView.clearColor = MTLClearColor(color: resolvedColor(for: appearance, NSColor.textBackgroundColor))
+        marqueeOverlayLayer.fillColor = resolvedColor(for: appearance, NSColor.controlAccentColor).withAlphaComponent(0.10).cgColor
+        marqueeOverlayLayer.strokeColor = resolvedColor(for: appearance, NSColor.controlAccentColor).withAlphaComponent(0.9).cgColor
+        linkPreviewLayer.strokeColor = resolvedColor(for: appearance, NSColor.controlAccentColor).withAlphaComponent(0.65).cgColor
+    }
+
+    private func resolvedColor(for appearance: NSAppearance, _ color: @autoclosure () -> NSColor) -> NSColor {
+        var resolved = color()
+        appearance.performAsCurrentDrawingAppearance {
+            resolved = color()
+        }
+        return resolved
     }
 
     @objc
@@ -972,6 +981,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     private var atlasRowHeight: Int = 0
     private var frameCounter: UInt64 = 0
     private var appearanceSignature: Int = 0
+    private var appearance: NSAppearance = NSAppearance(named: .aqua) ?? NSAppearance.currentDrawing()
 
     private let maxAtlasUploadsPerFrame = 4
     private let maxAtlasUploadBytesPerFrame = 12 * 1024 * 1024
@@ -1071,8 +1081,9 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         }
     }
 
-    fileprivate func handleAppearanceChange(signature: Int) {
+    fileprivate func handleAppearanceChange(signature: Int, appearance: NSAppearance) {
         appearanceSignature = signature
+        self.appearance = appearance
         resetAtlas()
         visibleAtlasKeys.removeAll(keepingCapacity: true)
         desiredAtlasKeys.removeAll(keepingCapacity: true)
@@ -1101,7 +1112,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             rebuildTextResources(for: scene)
             applyDesiredAtlasKeys()
         }
-        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(color: NSColor.textBackgroundColor)
+        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(color: resolvedColor(NSColor.textBackgroundColor))
         renderPassDescriptor.colorAttachments[0].loadAction = .clear
         renderPassDescriptor.colorAttachments[0].storeAction = .store
 
@@ -1292,7 +1303,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         var vertices: [BrowserMetalColorVertex] = []
         appendStrokedPath(
             scene.backgroundGuidePath,
-            color: NSColor.secondaryLabelColor.withAlphaComponent(0.08).rgbaVector,
+            color: resolvedColor(NSColor.secondaryLabelColor).withAlphaComponent(0.08).rgbaVector,
             width: 0.7,
             into: &vertices
         )
@@ -1300,15 +1311,15 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     }
 
     private func buildLinkInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalLinkInstance] {
-        let canvasBackground = NSColor.textBackgroundColor
+        let canvasBackground = resolvedColor(NSColor.textBackgroundColor)
         let linkBaseScale = max(
             max(abs(CGFloat(scene.worldToCanvasTransform.a)), abs(CGFloat(scene.worldToCanvasTransform.d))),
             0.0001
         )
         return scene.links.flatMap { snapshot -> [BrowserMetalLinkInstance] in
             let color = (snapshot.isHighlighted
-                ? NSColor.controlAccentColor.browserOpaqueComposite(over: canvasBackground, opacity: 0.85, darkModeLift: 0.04)
-                : NSColor.secondaryLabelColor.browserOpaqueComposite(over: canvasBackground, opacity: 0.42, darkModeLift: 0.10)).rgbaVector
+                ? resolvedColor(NSColor.controlAccentColor).browserOpaqueComposite(over: canvasBackground, opacity: 0.85, darkModeLift: 0.04)
+                : resolvedColor(NSColor.secondaryLabelColor).browserOpaqueComposite(over: canvasBackground, opacity: 0.42, darkModeLift: 0.10)).rgbaVector
             let width: Float = snapshot.isHighlighted ? 3 : 2
             var instances = makeLinkSegmentInstances(
                 start: snapshot.startPoint,
@@ -1972,9 +1983,11 @@ private extension BrowserMetalRenderer {
         }
 
         let font = NSFont.systemFont(ofSize: 11, weight: .semibold)
-        let foreground = highlighted ? NSColor.white : NSColor.secondaryLabelColor
-        let background = highlighted ? NSColor.controlAccentColor.withAlphaComponent(0.92) : NSColor.windowBackgroundColor.withAlphaComponent(0.92)
-        let border = highlighted ? NSColor.controlAccentColor : NSColor.separatorColor.withAlphaComponent(0.55)
+        let foreground = highlighted ? NSColor.white : resolvedColor(NSColor.secondaryLabelColor)
+        let background = highlighted
+            ? resolvedColor(NSColor.controlAccentColor).withAlphaComponent(0.92)
+            : resolvedColor(NSColor.windowBackgroundColor).withAlphaComponent(0.92)
+        let border = highlighted ? resolvedColor(NSColor.controlAccentColor) : resolvedColor(NSColor.separatorColor).withAlphaComponent(0.55)
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
         paragraph.lineBreakMode = .byTruncatingTail
@@ -2059,6 +2072,14 @@ private extension BrowserMetalRenderer {
     func touchLabelImageOrder(_ key: String) {
         labelImageOrder.removeAll { $0 == key }
         labelImageOrder.append(key)
+    }
+
+    func resolvedColor(_ color: @autoclosure () -> NSColor) -> NSColor {
+        var resolved = color()
+        appearance.performAsCurrentDrawingAppearance {
+            resolved = color()
+        }
+        return resolved
     }
 
     func distanceSquared(from start: SIMD2<Float>, to end: SIMD2<Float>) -> Float {

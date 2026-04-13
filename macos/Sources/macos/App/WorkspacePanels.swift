@@ -7,66 +7,69 @@ struct EditorWorkspaceView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
 
     var body: some View {
-        if viewModel.selectedCard != nil {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    TextField("Card title", text: viewModel.bindingForSelectedTitle())
-                        .textFieldStyle(.roundedBorder)
-                    Button("Web Search") { viewModel.searchWebForSelection() }
-                }
-                TextEditor(text: viewModel.bindingForSelectedBody())
-                    .font(.body.monospaced())
-                    .padding(8)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .textBackgroundColor)))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15)))
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Linked Cards")
-                        .font(.headline)
-                    if viewModel.editorRelatedCardLines().isEmpty {
-                        Text("リンクしているカードはありません")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ScrollView {
-                            LazyVStack(alignment: .leading, spacing: 6) {
-                                ForEach(viewModel.editorRelatedCardLines()) { line in
-                                    Text(line.text)
-                                        .font(.body.monospaced())
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+        Group {
+            if viewModel.selectedCard != nil {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        TextField("Card title", text: viewModel.bindingForSelectedTitle())
+                            .textFieldStyle(.roundedBorder)
+                        Button("Web Search") { viewModel.searchWebForSelection() }
+                    }
+                    TextEditor(text: viewModel.bindingForSelectedBody())
+                        .font(.body.monospaced())
+                        .padding(8)
+                        .background(RoundedRectangle(cornerRadius: 10).fill(resolvedAppColor(NSColor.textBackgroundColor)))
+                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15)))
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Linked Cards")
+                            .font(.headline)
+                        if viewModel.editorRelatedCardLines().isEmpty {
+                            Text("リンクしているカードはありません")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ScrollView {
+                                LazyVStack(alignment: .leading, spacing: 6) {
+                                    ForEach(viewModel.editorRelatedCardLines()) { line in
+                                        Text(line.text)
+                                            .font(.body.monospaced())
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
                                 }
                             }
+                            .frame(minHeight: 92, maxHeight: 140)
+                            .padding(8)
+                            .background(RoundedRectangle(cornerRadius: 10).fill(resolvedAppColor(NSColor.windowBackgroundColor)))
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15)))
                         }
-                        .frame(minHeight: 92, maxHeight: 140)
-                        .padding(8)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .underPageBackgroundColor)))
-                        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15)))
+                    }
+                    if !viewModel.lastGPTPrompt.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Last GPT Prompt")
+                                .font(.headline)
+                            ScrollView {
+                                Text(viewModel.lastGPTPrompt)
+                                    .font(.caption.monospaced())
+                                    .textSelection(.enabled)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .frame(minHeight: 120, maxHeight: 180)
+                            .padding(8)
+                            .background(RoundedRectangle(cornerRadius: 10).fill(resolvedAppColor(NSColor.windowBackgroundColor)))
+                        }
                     }
                 }
-                if !viewModel.lastGPTPrompt.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Last GPT Prompt")
-                            .font(.headline)
-                        ScrollView {
-                            Text(viewModel.lastGPTPrompt)
-                                .font(.caption.monospaced())
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .frame(minHeight: 120, maxHeight: 180)
-                        .padding(8)
-                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .underPageBackgroundColor)))
-                    }
-                }
+                .padding(16)
+            } else {
+                ContentUnavailableView(
+                    "Select a card",
+                    systemImage: "square.and.pencil",
+                    description: Text("Choose a card in the browser to edit its content.")
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(16)
-        } else {
-            ContentUnavailableView(
-                "Select a card",
-                systemImage: "square.and.pencil",
-                description: Text("Choose a card in the browser to edit its content.")
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(nsColor: .underPageBackgroundColor))
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(resolvedAppColor(NSColor.controlBackgroundColor))
     }
 }
 
@@ -115,12 +118,13 @@ struct DrawingWorkspaceView: View {
                     description: Text("Choose a card in the browser before editing its drawing.")
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(nsColor: .underPageBackgroundColor))
+                .background(resolvedAppColor(NSColor.controlBackgroundColor))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(16)
+        .background(resolvedAppColor(NSColor.controlBackgroundColor))
         .onAppear(perform: syncPendingDrawingColorFromSelection)
         .onChange(of: viewModel.selectedCardID) { _, _ in
             syncPendingDrawingColorFromSelection()
@@ -181,7 +185,7 @@ struct DrawingCanvasEditor: View {
             GeometryReader { geometry in
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(nsColor: .textBackgroundColor))
+                        .fill(resolvedAppColor(NSColor.textBackgroundColor))
                     drawingGrid(viewport: viewport)
                     ForEach(Array(drawingDocument.shapes.enumerated()), id: \.offset) { index, shape in
                         DrawingShapeLayer(
@@ -1539,7 +1543,7 @@ struct StatisticsWorkspaceView: View {
                     }
                 }
             }
-            .background(Color(nsColor: .textBackgroundColor))
+            .background(resolvedAppColor(NSColor.windowBackgroundColor))
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
@@ -1570,6 +1574,7 @@ struct StatisticsWorkspaceView: View {
                         }
                     }
                     .frame(minHeight: 220)
+                    .background(resolvedAppColor(NSColor.windowBackgroundColor))
                 }
             } else {
                 ContentUnavailableView(
@@ -1578,11 +1583,12 @@ struct StatisticsWorkspaceView: View {
                     description: Text("Cards for the selected statistic bucket will appear here.")
                 )
                 .frame(maxWidth: .infinity, minHeight: 220)
-                .background(Color(nsColor: .underPageBackgroundColor))
+                .background(resolvedAppColor(NSColor.controlBackgroundColor))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
         }
         .padding(16)
+        .background(resolvedAppColor(NSColor.controlBackgroundColor))
     }
 }
 
@@ -1737,7 +1743,7 @@ struct InspectorPaneView: View {
                             }
                             .padding(.horizontal, 6)
                             .padding(.vertical, 4)
-                            .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
+                            .background(resolvedAppColor(NSColor.textBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
                             .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color(nsColor: .separatorColor)))
                         }
                         .menuStyle(.borderlessButton)
@@ -1808,7 +1814,7 @@ struct StatusBarView: View {
         .font(.footnote)
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(resolvedAppColor(NSColor.controlBackgroundColor))
         .overlay(alignment: .top) {
             Divider()
         }

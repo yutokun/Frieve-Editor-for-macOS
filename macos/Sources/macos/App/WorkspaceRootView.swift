@@ -1,6 +1,16 @@
 import SwiftUI
 import AppKit
 
+@MainActor
+func resolvedAppColor(_ color: @autoclosure () -> NSColor) -> Color {
+    let appearance = NSApp.effectiveAppearance
+    var resolved = color()
+    appearance.performAsCurrentDrawingAppearance {
+        resolved = color()
+    }
+    return Color(nsColor: resolved)
+}
+
 struct WorkspaceRootView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
 
@@ -77,9 +87,11 @@ private struct SidebarView: View {
                 }
             }
             .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
 
             Spacer(minLength: 0)
         }
+        .background(resolvedAppColor(NSColor.controlBackgroundColor))
     }
 }
 
@@ -153,7 +165,7 @@ private struct CardListPane: View {
                 Spacer()
             }
         }
-        .background(Color(nsColor: .underPageBackgroundColor))
+        .background(resolvedAppColor(NSColor.controlBackgroundColor))
         .onChange(of: viewModel.cardFilterFocusTrigger) { _, triggered in
             if triggered {
                 viewModel.showCardList = true
