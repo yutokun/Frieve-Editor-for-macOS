@@ -161,6 +161,8 @@ func browserPresentationRefreshMode(selectionChanged: Bool, dragChanged: Bool, h
 
 @MainActor
 final class BrowserSurfaceNSView: BrowserInteractionNSView {
+    override var isOpaque: Bool { false }
+
     private enum BrowserCardContextAction: Int {
         case edit
         case newChild
@@ -510,7 +512,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     private func updateScene(_ scene: BrowserSurfaceSceneSnapshot, canvasSize: CGSize, mode: BrowserSceneUpdateMode) {
         let updateStart = CACurrentMediaTime()
         let appearance = resolvedAppearance
-        layer?.backgroundColor = resolvedCanvasBackgroundColor.cgColor
+        layer?.backgroundColor = resolvedCanvasBackgroundColor.withAlphaComponent(surfaceBackgroundAlpha).cgColor
         layer?.borderColor = resolvedColor(for: appearance, NSColor.separatorColor).withAlphaComponent(0.10).cgColor
         layer?.borderWidth = 0.5
         currentHitRegions = scene.hitRegions
@@ -750,12 +752,14 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
 
     private func applyDynamicAppearanceColors() {
         let appearance = resolvedAppearance
-        let backgroundAlpha: CGFloat =
-            ((viewModel?.browserWallpaperURL() != nil) || (viewModel?.settings.browserBackgroundAnimation == true)) ? 0.70 : 1
-        metalView.clearColor = MTLClearColor(color: resolvedCanvasBackgroundColor.withAlphaComponent(backgroundAlpha))
+        metalView.clearColor = MTLClearColor(color: resolvedCanvasBackgroundColor.withAlphaComponent(surfaceBackgroundAlpha))
         marqueeOverlayLayer.fillColor = resolvedColor(for: appearance, NSColor.controlAccentColor).withAlphaComponent(0.10).cgColor
         marqueeOverlayLayer.strokeColor = resolvedColor(for: appearance, NSColor.controlAccentColor).withAlphaComponent(0.9).cgColor
         linkPreviewLayer.strokeColor = resolvedColor(for: appearance, NSColor.controlAccentColor).withAlphaComponent(0.65).cgColor
+    }
+
+    private var surfaceBackgroundAlpha: CGFloat {
+        ((viewModel?.browserWallpaperURL() != nil) || (viewModel?.settings.browserBackgroundAnimation == true)) ? 0.70 : 1
     }
 
     private func applyResolvedAppearance(_ appearance: NSAppearance, canvasBackgroundColor: NSColor, force: Bool) {
@@ -1217,7 +1221,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             rebuildTextResources(for: scene)
             applyDesiredAtlasKeys()
         }
-        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColor(color: canvasBackgroundColor)
+        renderPassDescriptor.colorAttachments[0].clearColor = view.clearColor
         renderPassDescriptor.colorAttachments[0].loadAction = .clear
         renderPassDescriptor.colorAttachments[0].storeAction = .store
 

@@ -57,6 +57,29 @@ import Testing
 }
 
 @MainActor
+@Test func browserSurfaceBecomesTransparentForWallpaperAndBackgroundAnimation() throws {
+    let suiteName = "FrieveEditorMacTests.browserBackgroundTransparency"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defaults.removePersistentDomain(forName: suiteName)
+    let model = WorkspaceViewModel(settings: AppSettings(userDefaults: defaults))
+    let view = BrowserSurfaceNSView(frame: CGRect(x: 0, y: 0, width: 1200, height: 800))
+    view.viewModel = model
+
+    model.settings.browserWallpaperPath = "/tmp/wallpaper.png"
+    view.updateColorScheme(.light)
+    let wallpaperAlpha = view.browserCanvasClearColor.alpha
+
+    model.settings.browserWallpaperPath = ""
+    model.settings.browserBackgroundAnimation = true
+    view.updateColorScheme(.light)
+    let animationAlpha = view.browserCanvasClearColor.alpha
+
+    #expect(view.isOpaque == false)
+    #expect(wallpaperAlpha < 1)
+    #expect(animationAlpha < 1)
+}
+
+@MainActor
 @Test func browserParentsRenderInFrontUnlessChildIsSelected() throws {
     let model = WorkspaceViewModel()
     model.newDocument()
@@ -77,7 +100,10 @@ import Testing
 
 @MainActor
 @Test func browserTickerExpandsCardHeightAndUsesBodyLines() throws {
-    let model = WorkspaceViewModel()
+    let suiteName = "FrieveEditorMacTests.browserTickerLayout"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defaults.removePersistentDomain(forName: suiteName)
+    let model = WorkspaceViewModel(settings: AppSettings(userDefaults: defaults))
     model.newDocument()
     model.settings.browserTickerVisible = false
     model.settings.browserTickerLines = 1
@@ -101,7 +127,10 @@ import Testing
 
 @MainActor
 @Test func browserScoreExpandsCardSizeAndStacksWithTicker() throws {
-    let model = WorkspaceViewModel()
+    let suiteName = "FrieveEditorMacTests.browserScoreLayout"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defaults.removePersistentDomain(forName: suiteName)
+    let model = WorkspaceViewModel(settings: AppSettings(userDefaults: defaults))
     model.newDocument()
     model.settings.browserScoreVisible = false
     model.settings.browserTickerVisible = false
@@ -815,7 +844,12 @@ import Testing
 
 @MainActor
 @Test func browserSurfaceSceneRecomputesHitRegionsWhenZoomUsesCachedContent() async throws {
-    let model = WorkspaceViewModel()
+    let suiteName = "FrieveEditorMacTests.browserSurfaceHitRegions"
+    let model = WorkspaceViewModel(settings: AppSettings(userDefaults: {
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return defaults
+    }()))
     let canvasSize = CGSize(width: 1280, height: 840)
 
     model.newDocument()
@@ -1971,7 +2005,12 @@ import Testing
 }
 
 @Test func browserTitleOnlyCardsSizeToFitTitle() async throws {
-    let model = await MainActor.run { WorkspaceViewModel() }
+    let model = await MainActor.run {
+        let suiteName = "FrieveEditorMacTests.browserTitleOnlySizing"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return WorkspaceViewModel(settings: AppSettings(userDefaults: defaults))
+    }
 
     let sizes = await MainActor.run { () -> (CGSize, CGSize) in
         model.newDocument()
