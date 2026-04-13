@@ -71,6 +71,8 @@ struct FrieveEditorCommands: Commands {
                 Button("Copy GPT Prompt") { viewModel.copyGPTPromptToClipboard() }
             }
             .disabled(viewModel.selectedCardID == nil)
+            Button("Web Search") { viewModel.searchWebForSelection() }
+                .disabled(viewModel.selectedCardID == nil)
             Button("Edit Card Labels…") { viewModel.showCardLabelEditor = true }
             Button("Edit Link Labels…") { viewModel.showLinkLabelEditor = true }
             Divider()
@@ -146,7 +148,6 @@ struct FrieveEditorCommands: Commands {
         }
 
         CommandMenu("Services") {
-            Button("Web Search Selection") { viewModel.searchWebForSelection() }
             Button("Read Selected Card Aloud") { viewModel.readSelectedCardAloud() }
             Button("Stop Reading") { viewModel.stopReadAloud() }
         }
