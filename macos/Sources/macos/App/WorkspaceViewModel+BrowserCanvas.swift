@@ -925,16 +925,18 @@ extension WorkspaceViewModel {
     }
 
     func zoomToSelection(in size: CGSize) {
-        guard let primaryCard = cardByID(selectedCardID) else {
+        let visibleCards = visibleSortedCards()
+        let visibleIDs = Set(visibleCards.map(\.id))
+        guard let primaryCard = cardByID(selectedCardID), visibleIDs.contains(primaryCard.id) else {
             resetCanvasToFit(in: size)
             return
         }
 
-        // Collect selected card + directly linked cards (Windows "related cards")
-        let linkedIDs = Set(document.links
-            .filter { $0.fromCardID == primaryCard.id || $0.toCardID == primaryCard.id }
-            .flatMap { [$0.fromCardID, $0.toCardID] })
-        let relatedCards = document.cards.filter { linkedIDs.contains($0.id) || $0.id == primaryCard.id }
+        let relatedIDs = browserRelatedCardIDs(for: primaryCard.id, visibleIDs: visibleIDs)
+        let selectedIDs = selectedCardIDs.union(selectedCardID.map { [$0] } ?? []).intersection(visibleIDs)
+        let focusCards = visibleCards.filter { card in
+            card.id == primaryCard.id || relatedIDs.contains(card.id) || selectedIDs.contains(card.id)
+        }
 
         let center = primaryCard.position
         canvasCenter = center
@@ -948,15 +950,26 @@ extension WorkspaceViewModel {
         var xdSum = 0.0
         var ydSum = 0.0
         var maxd = 0.0
-        for card in relatedCards {
+        var count = 0
+        for card in focusCards {
             let dx = (card.position.x - center.x) * currentScale / W
             let dy = (card.position.y - center.y) * currentScale / H
             xdSum += dx * dx
             ydSum += dy * dy
             maxd = max(maxd, max(abs(dx), abs(dy)))
+            count += 1
         }
-        let n = max(Double(relatedCards.count), 1.0)
-        let spread = max(sqrt(max(xdSum, ydSum) / n), 0.0001)
+        guard count > 0, xdSum > 0, ydSum > 0 else {
+            suspendBrowserAutoScroll()
+            markBrowserSurfaceViewportDirty()
+            return
+        }
+        let n = Double(count)
+        var spread = sqrt(xdSum / n)
+        let verticalSpread = sqrt(ydSum / n)
+        if verticalSpread > spread {
+            spread = verticalSpread
+        }
 
         // target zoom multiplier: make RMS spread = 0.21 of screen
         var zoomMultiplier = 0.21 / spread

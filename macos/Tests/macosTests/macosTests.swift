@@ -928,13 +928,17 @@ import Testing
 @Test func browserAutoZoomCentersAndFitsSelectionWhenEnabled() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
-    let result = await MainActor.run { () -> (Bool, Bool) in
+    let result = await MainActor.run { () -> (Bool, Bool, Bool) in
         model.newDocument()
         model.browserCanvasSize = CGSize(width: 1200, height: 800)
         let rootID = model.selectedCardID ?? 0
         let childID = model.document.addCard(title: "Zoom Target", linkedFrom: rootID)
+        let siblingID = model.document.addCard(title: "Zoom Sibling", linkedFrom: rootID)
         model.document.updateCard(childID) { card in
             card.position = FrievePoint(x: 0.82, y: 0.27)
+        }
+        model.document.updateCard(siblingID) { card in
+            card.position = FrievePoint(x: 0.18, y: 0.74)
         }
 
         model.autoZoom = false
@@ -947,11 +951,70 @@ import Testing
         model.selectCard(childID)
         let target = model.document.card(withID: childID)?.position ?? .zero
         let centeredOnSelection = hypot(model.canvasCenter.x - target.x, model.canvasCenter.y - target.y) < 0.0001
+        model.clearSelection()
+        let bounds = model.browserDocumentBounds()
+        let centeredOnDocumentAfterClear = hypot(model.canvasCenter.x - bounds.midX, model.canvasCenter.y - bounds.midY) < 0.001
 
-        return (centerWithoutAutoZoom, centeredOnSelection)
+        return (centerWithoutAutoZoom, centeredOnSelection, centeredOnDocumentAfterClear)
     }
 
     #expect(result.0)
+    #expect(result.1)
+    #expect(result.2)
+}
+
+@Test func browserAutoZoomSkipsSingleAxisSpreadLikeWindows() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let result = await MainActor.run { () -> (Double, Double, Bool) in
+        model.newDocument()
+        model.browserCanvasSize = CGSize(width: 1200, height: 800)
+        model.autoZoom = true
+        let rootID = model.selectedCardID ?? 0
+        let childID = model.document.addCard(title: "Vertical Target", linkedFrom: rootID)
+        model.document.updateCard(rootID) { card in
+            card.position = FrievePoint(x: 0.50, y: 0.20)
+        }
+        model.document.updateCard(childID) { card in
+            card.position = FrievePoint(x: 0.50, y: 0.80)
+        }
+
+        let zoomBeforeSelection = model.zoom
+        model.selectCard(childID)
+        let centeredOnSelection = model.canvasCenter == (model.document.card(withID: childID)?.position ?? .zero)
+        return (zoomBeforeSelection, model.zoom, centeredOnSelection)
+    }
+
+    #expect(result.0 == result.1)
+    #expect(result.2)
+}
+
+@Test func browserAutoZoomIgnoresUnrelatedRecentCardsByDefault() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let result = await MainActor.run { () -> (Double, Bool) in
+        model.newDocument()
+        model.browserCanvasSize = CGSize(width: 1200, height: 800)
+        model.autoZoom = true
+        let rootID = model.selectedCardID ?? 0
+        let childID = model.document.addCard(title: "Zoom Target", linkedFrom: rootID)
+        let siblingID = model.document.addCard(title: "Far Recent", linkedFrom: rootID)
+        model.document.updateCard(rootID) { card in
+            card.position = FrievePoint(x: 0.50, y: 0.50)
+        }
+        model.document.updateCard(childID) { card in
+            card.position = FrievePoint(x: 0.60, y: 0.58)
+        }
+        model.document.updateCard(siblingID) { card in
+            card.position = FrievePoint(x: 0.12, y: 0.86)
+        }
+
+        model.selectCard(rootID)
+        model.selectCard(childID)
+        return (model.browserAutoZoomTargetZoom ?? model.zoom, model.canvasCenter == (model.document.card(withID: childID)?.position ?? .zero))
+    }
+
+    #expect(result.0 > 2.0)
     #expect(result.1)
 }
 

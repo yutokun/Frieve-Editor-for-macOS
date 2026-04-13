@@ -145,6 +145,9 @@ extension WorkspaceViewModel {
         browserInlineEditorCardID = nil
         document.focusedCardID = nil
         resetBrowserAutoScrollAnimation()
+        if autoZoom, selectedTab == .browser {
+            zoomToSelection(in: resolvedBrowserCanvasSize())
+        }
         markBrowserSurfacePresentationDirty()
     }
 
