@@ -332,13 +332,6 @@ private struct BrowserCanvasHUD: View {
     var body: some View {
         VStack(alignment: .trailing, spacing: 8) {
             HStack(spacing: 12) {
-                Label("Metal", systemImage: "cpu")
-                Label("\(Int(viewModel.browserPerformance.frameInterval.rollingFPS.rounded())) fps", systemImage: "speedometer")
-                Label("\(viewModel.selectedCardIDs.count)", systemImage: "checkmark.circle")
-                Label("\(viewModel.zoom.formatted(.number.precision(.fractionLength(2))))×", systemImage: "magnifyingglass")
-                Label(viewModel.autoScroll ? "Follow" : "Free", systemImage: viewModel.autoScroll ? "scope" : "hand.draw")
-            }
-            HStack(spacing: 12) {
                 Picker("Arrange", selection: $viewModel.arrangeMode) {
                     Text("None").tag("None")
                     Text("Link").tag("Link")
@@ -365,7 +358,7 @@ private struct BrowserCanvasHUD: View {
                 Toggle("Overview", isOn: $viewModel.showOverview)
                     .toggleStyle(.checkbox)
             }
-            Text(viewModel.browserPerformanceSummary)
+            Text(viewModel.browserPerformanceHUDSummary)
                 .font(.caption2.monospacedDigit())
                 .foregroundStyle(.secondary)
         }

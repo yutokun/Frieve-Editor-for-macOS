@@ -670,6 +670,15 @@ final class WorkspaceViewModel: ObservableObject {
         browserPerformance.summary()
     }
 
+    var browserPerformanceHUDSummary: String {
+        let zoomText = zoom.formatted(.number.precision(.fractionLength(2)))
+        let summary = browserPerformance.summary()
+        if let summaryRemainder = summary.split(separator: " ", maxSplits: 1).dropFirst().first {
+            return "Browser \(zoomText)× · \(summaryRemainder)"
+        }
+        return "Browser \(zoomText)×"
+    }
+
     var fileDisplayName: String {
         if let path = document.sourcePath {
             return URL(fileURLWithPath: path).lastPathComponent
