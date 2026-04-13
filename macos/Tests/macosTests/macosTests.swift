@@ -56,6 +56,25 @@ import Testing
     #expect(darkLuminance! < lightLuminance!)
 }
 
+@MainActor
+@Test func browserParentsRenderInFrontUnlessChildIsSelected() throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.document.updateCard(0) { card in
+        card.title = "A Parent"
+    }
+    let childID = model.document.addCard(title: "Z Child", linkedFrom: 0)
+
+    let scene = model.browserSurfaceScene(in: CGSize(width: 1200, height: 800))
+    #expect(scene.cards.map(\.id) == [childID, 0])
+
+    model.selectedCardID = childID
+    model.selectedCardIDs = [childID]
+
+    let selectedScene = model.browserSurfaceScene(in: CGSize(width: 1200, height: 800))
+    #expect(selectedScene.cards.map(\.id) == [0, childID])
+}
+
 @Test func fip2RoundTripPreservesCardAndLinkData() async throws {
     var document = FrieveDocument.placeholder()
     let childID = document.addCard(title: "Child", linkedFrom: 0)

@@ -543,6 +543,7 @@ extension WorkspaceViewModel {
                 )
             )
         }
+        cards = browserSurfaceCardsOrderedForRendering(cards)
         let visibleCardIDs = Set(cards.map { $0.id })
         let links = visibleLinkLayerSnapshots(in: size, visibleCardIDs: visibleCardIDs)
         let labelGroups = (browserLabelOutlineStyle != .none || settings.browserLabelNameVisible)
@@ -583,7 +584,7 @@ extension WorkspaceViewModel {
     func browserSurfaceScene(in size: CGSize, canvasPadding: CGFloat = 260) -> BrowserSurfaceSceneSnapshot {
         let start = CACurrentMediaTime()
         let content = browserSurfaceContent(in: size, canvasPadding: canvasPadding)
-        let cards = content.cards.map { snapshot in
+        let cards = browserSurfaceCardsOrderedForRendering(content.cards.map { snapshot in
             BrowserCardLayerSnapshot(
                 card: snapshot.card,
                 position: snapshot.position,
@@ -592,7 +593,7 @@ extension WorkspaceViewModel {
                 isHovered: browserHoverCardID == snapshot.id,
                 detailLevel: snapshot.detailLevel
             )
-        }
+        })
         let links = content.links.map { snapshot in
             BrowserLinkLayerSnapshot(
                 id: snapshot.id,
@@ -629,6 +630,71 @@ extension WorkspaceViewModel {
         )
         recordPerformanceMetric(start, keyPath: \BrowserPerformanceSnapshot.surfaceScene)
         return scene
+    }
+
+    func browserSurfaceCardsOrderedForRendering(_ cards: [BrowserCardLayerSnapshot]) -> [BrowserCardLayerSnapshot] {
+        guard cards.count > 1 else { return cards }
+
+        let originalOrder = cards.enumerated().reduce(into: [Int: Int]()) { partial, entry in
+            partial[entry.element.id] = partial[entry.element.id] ?? entry.offset
+        }
+        let depthByCardID = browserRenderDepthByCardID(for: cards.map(\.id))
+
+        return cards.sorted { lhs, rhs in
+            if lhs.isSelected != rhs.isSelected {
+                return !lhs.isSelected && rhs.isSelected
+            }
+
+            let lhsDepth = depthByCardID[lhs.id] ?? 0
+            let rhsDepth = depthByCardID[rhs.id] ?? 0
+            if lhsDepth != rhsDepth {
+                return lhsDepth > rhsDepth
+            }
+
+            return (originalOrder[lhs.id] ?? 0) < (originalOrder[rhs.id] ?? 0)
+        }
+    }
+
+    func browserRenderDepthByCardID(for cardIDs: [Int]) -> [Int: Int] {
+        let visibleCardIDs = Set(cardIDs)
+        guard !visibleCardIDs.isEmpty else { return [:] }
+
+        var childrenByParent: [Int: [Int]] = [:]
+        var childCardIDs: Set<Int> = []
+        for link in document.links where visibleCardIDs.contains(link.fromCardID) && visibleCardIDs.contains(link.toCardID) {
+            childrenByParent[link.fromCardID, default: []].append(link.toCardID)
+            childCardIDs.insert(link.toCardID)
+        }
+
+        let rootCardIDs = cardIDs.filter { !childCardIDs.contains($0) }
+        guard !rootCardIDs.isEmpty else {
+            return cardIDs.reduce(into: [Int: Int]()) { partial, cardID in
+                partial[cardID] = partial[cardID] ?? 0
+            }
+        }
+
+        var depthByCardID: [Int: Int] = [:]
+        var queue = rootCardIDs.map { ($0, 0) }
+        var queueIndex = 0
+
+        while queueIndex < queue.count {
+            let (cardID, depth) = queue[queueIndex]
+            queueIndex += 1
+
+            if let existingDepth = depthByCardID[cardID], existingDepth >= depth {
+                continue
+            }
+            depthByCardID[cardID] = depth
+
+            for childID in childrenByParent[cardID] ?? [] {
+                queue.append((childID, depth + 1))
+            }
+        }
+
+        for cardID in cardIDs where depthByCardID[cardID] == nil {
+            depthByCardID[cardID] = 0
+        }
+        return depthByCardID
     }
 
     func visibleCardRenderData(in size: CGSize, canvasPadding: CGFloat = 220) -> [BrowserCardRenderData] {

@@ -983,7 +983,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         guard let viewModel else { return scene }
         let selectedCardIDs = state.selectedCardIDs
         let isDraggingSelection = state.dragTranslation != nil && !state.draggedCardIDs.isEmpty
-        let cards = updateCards ? scene.cards.map { snapshot in
+        let cards = updateCards ? viewModel.browserSurfaceCardsOrderedForRendering(scene.cards.map { snapshot in
             let position = isDraggingSelection ? viewModel.currentPosition(for: snapshot.card) : snapshot.position
             return BrowserCardLayerSnapshot(
                 card: snapshot.card,
@@ -993,7 +993,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
                 isHovered: state.hoverCardID == snapshot.id,
                 detailLevel: snapshot.detailLevel
             )
-        } : scene.cards
+        }) : scene.cards
         let linkBaseScale = CGFloat(max(viewModel.browserScale(in: scene.canvasSize), 1))
         let links = updateLinks ? scene.links.map { snapshot in
             let startPoint = viewModel.cardByID(snapshot.fromCardID).map {
