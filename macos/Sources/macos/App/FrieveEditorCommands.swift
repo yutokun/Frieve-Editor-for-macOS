@@ -88,9 +88,9 @@ struct FrieveEditorCommands: Commands {
             Button("New Root Card") { viewModel.addRootCard() }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
             Button("New Child Card") { viewModel.addChildCard() }
-                .keyboardShortcut(.return, modifiers: [.command])
+                .keyboardShortcut(.return, modifiers: [.shift])
             Button("New Sibling Card") { viewModel.addSiblingCard() }
-                .keyboardShortcut(.return, modifiers: [.command, .shift])
+                .keyboardShortcut(.return, modifiers: [.command])
             Divider()
             Button("New Ext Link…") { viewModel.insertExtLink() }
             Menu("New Label for Selected Cards") {
