@@ -50,10 +50,17 @@ private struct FrieveEditorSettingsView: View {
                     HStack {
                         Text("Read Speed")
                         Spacer()
-                        Text("\(Int(settings.readAloudRate))")
+                        Text("\(settings.readAloudRate)")
                             .foregroundStyle(.secondary)
                     }
-                    Slider(value: $settings.readAloudRate, in: 100 ... 320, step: 5)
+                    Slider(
+                        value: Binding(
+                            get: { Double(settings.readAloudRate) },
+                            set: { settings.readAloudRate = Int($0.rounded()) }
+                        ),
+                        in: -10 ... 10,
+                        step: 1
+                    )
                 }
 
                 TextField("GPT Model", text: $settings.gptModel)

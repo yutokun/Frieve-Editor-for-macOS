@@ -388,9 +388,7 @@ extension WorkspaceViewModel {
         }
         speechSynthesizer.stopSpeaking(at: .immediate)
         let utterance = AVSpeechUtterance(string: text)
-        // Map WPM (100–320) to AVSpeech rate (0.3–0.9)
-        let wpm = Float(settings.readAloudRate)
-        utterance.rate = (wpm - 100) / (320 - 100) * (0.9 - 0.3) + 0.3
+        utterance.rate = settings.readAloudSpeechRate
         speechSynthesizer.speak(utterance)
         statusMessage = "Reading the selected card aloud"
     }

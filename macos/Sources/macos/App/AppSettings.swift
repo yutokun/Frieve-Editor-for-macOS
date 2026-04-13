@@ -1,5 +1,6 @@
-import Foundation
+import AVFoundation
 import Combine
+import Foundation
 
 struct WebSearchProvider: Identifiable, Codable, Hashable {
     let id: String
@@ -83,8 +84,15 @@ final class AppSettings: ObservableObject {
         didSet { persistIfReady() }
     }
 
-    @Published var readAloudRate: Double {
-        didSet { persistIfReady() }
+    @Published var readAloudRate: Int {
+        didSet {
+            let normalized = Self.normalizedReadAloudRate(from: readAloudRate)
+            guard normalized == readAloudRate else {
+                readAloudRate = normalized
+                return
+            }
+            persistIfReady()
+        }
     }
 
     @Published var language: String {
@@ -142,7 +150,7 @@ final class AppSettings: ObservableObject {
         gptAPIKey = userDefaults.string(forKey: Keys.gptAPIKey) ?? ""
         gptModel = userDefaults.string(forKey: Keys.gptModel) ?? "gpt-4.1"
         gptSystemPrompt = userDefaults.string(forKey: Keys.gptSystemPrompt) ?? "Summarize the selected card, suggest related cards, and propose next writing steps."
-        readAloudRate = userDefaults.object(forKey: Keys.readAloudRate) as? Double ?? 175
+        readAloudRate = Self.normalizedReadAloudRate(from: userDefaults.object(forKey: Keys.readAloudRate))
         language = userDefaults.string(forKey: Keys.language) ?? "English"
         animationVisibleCardCount = userDefaults.object(forKey: Keys.animationVisibleCardCount) as? Int ?? 10
         animationSpeed = userDefaults.object(forKey: Keys.animationSpeed) as? Int ?? 30
@@ -175,6 +183,12 @@ final class AppSettings: ObservableObject {
         return URL(string: preferredWebSearchProvider().baseURL + encoded)
     }
 
+    var readAloudSpeechRate: Float {
+        let defaultRate = AVSpeechUtteranceDefaultSpeechRate
+        let adjustedRate = defaultRate + Float(readAloudRate) * 0.02
+        return min(max(adjustedRate, AVSpeechUtteranceMinimumSpeechRate), AVSpeechUtteranceMaximumSpeechRate)
+    }
+
     private func persistIfReady() {
         guard !isBootstrapping else { return }
         persist()
@@ -201,5 +215,34 @@ final class AppSettings: ObservableObject {
         userDefaults.set(showCardList, forKey: Keys.showCardList)
         userDefaults.set(showInspector, forKey: Keys.showInspector)
         userDefaults.set(showStatusBar, forKey: Keys.showStatusBar)
+    }
+
+    private static func normalizedReadAloudRate(from storedValue: Any?) -> Int {
+        let numericValue: Double
+        switch storedValue {
+        case let value as Int:
+            numericValue = Double(value)
+        case let value as Double:
+            numericValue = value
+        case let value as NSNumber:
+            numericValue = value.doubleValue
+        case let value as String:
+            guard let parsed = Double(value) else { return 0 }
+            numericValue = parsed
+        default:
+            return 0
+        }
+
+        let roundedValue = Int(numericValue.rounded())
+        if (-10 ... 10).contains(roundedValue), numericValue == Double(roundedValue) {
+            return roundedValue
+        }
+
+        if (100 ... 320).contains(roundedValue) {
+            let migratedValue = Int(((numericValue - 175.0) / 7.5).rounded())
+            return min(max(migratedValue, -10), 10)
+        }
+
+        return min(max(roundedValue, -10), 10)
     }
 }

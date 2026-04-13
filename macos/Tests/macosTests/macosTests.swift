@@ -1552,7 +1552,7 @@ import Testing
         settings.autoSaveDefault = false
         settings.autoReloadDefault = false
         settings.preferredWebSearchName = "DuckDuckGo"
-        settings.readAloudRate = 205
+        settings.readAloudRate = 7
         settings.gptModel = "gpt-4.1-mini"
 
         let reloaded = AppSettings(userDefaults: defaults)
@@ -1568,8 +1568,23 @@ import Testing
     #expect(values.0 == false)
     #expect(values.1 == false)
     #expect(values.2 == "DuckDuckGo")
-    #expect(values.3 == 205)
+    #expect(values.3 == 7)
     #expect(values.4 == "gpt-4.1-mini")
+}
+
+@Test func legacyReadSpeedSettingMigratesIntoNewIntegerRange() async throws {
+    let suiteName = "FrieveEditorMacTests.legacyReadSpeedMigration"
+
+    let migratedValue = await MainActor.run { () -> Int in
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defaults.set(175, forKey: "FrieveEditorMac.readAloudRate")
+
+        let settings = AppSettings(userDefaults: defaults)
+        return settings.readAloudRate
+    }
+
+    #expect(migratedValue == 0)
 }
 
 @Test func browserCardSizeStepMappingMatchesWindowsRange() async throws {
