@@ -91,7 +91,7 @@ private struct SidebarView: View {
 
             Spacer(minLength: 0)
         }
-        .background(resolvedAppColor(NSColor.controlBackgroundColor))
+        .background(.ultraThinMaterial)
     }
 }
 
