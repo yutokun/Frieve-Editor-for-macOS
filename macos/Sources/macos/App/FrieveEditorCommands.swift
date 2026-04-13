@@ -67,6 +67,10 @@ struct FrieveEditorCommands: Commands {
             Button("Find…") { viewModel.cardFilterFocusTrigger = true }
                 .keyboardShortcut("f", modifiers: [.command])
             Divider()
+            Menu("GPT") {
+                Button("Copy GPT Prompt") { viewModel.copyGPTPromptToClipboard() }
+            }
+            .disabled(viewModel.selectedCardID == nil)
             Button("Edit Card Labels…") { viewModel.showCardLabelEditor = true }
             Button("Edit Link Labels…") { viewModel.showLinkLabelEditor = true }
             Divider()
