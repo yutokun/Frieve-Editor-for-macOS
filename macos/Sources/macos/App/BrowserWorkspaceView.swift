@@ -345,18 +345,6 @@ private struct BrowserCanvasHUD: View {
                     .toggleStyle(.checkbox)
                 Toggle("Auto Zoom", isOn: $viewModel.autoZoom)
                     .toggleStyle(.checkbox)
-                Toggle("Link Labels", isOn: Binding(
-                    get: { viewModel.linkLabelsVisible },
-                    set: { viewModel.setBrowserLinkLabelsVisible($0) }
-                ))
-                    .toggleStyle(.checkbox)
-                Toggle("Label Rects", isOn: Binding(
-                    get: { viewModel.labelRectanglesVisible },
-                    set: { viewModel.setBrowserLabelRectanglesVisible($0) }
-                ))
-                    .toggleStyle(.checkbox)
-                Toggle("Overview", isOn: $viewModel.showOverview)
-                    .toggleStyle(.checkbox)
             }
             Text(viewModel.browserPerformanceHUDSummary)
                 .font(.caption2.monospacedDigit())
