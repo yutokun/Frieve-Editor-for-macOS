@@ -135,7 +135,7 @@ struct FrieveEditorCommands: Commands {
             .disabled(viewModel.selectedCardID == nil)
         }
 
-        CommandMenu("Layout") {
+        CommandMenu("View") {
             Button("Arrange") { viewModel.arrangeCards() }
             Button("Shuffle") { viewModel.shuffleLayout() }
             Toggle("Show Overview", isOn: $viewModel.showOverview)
