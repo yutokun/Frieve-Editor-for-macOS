@@ -541,6 +541,63 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
             enabled: hasSingleSelection && selectedCard != nil
         ))
         menu.addItem(.separator())
+        // Labels submenu
+        let labelMenu = NSMenu(title: "Label")
+        let noLabelItem = NSMenuItem(title: "No Label", action: #selector(handleSetLabelNone), keyEquivalent: "")
+        noLabelItem.target = self
+        labelMenu.addItem(noLabelItem)
+        if !viewModel.document.cardLabels.isEmpty {
+            labelMenu.addItem(.separator())
+            for label in viewModel.document.cardLabels {
+                let labelItem = NSMenuItem(title: label.name, action: #selector(handleSetLabel(_:)), keyEquivalent: "")
+                labelItem.target = self
+                labelItem.tag = label.id
+                if let selectedCard, selectedCard.labelIDs.contains(label.id) {
+                    labelItem.state = .on
+                }
+                labelMenu.addItem(labelItem)
+            }
+        }
+        let labelMenuItem = NSMenuItem(title: "Label", action: nil, keyEquivalent: "")
+        labelMenuItem.submenu = labelMenu
+        labelMenuItem.isEnabled = !selectedIDs.isEmpty
+        menu.addItem(labelMenuItem)
+
+        // Shape submenu
+        let shapeNames = ["Rounded Rectangle", "Ellipse", "Capsule", "Diamond", "Hexagon", "Soft Rectangle"]
+        let shapeMenu = NSMenu(title: "Shape")
+        for (idx, name) in shapeNames.enumerated() {
+            let item = NSMenuItem(title: name, action: #selector(handleSetShape(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = idx
+            if let selectedCard, (selectedCard.shape % shapeNames.count + shapeNames.count) % shapeNames.count == idx {
+                item.state = .on
+            }
+            shapeMenu.addItem(item)
+        }
+        let shapeMenuItem = NSMenuItem(title: "Shape", action: nil, keyEquivalent: "")
+        shapeMenuItem.submenu = shapeMenu
+        shapeMenuItem.isEnabled = !selectedIDs.isEmpty
+        menu.addItem(shapeMenuItem)
+
+        // Size submenu
+        let sizeOptions: [(String, Int)] = [("Small", 60), ("Normal", 100), ("Large", 140), ("Extra Large", 180)]
+        let sizeMenu = NSMenu(title: "Size")
+        for (name, size) in sizeOptions {
+            let item = NSMenuItem(title: name, action: #selector(handleSetSize(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = size
+            if let selectedCard, selectedCard.size == size {
+                item.state = .on
+            }
+            sizeMenu.addItem(item)
+        }
+        let sizeMenuItem = NSMenuItem(title: "Size", action: nil, keyEquivalent: "")
+        sizeMenuItem.submenu = sizeMenu
+        sizeMenuItem.isEnabled = !selectedIDs.isEmpty
+        menu.addItem(sizeMenuItem)
+
+        menu.addItem(.separator())
         menu.addItem(makeContextMenuItem("Web Search", action: .webSearch, enabled: viewModel.selectedCardID != nil))
         menu.addItem(makeContextMenuItem("Copy GPT Prompt", action: .copyGPTPrompt, enabled: viewModel.selectedCardID != nil))
         menu.addItem(.separator())
@@ -598,6 +655,59 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         case .undo:
             viewModel.undoLastDocumentChange()
         }
+    }
+
+    @objc
+    private func handleSetLabelNone() {
+        guard let viewModel else { return }
+        let ids = viewModel.selectedCardIDs.isEmpty ? Set(viewModel.selectedCardID.map { [$0] } ?? []) : viewModel.selectedCardIDs
+        viewModel.registerUndoCheckpoint()
+        for id in ids {
+            viewModel.document.updateCard(id) { $0.labelIDs = [] }
+        }
+        viewModel.noteDocumentMutation(status: "Cleared labels")
+    }
+
+    @objc
+    private func handleSetLabel(_ sender: NSMenuItem) {
+        guard let viewModel else { return }
+        let labelID = sender.tag
+        let ids = viewModel.selectedCardIDs.isEmpty ? Set(viewModel.selectedCardID.map { [$0] } ?? []) : viewModel.selectedCardIDs
+        viewModel.registerUndoCheckpoint()
+        for id in ids {
+            viewModel.document.updateCard(id) { card in
+                if card.labelIDs.contains(labelID) {
+                    card.labelIDs.removeAll { $0 == labelID }
+                } else {
+                    card.labelIDs.append(labelID)
+                }
+            }
+        }
+        viewModel.noteDocumentMutation(status: "Changed label")
+    }
+
+    @objc
+    private func handleSetShape(_ sender: NSMenuItem) {
+        guard let viewModel else { return }
+        let shape = sender.tag
+        let ids = viewModel.selectedCardIDs.isEmpty ? Set(viewModel.selectedCardID.map { [$0] } ?? []) : viewModel.selectedCardIDs
+        viewModel.registerUndoCheckpoint()
+        for id in ids {
+            viewModel.document.updateCard(id) { $0.shape = shape }
+        }
+        viewModel.noteDocumentMutation(status: "Changed shape")
+    }
+
+    @objc
+    private func handleSetSize(_ sender: NSMenuItem) {
+        guard let viewModel else { return }
+        let size = sender.tag
+        let ids = viewModel.selectedCardIDs.isEmpty ? Set(viewModel.selectedCardID.map { [$0] } ?? []) : viewModel.selectedCardIDs
+        viewModel.registerUndoCheckpoint()
+        for id in ids {
+            viewModel.document.updateCard(id) { $0.size = size }
+        }
+        viewModel.noteDocumentMutation(status: "Changed size")
     }
 
     func beginMiddleButtonCanvasPan(at point: CGPoint) {
