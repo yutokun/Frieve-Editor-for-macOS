@@ -6,6 +6,8 @@ extension WorkspaceViewModel {
     private var browserAutoArrangeBaselineInterval: CFTimeInterval { 1.0 / 30.0 }
     private var browserAutoArrangeFrameScale: Double { browserAutoArrangeFrameInterval / browserAutoArrangeBaselineInterval }
     private var browserAutoScrollDuration: CFTimeInterval { 0.28 }
+    private var browserFitBoundsPadding: Double { 0.10 }
+    private var browserFitVisibleFraction: Double { 0.94 }
     private var isBrowserAutoArrangeTemporarilySuspended: Bool {
         CACurrentMediaTime() < browserAutoArrangeSuspendedUntil
     }
@@ -309,11 +311,11 @@ extension WorkspaceViewModel {
 
     func resetCanvasToFit(in size: CGSize) {
         resetBrowserFitAnimation()
-        let bounds = browserDocumentBounds()
+        let bounds = browserDocumentBounds(padding: browserFitBoundsPadding)
         canvasCenter = FrievePoint(x: bounds.midX, y: bounds.midY)
         let fittedScale = min(
-            (size.width * 0.84) / max(bounds.width, 0.0001),
-            (size.height * 0.84) / max(bounds.height, 0.0001)
+            (size.width * browserFitVisibleFraction) / max(bounds.width, 0.0001),
+            (size.height * browserFitVisibleFraction) / max(bounds.height, 0.0001)
         )
         let minDimension = max(min(size.width, size.height), 1)
         browserBaseScaleFactor = max(Double(fittedScale) / Double(minDimension), 0.05)
@@ -1063,10 +1065,10 @@ extension WorkspaceViewModel {
     }
 
     func startBrowserFitAnimation(in size: CGSize) {
-        let bounds = browserDocumentBounds()
+        let bounds = browserDocumentBounds(padding: browserFitBoundsPadding)
         let fittedScale = min(
-            (size.width * 0.84) / max(bounds.width, 0.0001),
-            (size.height * 0.84) / max(bounds.height, 0.0001)
+            (size.width * browserFitVisibleFraction) / max(bounds.width, 0.0001),
+            (size.height * browserFitVisibleFraction) / max(bounds.height, 0.0001)
         )
         let minDimension = max(min(size.width, size.height), 1)
         let targetBaseScaleFactor = max(Double(fittedScale) / Double(minDimension), 0.05)

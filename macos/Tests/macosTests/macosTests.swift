@@ -1088,6 +1088,49 @@ import Testing
     #expect(result.2)
 }
 
+@Test func browserClearSelectionFitUsesTighterViewportFraming() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+    let canvasSize = CGSize(width: 1200, height: 800)
+
+    let result = await MainActor.run { () -> (Double, Bool) in
+        model.newDocument()
+        model.browserCanvasSize = canvasSize
+        model.autoZoom = true
+        let rootID = model.selectedCardID ?? 0
+        let childID = model.document.addCard(title: "Fit Target", linkedFrom: rootID)
+        model.document.updateCard(rootID) { card in
+            card.position = FrievePoint(x: 0.22, y: 0.24)
+        }
+        model.document.updateCard(childID) { card in
+            card.position = FrievePoint(x: 0.81, y: 0.77)
+        }
+        model.invalidateDocumentCaches()
+
+        model.selectCard(childID)
+        model.clearSelection()
+        let fitStartedAt = model.browserFitAnimationStartedAt ?? CACurrentMediaTime()
+        _ = model.applyBrowserFitStepIfNeeded(at: fitStartedAt + 1.0)
+
+        let contentBounds = model.browserDocumentBounds(padding: 0)
+        let visibleRect = model.visibleWorldRect(in: canvasSize)
+        let fillRatio = max(
+            contentBounds.width / max(visibleRect.width, 0.0001),
+            contentBounds.height / max(visibleRect.height, 0.0001)
+        )
+        let epsilon = 0.0001
+        let containsBounds =
+            visibleRect.minX <= contentBounds.minX + epsilon &&
+            visibleRect.maxX >= contentBounds.maxX - epsilon &&
+            visibleRect.minY <= contentBounds.minY + epsilon &&
+            visibleRect.maxY >= contentBounds.maxY - epsilon
+
+        return (fillRatio, containsBounds)
+    }
+
+    #expect(result.0 > 0.72)
+    #expect(result.1)
+}
+
 @Test func browserAutoZoomSkipsSingleAxisSpreadLikeWindows() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
