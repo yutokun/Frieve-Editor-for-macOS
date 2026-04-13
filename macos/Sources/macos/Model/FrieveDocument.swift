@@ -757,7 +757,6 @@ struct FrieveDocument: Codable, Hashable {
         }
         let siblingID = addCard(title: "Sibling of \(source.title)")
         updateCard(siblingID) { sibling in
-            sibling.position = FrievePoint(x: source.position.x + 0.12, y: source.position.y)
             sibling.shape = source.shape
             sibling.size = source.size
         }

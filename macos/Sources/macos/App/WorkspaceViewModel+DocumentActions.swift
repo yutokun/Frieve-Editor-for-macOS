@@ -158,16 +158,78 @@ extension WorkspaceViewModel {
 
     func addChildCard() {
         registerUndoCheckpoint()
-        let id = document.addCard(title: "Child Card", linkedFrom: selectedCardID)
+        let parentID = selectedCardID
+        let id = document.addCard(title: "Child Card", linkedFrom: parentID)
+        if let parent = document.card(withID: parentID) {
+            let pos = nearbyPlacementPosition(near: parent)
+            document.updateCard(id) { $0.position = pos }
+        }
         selectCard(id)
         noteDocumentMutation(status: "Added a child card")
     }
 
     func addSiblingCard() {
         registerUndoCheckpoint()
-        let id = document.addSiblingCard(for: selectedCardID)
+        guard let siblingID = selectedCardID else { return }
+        let id = document.addSiblingCard(for: siblingID)
+        // Place sibling near the parent card (or near the sibling itself if no parent)
+        let parentID = document.links.first { $0.toCardID == siblingID }?.fromCardID
+        let anchor = document.card(withID: parentID) ?? document.card(withID: siblingID)
+        if let anchor {
+            let pos = nearbyPlacementPosition(near: anchor)
+            document.updateCard(id) { $0.position = pos }
+        }
         selectCard(id)
         noteDocumentMutation(status: "Added a sibling card")
+    }
+
+    /// Returns a position near `source`, at a display-pixel-aware distance,
+    /// avoiding overlap with existing cards. Matches the Windows placement algorithm.
+    private func nearbyPlacementPosition(near source: FrieveCard) -> FrievePoint {
+        let size = browserCanvasSize
+        let scale = browserScale(in: size)
+        let minDist = 120.0 / scale   // minimum 120 display pixels in world units
+
+        // Average distance to all cards connected to source
+        let neighbors = document.links
+            .filter { $0.fromCardID == source.id || $0.toCardID == source.id }
+            .compactMap { link -> FrieveCard? in
+                let nid = link.fromCardID == source.id ? link.toCardID : link.fromCardID
+                return document.card(withID: nid)
+            }
+        var r: Double
+        if neighbors.isEmpty {
+            r = minDist
+        } else {
+            r = neighbors.reduce(0.0) { sum, n in
+                let dx = n.position.x - source.position.x
+                let dy = n.position.y - source.position.y
+                return sum + sqrt(dx * dx + dy * dy)
+            } / Double(neighbors.count)
+            r = max(r, minDist)
+            r = min(r, minDist * 3)
+        }
+
+        let rbak = r
+        let allCards = document.cards
+        for i in 1...100 {
+            let t = Double.random(in: 0 ..< (.pi * 2))
+            let candidate = FrievePoint(
+                x: source.position.x + sin(t) * r,
+                y: source.position.y - cos(t) * r
+            )
+            let overlapping = allCards.contains { card in
+                let dx = card.position.x - candidate.x
+                let dy = card.position.y - candidate.y
+                return dx * dx + dy * dy < (rbak * rbak / 4.0)
+            }
+            if !overlapping { return candidate }
+            if i > 1 { r += rbak * 0.1 / Double(i) }
+        }
+        // Fallback: just place at rbak distance in a random direction
+        let t = Double.random(in: 0 ..< (.pi * 2))
+        return FrievePoint(x: source.position.x + sin(t) * rbak,
+                           y: source.position.y - cos(t) * rbak)
     }
 
     func addLinkBetweenSelectionAndRoot() {
