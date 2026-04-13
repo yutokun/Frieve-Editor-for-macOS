@@ -2,6 +2,73 @@ import SwiftUI
 import AppKit
 import AVFoundation
 
+enum GPTPromptAction: String, CaseIterable, Identifiable {
+    case create
+    case continueWriting
+    case simplify
+    case longer
+    case summarize
+    case proofread
+    case translateToEnglish
+    case translateToJapanese
+    case title
+
+    var id: String { rawValue }
+
+    var menuTitle: String {
+        switch self {
+        case .create: "Create…"
+        case .continueWriting: "Continue"
+        case .simplify: "Simplify"
+        case .longer: "Longer"
+        case .summarize: "Summarize"
+        case .proofread: "Proofread"
+        case .translateToEnglish: "Translate to English"
+        case .translateToJapanese: "Translate to Japanese"
+        case .title: "Title"
+        }
+    }
+
+    var operationLabel: String {
+        switch self {
+        case .create: "Insert"
+        case .continueWriting: "Insert After"
+        case .simplify, .longer, .summarize, .proofread, .translateToEnglish, .translateToJapanese: "Replace"
+        case .title: "Title"
+        }
+    }
+
+    var defaultInstruction: String? {
+        switch self {
+        case .create:
+            nil
+        case .continueWriting:
+            "Generate text that follow the text below."
+        case .simplify:
+            "Replace the text below with simpler text."
+        case .longer:
+            "Inflate the text below and replace it with longer text than the original."
+        case .summarize:
+            "Summarize and replace the following text."
+        case .proofread:
+            "You are a professional multilingual proofreader. Replace the text below with the corrected text for grammar, misspellings, etc. If you do not need proofreading, please answer the original text as it is."
+        case .translateToEnglish:
+            "Translate the following sentences into English."
+        case .translateToJapanese:
+            "Translate the following sentences into Japanese."
+        case .title:
+            "Create a title based on the following sentences. Responses should be in the original language."
+        }
+    }
+
+    static let menuSections: [[GPTPromptAction]] = [
+        [.create],
+        [.continueWriting, .simplify, .longer, .summarize, .proofread],
+        [.translateToEnglish, .translateToJapanese],
+        [.title]
+    ]
+}
+
 extension WorkspaceViewModel {
     func browserGaussianRandom(using randomUnit: () -> Double = { Double.random(in: 0 ... 1) }) -> Double {
         var total = 0.0

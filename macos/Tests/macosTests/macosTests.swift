@@ -353,6 +353,39 @@ import Testing
     #expect(frieveLinkShapeOptions.map(\.name).contains("Curved Wedge"))
 }
 
+@Test func windowsGPTMenuActionsExposeExpectedWindowsItems() {
+    let titles = GPTPromptAction.menuSections.flatMap(\.self).map(\.menuTitle)
+
+    #expect(titles == [
+        "Create…",
+        "Continue",
+        "Simplify",
+        "Longer",
+        "Summarize",
+        "Proofread",
+        "Translate to English",
+        "Translate to Japanese",
+        "Title"
+    ])
+}
+
+@MainActor
+@Test func windowsGPTPromptsIncludeRequestedActionAndCardContext() {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.document.updateCard(0) { card in
+        card.title = "Topic"
+        card.bodyText = "Line 1\nLine 2"
+    }
+
+    let prompt = model.selectedGPTPrompt(for: .summarize)
+
+    #expect(prompt.contains("Requested Action: Replace"))
+    #expect(prompt.contains("Instruction: Summarize and replace the following text."))
+    #expect(prompt.contains("Selected Card Title: Topic"))
+    #expect(prompt.contains("Body:\nLine 1\nLine 2"))
+}
+
 @MainActor
 @Test func insertMenuActionsCanCreateLinksAndLabelDrivenCards() throws {
     let model = WorkspaceViewModel()

@@ -66,7 +66,14 @@ struct FrieveEditorCommands: Commands {
                 .keyboardShortcut("f", modifiers: [.command])
             Divider()
             Menu("GPT") {
-                Button("Copy GPT Prompt") { viewModel.copyGPTPromptToClipboard() }
+                ForEach(Array(GPTPromptAction.menuSections.enumerated()), id: \.offset) { sectionIndex, actions in
+                    ForEach(actions) { action in
+                        Button(action.menuTitle) { viewModel.copyGPTPrompt(for: action) }
+                    }
+                    if sectionIndex < GPTPromptAction.menuSections.count - 1 {
+                        Divider()
+                    }
+                }
             }
             .disabled(viewModel.selectedCardID == nil)
             Button("Web Search") { viewModel.searchWebForSelection() }

@@ -182,8 +182,20 @@ extension WorkspaceViewModel {
     }
 
     func selectedGPTPrompt() -> String {
+        selectedGPTPrompt(for: .summarize)
+    }
+
+    func selectedGPTPrompt(for action: GPTPromptAction, customInstruction: String? = nil) -> String {
+        let instruction = (customInstruction ?? action.defaultInstruction ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard let card = selectedCard else {
-            return settings.gptSystemPrompt
+            return [
+                settings.gptSystemPrompt,
+                "",
+                "Requested Action: \(action.operationLabel)",
+                "Instruction: \(instruction)"
+            ]
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
         }
         let labels = cardLabelNames(for: card).joined(separator: ", ")
         let relatedTitles = selectedCardLinks.compactMap { link -> String? in
@@ -195,6 +207,9 @@ extension WorkspaceViewModel {
         return [
             settings.gptSystemPrompt,
             "",
+            "Requested Action: \(action.operationLabel)",
+            "Instruction: \(instruction)",
+            "",
             "Document Title: \(document.title)",
             "Selected Card ID: \(card.id)",
             "Selected Card Title: \(card.title)",
@@ -202,7 +217,46 @@ extension WorkspaceViewModel {
             "Related Cards: \(relatedTitles.isEmpty ? "None" : relatedTitles)",
             "Body:",
             card.bodyText
-        ].joined(separator: "\n")
+        ]
+        .filter { !$0.isEmpty }
+        .joined(separator: "\n")
+    }
+
+    func copyGPTPrompt(for action: GPTPromptAction) {
+        let customInstruction: String?
+        if action == .create {
+            guard let prompt = promptForGPTInstruction(title: action.menuTitle) else {
+                statusMessage = "GPT prompt creation was cancelled"
+                return
+            }
+            customInstruction = prompt
+        } else {
+            customInstruction = nil
+        }
+
+        let prompt = selectedGPTPrompt(for: action, customInstruction: customInstruction)
+        lastGPTPrompt = prompt
+        copyTextToClipboard(prompt)
+        statusMessage = "Copied the \(action.menuTitle.replacingOccurrences(of: "…", with: "")) GPT prompt to the clipboard"
+    }
+
+    private func promptForGPTInstruction(title: String) -> String? {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = "Enter the instruction to send with the selected card."
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Cancel")
+
+        let inputField = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
+        inputField.placeholderString = "Prompt"
+        alert.accessoryView = inputField
+
+        let response = alert.runModal()
+        let prompt = inputField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard response == .alertFirstButtonReturn, !prompt.isEmpty else {
+            return nil
+        }
+        return prompt
     }
 
     func saveTextExport(_ text: String, defaultName: String) {
