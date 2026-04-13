@@ -588,14 +588,14 @@ struct DrawingCanvasEditor: View {
                   let startOffset = middlePanStartOffset else {
                 return event
             }
-            let delta = CGSize(
-                width: event.locationInWindow.x - startLocation.x,
-                height: event.locationInWindow.y - startLocation.y
-            )
+            // locationInWindow uses bottom-left origin (Y+ = up), but the canvas
+            // uses top-left origin (Y+ = down), so negate the Y component.
+            let deltaX = event.locationInWindow.x - startLocation.x
+            let deltaY = -(event.locationInWindow.y - startLocation.y)
             viewport.setContentOffset(
                 CGSize(
-                width: startOffset.width + delta.width,
-                height: startOffset.height + delta.height
+                    width: startOffset.width + deltaX,
+                    height: startOffset.height + deltaY
                 ),
                 in: canvasFrameInWindow.size,
                 allowsRubberBanding: viewport.zoomScale > 1.0
