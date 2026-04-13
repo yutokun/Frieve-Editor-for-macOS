@@ -729,7 +729,7 @@ struct FrieveDocument: Codable, Hashable {
             created: isoTimestamp(),
             updated: isoTimestamp(),
             viewed: isoTimestamp(),
-            labelIDs: seed?.labelIDs ?? [],
+            labelIDs: [],
             score: seed?.score ?? 0,
             imagePath: nil,
             videoPath: nil
@@ -758,7 +758,6 @@ struct FrieveDocument: Codable, Hashable {
         let siblingID = addCard(title: "Sibling of \(source.title)")
         updateCard(siblingID) { sibling in
             sibling.position = FrievePoint(x: source.position.x + 0.12, y: source.position.y)
-            sibling.labelIDs = source.labelIDs
             sibling.shape = source.shape
             sibling.size = source.size
         }
