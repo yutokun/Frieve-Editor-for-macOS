@@ -2038,7 +2038,12 @@ import Testing
 }
 
 @Test func browserAutoScrollMovesCanvasTowardSelectedCard() async throws {
-    let model = await MainActor.run { WorkspaceViewModel() }
+    let model = await MainActor.run {
+        let suiteName = "FrieveEditorMacTests.browserAutoScrollMovement"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return WorkspaceViewModel(settings: AppSettings(userDefaults: defaults))
+    }
 
     let result = await MainActor.run { () -> (FrievePoint, FrievePoint, FrievePoint) in
         model.newDocument()
@@ -2068,6 +2073,48 @@ import Testing
     #expect(result.0.y > 0.22)
     #expect(abs(result.1.x - result.2.x) < 0.0001)
     #expect(abs(result.1.y - result.2.y) < 0.0001)
+}
+
+@Test func browserNoScrollLagSettingControlsSelectionFollowDelay() async throws {
+    let model = await MainActor.run {
+        let suiteName = "FrieveEditorMacTests.browserNoScrollLag"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        return WorkspaceViewModel(settings: AppSettings(userDefaults: defaults))
+    }
+
+    let result = await MainActor.run { () -> (FrievePoint, Bool, FrievePoint) in
+        model.newDocument()
+        let rootID = model.document.sortedCards.first?.id ?? 0
+        let childID = model.document.addCard(title: "Child", linkedFrom: rootID)
+        model.document.updateCard(rootID) { card in
+            card.position = FrievePoint(x: 0.18, y: 0.22)
+        }
+        model.document.updateCard(childID) { card in
+            card.position = FrievePoint(x: 0.84, y: 0.76)
+        }
+        model.invalidateDocumentCaches()
+
+        model.settings.browserNoScrollLag = false
+        model.canvasCenter = FrievePoint(x: 0.18, y: 0.22)
+        model.autoScroll = true
+        model.selectCard(childID)
+        let delayedCenter = model.canvasCenter
+        let delayedStep = model.applyBrowserAutoScrollStepIfNeeded(at: CACurrentMediaTime())
+
+        model.settings.browserNoScrollLag = true
+        model.canvasCenter = FrievePoint(x: 0.18, y: 0.22)
+        model.selectCard(rootID)
+        model.selectCard(childID)
+        let immediateCenter = model.canvasCenter
+
+        return (delayedCenter, delayedStep, immediateCenter)
+    }
+
+    #expect(result.0 == FrievePoint(x: 0.18, y: 0.22))
+    #expect(result.1 == false)
+    #expect(result.2.x > 0.18)
+    #expect(result.2.y > 0.22)
 }
 
 @Test func browserLinkSnapshotUsesWorldCoordinatesForMetalRenderer() async throws {

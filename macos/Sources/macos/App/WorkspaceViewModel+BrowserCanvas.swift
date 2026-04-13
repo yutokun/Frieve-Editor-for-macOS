@@ -6,6 +6,7 @@ extension WorkspaceViewModel {
     private var browserAutoArrangeBaselineInterval: CFTimeInterval { 1.0 / 30.0 }
     private var browserAutoArrangeFrameScale: Double { browserAutoArrangeFrameInterval / browserAutoArrangeBaselineInterval }
     private var browserAutoScrollDuration: CFTimeInterval { 0.28 }
+    private var browserAutoScrollSelectionLagDuration: CFTimeInterval { settings.browserNoScrollLag ? 0 : 0.5 }
     private var browserFitBoundsPadding: Double { 0.10 }
     private var browserFitVisibleFraction: Double { 0.94 }
     private var isBrowserAutoArrangeTemporarilySuspended: Bool {
@@ -74,20 +75,22 @@ extension WorkspaceViewModel {
         browserAutoScrollTimer = nil
     }
 
-    func startBrowserAutoScroll(toward targetCenter: FrievePoint) {
+    func startBrowserAutoScroll(toward targetCenter: FrievePoint, delay: CFTimeInterval = 0) {
         let now = CACurrentMediaTime()
         resetBrowserFitAnimation()
-        browserAutoScrollStartCenter = canvasCenter
+        browserAutoScrollStartCenter = nil
         browserAutoScrollTargetCenter = targetCenter
-        browserAutoScrollStartedAt = now - (1.0 / 60.0)
-        browserAutoScrollSuspendedUntil = 0
+        browserAutoScrollStartedAt = nil
+        browserAutoScrollSuspendedUntil = delay > 0 ? now + delay : 0
         ensureBrowserAutoScrollTimer()
-        applyBrowserViewportAnimationsFrameIfNeeded(at: now)
+        if delay <= 0 {
+            applyBrowserViewportAnimationsFrameIfNeeded(at: now)
+        }
     }
 
     func prepareBrowserAutoScrollForSelectionChange() {
         if let selectedCard {
-            startBrowserAutoScroll(toward: selectedCard.position)
+            startBrowserAutoScroll(toward: selectedCard.position, delay: browserAutoScrollSelectionLagDuration)
         } else {
             resetBrowserAutoScrollAnimation()
         }
