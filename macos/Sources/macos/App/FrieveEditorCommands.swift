@@ -1,8 +1,5 @@
 import SwiftUI
 
-private let batchShapeOptions = ["Rounded Rectangle", "Ellipse", "Capsule", "Diamond", "Hexagon", "Soft Rectangle"]
-private let batchLinkShapeOptions = ["Straight", "Curve", "Right Angle", "Double Curve", "Arc", "Zigzag"]
-
 struct FrieveEditorCommands: Commands {
     @ObservedObject var viewModel: WorkspaceViewModel
 
@@ -78,13 +75,13 @@ struct FrieveEditorCommands: Commands {
             Divider()
             Menu("Batch Conversion") {
                 Menu("All Cards Shape") {
-                    ForEach(Array(batchShapeOptions.enumerated()), id: \.offset) { index, name in
-                        Button(name) { viewModel.batchChangeAllCardsShape(to: index) }
+                    ForEach(frieveCardShapeOptions, id: \.index) { option in
+                        Button(option.name) { viewModel.batchChangeAllCardsShape(to: option.index) }
                     }
                 }
                 Menu("All Links Shape") {
-                    ForEach(Array(batchLinkShapeOptions.enumerated()), id: \.offset) { index, name in
-                        Button(name) { viewModel.batchChangeAllLinksShape(to: index) }
+                    ForEach(frieveLinkShapeOptions, id: \.index) { option in
+                        Button(option.name) { viewModel.batchChangeAllLinksShape(to: option.index) }
                     }
                 }
                 Button("Reverse All Links Direction") { viewModel.batchReverseAllLinksDirection() }

@@ -163,8 +163,9 @@ private func browserLinkPolylinePoints(
     baseScale: CGFloat,
     curveSamples: Int
 ) -> [CGPoint] {
-    switch abs(shapeIndex % 6) {
-    case 1, 3:
+    let normalizedShapeIndex = ((shapeIndex % frieveLinkShapeOptions.count) + frieveLinkShapeOptions.count) % frieveLinkShapeOptions.count
+    switch normalizedShapeIndex {
+    case 1, 3, 6...11:
         let scale = max(baseScale, 0.0001)
         let dx = end.x - start.x
         let controlOffset = max(abs(dx) * 0.35, 28 / scale)
@@ -510,11 +511,12 @@ extension WorkspaceViewModel {
     func buildLinkPath(for link: FrieveLink, start: CGPoint, end: CGPoint, baseScale: CGFloat = 1) -> CGPath {
         let path = CGMutablePath()
         path.move(to: start)
+        let normalizedShapeIndex = ((link.shape % frieveLinkShapeOptions.count) + frieveLinkShapeOptions.count) % frieveLinkShapeOptions.count
         let dx = end.x - start.x
         let scale = max(baseScale, 0.0001)
         let controlOffset = max(abs(dx) * 0.35, 28 / scale)
-        switch abs(link.shape % 6) {
-        case 1, 3:
+        switch normalizedShapeIndex {
+        case 1, 3, 6...11:
             let cp1 = CGPoint(x: start.x + controlOffset, y: start.y)
             let cp2 = CGPoint(x: end.x - controlOffset, y: end.y)
             path.addCurve(to: end, control1: cp1, control2: cp2)

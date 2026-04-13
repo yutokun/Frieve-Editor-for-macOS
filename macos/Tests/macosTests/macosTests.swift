@@ -334,6 +334,15 @@ import Testing
     #expect(model.annotatedCardBodiesExportText().contains("# Topic"))
 }
 
+@Test func windowsShapeMenusExposeFullWindowsOptionSets() {
+    #expect(frieveCardShapeOptions.count == 16)
+    #expect(frieveCardShapeOptions.map(\.name).contains("No Drawing"))
+    #expect(frieveCardShapeOptions.map(\.name).contains("Trapezoid Top"))
+    #expect(frieveLinkShapeOptions.count == 12)
+    #expect(frieveLinkShapeOptions.map(\.name).contains("Wedge"))
+    #expect(frieveLinkShapeOptions.map(\.name).contains("Curved Wedge"))
+}
+
 @MainActor
 @Test func randomFlashAnimationRestoresDocumentAndSelectionWhenStopped() async throws {
     let model = WorkspaceViewModel()

@@ -708,7 +708,7 @@ extension WorkspaceViewModel {
                 toCardID: link.toCardID,
                 startPoint: start,
                 endPoint: end,
-                shapeIndex: abs(link.shape % 6),
+                shapeIndex: ((link.shape % frieveLinkShapeOptions.count) + frieveLinkShapeOptions.count) % frieveLinkShapeOptions.count,
                 directionVisible: link.directionVisible,
                 labelPoint: buildLinkLabelPoint(for: link, start: start, end: end, baseScale: CGFloat(scale)),
                 labelText: showsLabels ? link.name.trimmed.nilIfEmpty : nil,

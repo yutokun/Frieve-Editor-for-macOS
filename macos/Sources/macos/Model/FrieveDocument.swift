@@ -1,5 +1,39 @@
 import Foundation
 
+let frieveCardShapeOptions: [(index: Int, name: String)] = [
+    (0, "No Drawing"),
+    (1, "Rectangle"),
+    (2, "Rounded Rectangle"),
+    (3, "Capsule"),
+    (4, "Ellipse"),
+    (5, "Diamond"),
+    (6, "Hexagon"),
+    (7, "Trapezoid Top"),
+    (8, "Trapezoid Bottom"),
+    (9, "Small Rectangle"),
+    (10, "Small Circle"),
+    (11, "Small Triangle Up"),
+    (12, "Small Triangle Down"),
+    (13, "Small Diamond"),
+    (14, "Small Hexagon"),
+    (15, "Star")
+]
+
+let frieveLinkShapeOptions: [(index: Int, name: String)] = [
+    (0, "Straight"),
+    (1, "Straight Dotted"),
+    (2, "Straight Dashed"),
+    (3, "Straight Dash-Dot"),
+    (4, "Straight Dash-Dot-Dot"),
+    (5, "Wedge"),
+    (6, "Curved"),
+    (7, "Curved Dotted"),
+    (8, "Curved Dashed"),
+    (9, "Curved Dash-Dot"),
+    (10, "Curved Dash-Dot-Dot"),
+    (11, "Curved Wedge")
+]
+
 struct FrievePoint: Codable, Hashable {
     var x: Double
     var y: Double
@@ -87,28 +121,31 @@ struct FrieveCard: Identifiable, Codable, Hashable {
     }
 
     var normalizedShapeIndex: Int {
-        ((shape % 6) + 6) % 6
+        ((shape % frieveCardShapeOptions.count) + frieveCardShapeOptions.count) % frieveCardShapeOptions.count
     }
 
     var shapeName: String {
-        switch normalizedShapeIndex {
-        case 0: "Rect"
-        case 1: "Capsule"
-        case 2: "Round"
-        case 3: "Diamond"
-        case 4: "Hexagon"
-        default: "Note"
-        }
+        frieveCardShapeOptions[normalizedShapeIndex].name
     }
 
     var shapeSymbolName: String {
         switch normalizedShapeIndex {
-        case 0: "rectangle.roundedtop"
-        case 1: "capsule.portrait"
-        case 2: "square.roundedbottom"
-        case 3: "diamond"
-        case 4: "hexagon"
-        default: "note.text"
+        case 0: "textformat"
+        case 1: "rectangle"
+        case 2: "rectangle.roundedtop"
+        case 3: "capsule.portrait"
+        case 4: "circle"
+        case 5: "diamond"
+        case 6: "hexagon"
+        case 7: "trapezoid.and.line.horizontal"
+        case 8: "trapezoid.and.line.vertical"
+        case 9: "rectangle.center.inset.filled"
+        case 10: "circle.fill"
+        case 11: "triangle.fill"
+        case 12: "arrowtriangle.down.fill"
+        case 13: "diamond.fill"
+        case 14: "hexagon.fill"
+        default: "star.fill"
         }
     }
 

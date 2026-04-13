@@ -637,13 +637,12 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         menu.addItem(labelMenuItem)
 
         // Shape submenu
-        let shapeNames = ["Rounded Rectangle", "Ellipse", "Capsule", "Diamond", "Hexagon", "Soft Rectangle"]
         let shapeMenu = NSMenu(title: "Shape")
-        for (idx, name) in shapeNames.enumerated() {
-            let item = NSMenuItem(title: name, action: #selector(handleSetShape(_:)), keyEquivalent: "")
+        for option in frieveCardShapeOptions {
+            let item = NSMenuItem(title: option.name, action: #selector(handleSetShape(_:)), keyEquivalent: "")
             item.target = self
-            item.tag = idx
-            if let selectedCard, (selectedCard.shape % shapeNames.count + shapeNames.count) % shapeNames.count == idx {
+            item.tag = option.index
+            if let selectedCard, selectedCard.shape == option.index {
                 item.state = .on
             }
             shapeMenu.addItem(item)
@@ -1989,19 +1988,7 @@ private extension BrowserMetalRenderer {
         lineWidth: Float,
         color: SIMD4<Float>
     ) -> [BrowserMetalLinkInstance] {
-        switch abs(shapeIndex % 6) {
-        case 2, 4:
-            let midX = (start.x + end.x) / 2
-            let elbowA = CGPoint(x: midX, y: start.y)
-            let elbowB = CGPoint(x: midX, y: end.y)
-            return [
-                makeLinkBodyInstance(start: start, end: elbowA, shapeIndex: shapeIndex, lineWidth: lineWidth, color: color),
-                makeLinkBodyInstance(start: elbowA, end: elbowB, shapeIndex: shapeIndex, lineWidth: lineWidth, color: color),
-                makeLinkBodyInstance(start: elbowB, end: end, shapeIndex: shapeIndex, lineWidth: lineWidth, color: color)
-            ].filter { distanceSquared(from: $0.start, to: $0.end) > 0.00000001 }
-        default:
-            return [makeLinkBodyInstance(start: start, end: end, shapeIndex: shapeIndex, lineWidth: lineWidth, color: color)]
-        }
+        return [makeLinkBodyInstance(start: start, end: end, shapeIndex: shapeIndex, lineWidth: lineWidth, color: color)]
     }
 
     func makeArrowInstances(

@@ -9,14 +9,19 @@ struct BrowserCardShape: Shape {
     }
 
     static func cgPath(in rect: CGRect, shapeIndex: Int) -> CGPath {
-        switch ((shapeIndex % 6) + 6) % 6 {
+        let normalizedShapeIndex = ((shapeIndex % frieveCardShapeOptions.count) + frieveCardShapeOptions.count) % frieveCardShapeOptions.count
+        switch normalizedShapeIndex {
         case 0:
-            return CGPath(roundedRect: rect, cornerWidth: 10, cornerHeight: 10, transform: nil)
+            return CGMutablePath()
         case 1:
-            return CGPath(ellipseIn: rect, transform: nil)
+            return CGPath(rect: rect, transform: nil)
         case 2:
-            return CGPath(roundedRect: rect, cornerWidth: 18, cornerHeight: 18, transform: nil)
+            return CGPath(roundedRect: rect, cornerWidth: 10, cornerHeight: 10, transform: nil)
         case 3:
+            return CGPath(roundedRect: rect, cornerWidth: rect.height / 2, cornerHeight: rect.height / 2, transform: nil)
+        case 4:
+            return CGPath(ellipseIn: rect, transform: nil)
+        case 5:
             let path = CGMutablePath()
             path.move(to: CGPoint(x: rect.midX, y: rect.minY))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
@@ -24,7 +29,7 @@ struct BrowserCardShape: Shape {
             path.addLine(to: CGPoint(x: rect.minX, y: rect.midY))
             path.closeSubpath()
             return path
-        case 4:
+        case 6:
             let inset = rect.width * 0.14
             let path = CGMutablePath()
             path.move(to: CGPoint(x: rect.minX + inset, y: rect.minY))
@@ -35,8 +40,93 @@ struct BrowserCardShape: Shape {
             path.addLine(to: CGPoint(x: rect.minX, y: rect.midY))
             path.closeSubpath()
             return path
+        case 7:
+            let inset = rect.height / 4
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: rect.minX + inset, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX - inset, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.closeSubpath()
+            return path
+        case 8:
+            let inset = rect.height / 4
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX - inset, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX + inset, y: rect.maxY))
+            path.closeSubpath()
+            return path
+        case 9:
+            let size = min(rect.width, rect.height) * 0.28
+            let centered = CGRect(x: rect.midX - size, y: rect.midY - size, width: size * 2, height: size * 2)
+            return CGPath(rect: centered, transform: nil)
+        case 10:
+            let size = min(rect.width, rect.height) * 0.28
+            let centered = CGRect(x: rect.midX - size, y: rect.midY - size, width: size * 2, height: size * 2)
+            return CGPath(ellipseIn: centered, transform: nil)
+        case 11:
+            let size = min(rect.width, rect.height) * 0.32
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: rect.midX, y: rect.midY - size))
+            path.addLine(to: CGPoint(x: rect.midX + size * 0.866, y: rect.midY + size * 0.5))
+            path.addLine(to: CGPoint(x: rect.midX - size * 0.866, y: rect.midY + size * 0.5))
+            path.closeSubpath()
+            return path
+        case 12:
+            let size = min(rect.width, rect.height) * 0.32
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: rect.midX, y: rect.midY + size))
+            path.addLine(to: CGPoint(x: rect.midX + size * 0.866, y: rect.midY - size * 0.5))
+            path.addLine(to: CGPoint(x: rect.midX - size * 0.866, y: rect.midY - size * 0.5))
+            path.closeSubpath()
+            return path
+        case 13:
+            let size = min(rect.width, rect.height) * 0.32
+            let path = CGMutablePath()
+            path.move(to: CGPoint(x: rect.midX, y: rect.midY - size))
+            path.addLine(to: CGPoint(x: rect.midX + size, y: rect.midY))
+            path.addLine(to: CGPoint(x: rect.midX, y: rect.midY + size))
+            path.addLine(to: CGPoint(x: rect.midX - size, y: rect.midY))
+            path.closeSubpath()
+            return path
+        case 14:
+            let size = min(rect.width, rect.height) * 0.32
+            let path = CGMutablePath()
+            for step in 0..<6 {
+                let angle = (.pi / 6) + (.pi / 3 * Double(step))
+                let point = CGPoint(
+                    x: rect.midX + CGFloat(sin(angle)) * size,
+                    y: rect.midY - CGFloat(cos(angle)) * size
+                )
+                if step == 0 {
+                    path.move(to: point)
+                } else {
+                    path.addLine(to: point)
+                }
+            }
+            path.closeSubpath()
+            return path
         default:
-            return CGPath(roundedRect: rect, cornerWidth: 12, cornerHeight: 12, transform: nil)
+            let outerRadius = min(rect.width, rect.height) * 0.34
+            let innerRadius = outerRadius * 0.45
+            let path = CGMutablePath()
+            for step in 0..<10 {
+                let radius = step.isMultiple(of: 2) ? outerRadius : innerRadius
+                let angle = (-.pi / 2) + (.pi / 5 * Double(step))
+                let point = CGPoint(
+                    x: rect.midX + CGFloat(cos(angle)) * radius,
+                    y: rect.midY + CGFloat(sin(angle)) * radius
+                )
+                if step == 0 {
+                    path.move(to: point)
+                } else {
+                    path.addLine(to: point)
+                }
+            }
+            path.closeSubpath()
+            return path
         }
     }
 }
