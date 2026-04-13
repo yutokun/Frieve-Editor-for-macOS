@@ -163,12 +163,6 @@ private struct FrieveEditorSettingsView: View {
                         Button("Default Size") {
                             settings.browserFontSize = 13
                         }
-                        Button("Magnify") {
-                            settings.browserFontSize = min(settings.browserFontSize + 1, 36)
-                        }
-                        Button("Reduce") {
-                            settings.browserFontSize = max(settings.browserFontSize - 1, 8)
-                        }
                     }
                 }
 
