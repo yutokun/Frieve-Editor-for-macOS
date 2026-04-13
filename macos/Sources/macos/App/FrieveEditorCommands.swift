@@ -117,9 +117,6 @@ struct FrieveEditorCommands: Commands {
                 }
             }
             .disabled(viewModel.selectedCardID == nil)
-            Divider()
-            Button("Delete Selected Card") { viewModel.deleteSelectedCard() }
-                .keyboardShortcut(.delete, modifiers: [.command])
         }
 
         CommandMenu("Layout") {
