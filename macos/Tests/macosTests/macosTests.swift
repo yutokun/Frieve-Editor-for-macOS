@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import MetalKit
 import SwiftUI
 import Testing
 @testable import macos
@@ -10,6 +11,35 @@ import Testing
     #expect(document.cardCount == 1)
     #expect(document.focusedCardID == 0)
     #expect(document.cards.first?.title == "Frieve Editor")
+}
+
+@Test func browserAppearanceHelperMatchesSwiftUIColorScheme() throws {
+    #expect(browserAppearance(for: .light).bestMatch(from: [.aqua, .darkAqua]) == .aqua)
+    #expect(browserAppearance(for: .dark).bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
+}
+
+@Test func browserCanvasBackgroundHelperMatchesColorScheme() throws {
+    let light = browserCanvasBackgroundColor(for: .light).usingColorSpace(.deviceRGB)
+    let dark = browserCanvasBackgroundColor(for: .dark).usingColorSpace(.deviceRGB)
+
+    #expect(light != nil)
+    #expect(dark != nil)
+    #expect(dark?.redComponent != light?.redComponent || dark?.greenComponent != light?.greenComponent || dark?.blueComponent != light?.blueComponent)
+}
+
+@MainActor
+@Test func browserCanvasClearColorVariesByAppearance() throws {
+    let view = BrowserSurfaceNSView(frame: CGRect(x: 0, y: 0, width: 1200, height: 800))
+
+    view.updateColorScheme(.light)
+    let lightLuminance = browserTestLuminance(from: view.browserCanvasClearColor)
+
+    view.updateColorScheme(.dark)
+    let darkLuminance = browserTestLuminance(from: view.browserCanvasClearColor)
+
+    #expect(lightLuminance != nil)
+    #expect(darkLuminance != nil)
+    #expect(darkLuminance! < lightLuminance!)
 }
 
 @Test func fip2RoundTripPreservesCardAndLinkData() async throws {
@@ -1515,6 +1545,32 @@ import Testing
     #expect(model.cardByID(cardID) == nil)
 }
 
+@MainActor
+@Test func browserRefreshSynchronizesAppearanceBeforeRedraw() throws {
+    guard let lightAppearance = NSAppearance(named: .aqua),
+          let darkAppearance = NSAppearance(named: .darkAqua) else {
+        Issue.record("Expected standard Aqua appearances to be available")
+        return
+    }
+
+    let model = WorkspaceViewModel()
+    let view = BrowserSurfaceNSView(frame: CGRect(x: 0, y: 0, width: 1200, height: 800))
+    view.viewModel = model
+    model.newDocument()
+
+    view.updateColorScheme(.light)
+    let lightLuminance = try #require(browserTestLuminance(from: view.layer?.backgroundColor))
+    let lightCanvasLuminance = try #require(browserTestLuminance(from: view.browserCanvasClearColor))
+    #expect(view.browserAppearanceSignature == 0)
+
+    view.updateColorScheme(.dark)
+    let darkLuminance = try #require(browserTestLuminance(from: view.layer?.backgroundColor))
+    let darkCanvasLuminance = try #require(browserTestLuminance(from: view.browserCanvasClearColor))
+    #expect(view.browserAppearanceSignature == 1)
+    #expect(darkLuminance < lightLuminance)
+    #expect(darkCanvasLuminance < lightCanvasLuminance)
+}
+
 @Test func webSearchQueryUsesCardTitleOnlyForSingleSelection() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
@@ -1565,4 +1621,18 @@ import Testing
         model.scheduleBrowserChromeRefresh(immediate: true)
         #expect(model.browserChromeRevision > beforeRevision)
     }
+}
+
+private func browserTestLuminance(from color: CGColor?) -> Double? {
+    guard let color,
+          let nsColor = NSColor(cgColor: color)?.usingColorSpace(.deviceRGB) else {
+        return nil
+    }
+    return (Double(nsColor.redComponent) * 0.2126) +
+        (Double(nsColor.greenComponent) * 0.7152) +
+        (Double(nsColor.blueComponent) * 0.0722)
+}
+
+private func browserTestLuminance(from color: MTLClearColor) -> Double? {
+    (color.red * 0.2126) + (color.green * 0.7152) + (color.blue * 0.0722)
 }

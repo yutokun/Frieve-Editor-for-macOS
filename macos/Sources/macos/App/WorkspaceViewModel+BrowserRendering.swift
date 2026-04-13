@@ -203,11 +203,10 @@ extension WorkspaceViewModel {
         return (start, end)
     }
 
-    func color(for card: FrieveCard) -> Color {
+    func browserFillColor(for card: FrieveCard) -> NSColor {
         if let labelColor = metadata(for: card).primaryLabelColor {
             return browserCardFillColor(from: Color(frieveRGB: labelColor))
         }
-        // No label: neutral white-based color matching Windows no-label style
         return browserCardFillColor(from: Color(white: 0.55))
     }
 
@@ -248,7 +247,7 @@ extension Color {
     }
 }
 
-private func browserCardFillColor(from accent: Color) -> Color {
+private func browserCardFillColor(from accent: Color) -> NSColor {
     let accentRGB = (NSColor(accent).usingColorSpace(.deviceRGB) ?? NSColor(accent))
     let referenceBackground = NSColor(
         calibratedRed: 0.96,
@@ -256,7 +255,9 @@ private func browserCardFillColor(from accent: Color) -> Color {
         blue: 0.95,
         alpha: 1
     )
-    let outlineLikeColor = accentRGB.blended(withFraction: 0.33, of: referenceBackground) ?? accentRGB
-    let fillColor = outlineLikeColor.blended(withFraction: 0.5, of: referenceBackground) ?? outlineLikeColor
-    return Color(nsColor: fillColor)
+    let outlineBlend: CGFloat = 0.33
+    let fillBlend: CGFloat = 0.5
+    let outlineLikeColor = accentRGB.blended(withFraction: outlineBlend, of: referenceBackground) ?? accentRGB
+    let fillColor = outlineLikeColor.blended(withFraction: fillBlend, of: referenceBackground) ?? outlineLikeColor
+    return fillColor
 }
