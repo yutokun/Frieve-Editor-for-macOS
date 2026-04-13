@@ -149,8 +149,15 @@ private struct FrieveEditorSettingsView: View {
                             Text(family).tag(family)
                         }
                     }
-                    Stepper(value: $settings.browserFontSize, in: 8 ... 36) {
-                        Text("Size \(settings.browserFontSize) pt")
+                    LabeledContent("Size") {
+                        HStack(spacing: 8) {
+                            Stepper("", value: $settings.browserFontSize, in: 8 ... 36)
+                                .labelsHidden()
+                            Text("\(settings.browserFontSize) pt")
+                                .font(.body.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                                .frame(minWidth: 52, alignment: .leading)
+                        }
                     }
                     HStack {
                         Button("Default Size") {
