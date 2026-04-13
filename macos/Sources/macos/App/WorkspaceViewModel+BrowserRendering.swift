@@ -207,29 +207,8 @@ extension WorkspaceViewModel {
         if let labelColor = metadata(for: card).primaryLabelColor {
             return browserCardFillColor(from: Color(frieveRGB: labelColor))
         }
-
-        if card.isTop {
-            return browserCardFillColor(from: .accentColor)
-        }
-
-        let normalizedScore = max(min(card.score, 5.0), -5.0)
-        if normalizedScore >= 0 {
-            return browserCardFillColor(
-                from: Color(
-                    red: 0.56 - normalizedScore * 0.03,
-                    green: 0.67,
-                    blue: 0.56 - normalizedScore * 0.05
-                )
-            )
-        }
-
-        return browserCardFillColor(
-            from: Color(
-                red: 0.64,
-                green: 0.60 + normalizedScore * 0.02,
-                blue: 0.72 + normalizedScore * 0.05
-            )
-        )
+        // No label: neutral white-based color matching Windows no-label style
+        return browserCardFillColor(from: Color(white: 0.55))
     }
 
     func drawingColor(rawValue: Int?, fallback: Color) -> Color {
