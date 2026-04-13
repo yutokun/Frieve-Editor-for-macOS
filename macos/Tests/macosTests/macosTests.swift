@@ -322,41 +322,45 @@ import Testing
     }
 }
 
-@Test func browserLinkArrowSegmentKeepsRendererArrowAnchoredAtMidLink() async throws {
-    let straight = browserLinkArrowSegment(
+@Test func browserLinkArrowStrokeSegmentsKeepRendererChevronAnchoredAtMidLink() async throws {
+    let straight = browserLinkArrowStrokeSegments(
         shapeIndex: 5,
         start: CGPoint(x: 0, y: 0),
         end: CGPoint(x: 120, y: 0)
     )
     #expect(straight != nil)
     if let straight {
-        #expect(abs(straight.end.x - 60) < 0.01)
-        #expect(abs(straight.end.y) < 0.01)
-        #expect(straight.start.x < straight.end.x)
-        #expect(abs(straight.start.y - straight.end.y) < 0.001)
+        #expect(straight.leftStart.x < straight.leftEnd.x)
+        #expect(straight.rightStart.x < straight.rightEnd.x)
+        #expect(straight.leftEnd.x < 60)
+        #expect(straight.rightEnd.x < 60)
+        #expect(abs(straight.leftEnd.y) < 8)
+        #expect(abs(straight.rightEnd.y) < 8)
     }
 
-    let elbow = browserLinkArrowSegment(
+    let elbow = browserLinkArrowStrokeSegments(
         shapeIndex: 2,
         start: CGPoint(x: 0, y: 0),
         end: CGPoint(x: 120, y: 80)
     )
     #expect(elbow != nil)
     if let elbow {
-        #expect(abs(elbow.end.x - 60) < 0.01)
-        #expect(abs(elbow.end.y - 40) < 0.01)
-        #expect(abs(elbow.start.x - elbow.end.x) < 0.001)
-        #expect(elbow.start.y < elbow.end.y)
+        #expect(abs(straight?.leftEnd.x ?? 0 - 60) > 0.5)
+        #expect(abs(elbow.leftEnd.x - 60) < 8)
+        #expect(abs(elbow.rightEnd.x - 60) < 8)
+        #expect(elbow.leftStart.y < elbow.leftEnd.y)
+        #expect(elbow.rightStart.y < elbow.rightEnd.y)
     }
 
-    let curve = browserLinkArrowSegment(
+    let curve = browserLinkArrowStrokeSegments(
         shapeIndex: 1,
         start: CGPoint(x: 0, y: 0),
         end: CGPoint(x: 140, y: 40)
     )
     #expect(curve != nil)
     if let curve {
-        #expect(hypot(curve.end.x - 140, curve.end.y - 40) > 40)
+        #expect(hypot(curve.leftEnd.x - 140, curve.leftEnd.y - 40) > 35)
+        #expect(hypot(curve.rightEnd.x - 140, curve.rightEnd.y - 40) > 35)
     }
 }
 

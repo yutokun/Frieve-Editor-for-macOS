@@ -1877,33 +1877,24 @@ private extension BrowserMetalRenderer {
         color: SIMD4<Float>
     ) -> [BrowserMetalLinkInstance] {
         let arrowLineWidth = max(lineWidth * 1.4, lineWidth + 1)
-        guard let arrowSegment = browserLinkArrowSegment(
+        guard let segments = browserLinkArrowStrokeSegments(
             shapeIndex: shapeIndex,
             start: start,
             end: end
         ) else {
             return []
         }
-        guard distanceSquared(
-            from: SIMD2(Float(arrowSegment.start.x), Float(arrowSegment.start.y)),
-            to: SIMD2(Float(arrowSegment.end.x), Float(arrowSegment.end.y))
-        ) > 0.00000001 else {
-            return []
-        }
         return [
-            BrowserMetalLinkInstance(
-                start: SIMD2(Float(arrowSegment.start.x), Float(arrowSegment.start.y)),
-                end: SIMD2(Float(arrowSegment.end.x), Float(arrowSegment.end.y)),
-                control1: .zero,
-                control2: .zero,
-                color: color,
-                lineWidth: arrowLineWidth,
-                shapeIndex: Int32(shapeIndex),
-                isArrow: 1,
-                curveOffset: 0,
-                padding: .zero
-            )
+            (segments.leftStart, segments.leftEnd),
+            (segments.rightStart, segments.rightEnd)
         ]
+        .filter {
+            distanceSquared(
+                from: SIMD2(Float($0.0.x), Float($0.0.y)),
+                to: SIMD2(Float($0.1.x), Float($0.1.y))
+            ) > 0.00000001
+        }
+        .map { makeLinkBodyInstance(start: $0.0, end: $0.1, shapeIndex: 0, lineWidth: arrowLineWidth, color: color) }
     }
 
     func applyDesiredAtlasKeys() {

@@ -12,9 +12,11 @@ struct BrowserLinkArrowGeometry {
     let rightWing: CGPoint
 }
 
-struct BrowserLinkArrowSegment {
-    let start: CGPoint
-    let end: CGPoint
+struct BrowserLinkArrowStrokeSegments {
+    let leftStart: CGPoint
+    let leftEnd: CGPoint
+    let rightStart: CGPoint
+    let rightEnd: CGPoint
 }
 
 func browserTrimmedSegmentEnd(start: CGPoint, end: CGPoint, trimDistance: CGFloat) -> CGPoint {
@@ -123,26 +125,35 @@ func browserLinkArrowGeometry(
     )
 }
 
-func browserLinkArrowSegment(
+func browserLinkArrowStrokeSegments(
     shapeIndex: Int,
     start: CGPoint,
     end: CGPoint,
     baseScale: CGFloat = 1,
-    segmentLength: CGFloat = 1
-) -> BrowserLinkArrowSegment? {
-    guard let placement = browserLinkArrowPlacement(
+    tipTrimDistance: CGFloat = 1.2
+) -> BrowserLinkArrowStrokeSegments? {
+    guard let geometry = browserLinkArrowGeometry(
         shapeIndex: shapeIndex,
         start: start,
         end: end,
         baseScale: baseScale
     ) else { return nil }
 
-    let scaledSegmentLength = max(segmentLength / max(baseScale, 0.0001), 0.001)
-    let segmentStart = CGPoint(
-        x: placement.center.x - placement.direction.dx * scaledSegmentLength,
-        y: placement.center.y - placement.direction.dy * scaledSegmentLength
+    let trimDistance = tipTrimDistance / max(baseScale, 0.0001)
+    return BrowserLinkArrowStrokeSegments(
+        leftStart: geometry.leftWing,
+        leftEnd: browserTrimmedSegmentEnd(
+            start: geometry.leftWing,
+            end: geometry.tip,
+            trimDistance: trimDistance
+        ),
+        rightStart: geometry.rightWing,
+        rightEnd: browserTrimmedSegmentEnd(
+            start: geometry.rightWing,
+            end: geometry.tip,
+            trimDistance: trimDistance
+        )
     )
-    return BrowserLinkArrowSegment(start: segmentStart, end: placement.center)
 }
 
 private func browserLinkPolylinePoints(
@@ -520,27 +531,17 @@ extension WorkspaceViewModel {
 
     func buildLinkArrowHead(for link: FrieveLink, start: CGPoint, end: CGPoint, baseScale: CGFloat = 1) -> CGPath? {
         guard link.directionVisible,
-              let geometry = browserLinkArrowGeometry(
+              let segments = browserLinkArrowStrokeSegments(
                 shapeIndex: link.shape,
                 start: start,
                 end: end,
                 baseScale: baseScale
               ) else { return nil }
-        let trimmedLeftTip = browserTrimmedSegmentEnd(
-            start: geometry.leftWing,
-            end: geometry.tip,
-            trimDistance: 1.2 / max(baseScale, 0.0001)
-        )
-        let trimmedRightTip = browserTrimmedSegmentEnd(
-            start: geometry.rightWing,
-            end: geometry.tip,
-            trimDistance: 1.2 / max(baseScale, 0.0001)
-        )
         let path = CGMutablePath()
-        path.move(to: geometry.leftWing)
-        path.addLine(to: trimmedLeftTip)
-        path.move(to: geometry.rightWing)
-        path.addLine(to: trimmedRightTip)
+        path.move(to: segments.leftStart)
+        path.addLine(to: segments.leftEnd)
+        path.move(to: segments.rightStart)
+        path.addLine(to: segments.rightEnd)
         return path
     }
 
