@@ -38,14 +38,14 @@ struct FrieveEditorCommands: Commands {
                 .keyboardShortcut("S", modifiers: [.command, .shift])
             Divider()
             Menu("Import") {
-                Button("Txt File(s)…") { viewModel.importTextFiles() }
+                Button("Text File(s)…") { viewModel.importTextFiles() }
                 Button("Hierarchical Text File…") { viewModel.importHierarchicalTextFiles() }
                 Button("Hierarchical Text File 2…") { viewModel.importHierarchicalTextFilesWithBodies() }
-                Button("Txt Files in a Folder…") { viewModel.importTextFilesInFolder() }
+                Button("Text Files in a Folder…") { viewModel.importTextFilesInFolder() }
             }
             Menu("Export") {
                 Button("Text File (Card Title)…") { viewModel.exportCardTitles() }
-                Button("Text File (Text)…") { viewModel.exportCardBodies() }
+                Button("Text File (Body)…") { viewModel.exportCardBodies() }
                 Button("Text Files…") { viewModel.exportCardBodiesPerFile() }
                 Button("Hierarchical Text File…") { viewModel.exportHierarchicalText() }
                 Button("HTML Files…") { viewModel.exportHTMLFiles() }
