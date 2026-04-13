@@ -461,6 +461,15 @@ extension WorkspaceViewModel {
         let trimmedLine = line.trimmed
         guard !trimmedLine.isEmpty else { return line }
 
+        // Parse and re-encode via the shape model to avoid corrupting coordinates.
+        // Raw text manipulation would let hex color digits (e.g. "0000" in "color=FF0000")
+        // get picked up as extra coordinate numbers by DrawingEditorCodec.numbers.
+        if var shape = DrawingEditorShape(chunk: trimmedLine) {
+            shape.strokeColor = rawValue
+            return shape.encodedChunk
+        }
+
+        // Fallback for unrecognised lines: text-level token replacement
         let filteredTokens = trimmedLine
             .split(whereSeparator: \.isWhitespace)
             .map(String.init)
@@ -468,11 +477,7 @@ extension WorkspaceViewModel {
                 let lower = token.lowercased()
                 return !(lower.hasPrefix("color=") || lower.hasPrefix("stroke=") || lower.hasPrefix("pen="))
             }
-
-        guard let rawValue else {
-            return filteredTokens.joined(separator: " ")
-        }
-
+        guard let rawValue else { return filteredTokens.joined(separator: " ") }
         let colorToken = String(format: "color=%06X", rawValue & 0xFFFFFF)
         return (filteredTokens + [colorToken]).joined(separator: " ")
     }
