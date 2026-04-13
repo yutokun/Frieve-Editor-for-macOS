@@ -49,7 +49,6 @@ struct FrieveEditorCommands: Commands {
             Menu("Export") {
                 Button("Txt File (Card Title)…") { viewModel.exportCardTitles() }
                 Button("Txt File (Text)…") { viewModel.exportCardBodies() }
-                Button("Card Bodies (Annotated)…") { viewModel.exportAnnotatedCardBodies() }
                 Button("Txt Files…") { viewModel.exportCardBodiesPerFile() }
                 Button("Hierarchical Text File…") { viewModel.exportHierarchicalText() }
                 Button("HTML Files…") { viewModel.exportHTMLFiles() }
@@ -61,9 +60,6 @@ struct FrieveEditorCommands: Commands {
                 Button("Clipboard (Card Title)") { viewModel.copyCardTitlesToClipboard() }
                 Button("Clipboard (Text)") { viewModel.copyCardBodiesToClipboard() }
                 Button("Clipboard (BMP)") { viewModel.copyBrowserImageToClipboard() }
-                Divider()
-                Button("Copy FIP2 to Clipboard") { viewModel.exportFIP2ToClipboard() }
-                Button("Copy GPT Prompt") { viewModel.copyGPTPromptToClipboard() }
             }
         }
 
