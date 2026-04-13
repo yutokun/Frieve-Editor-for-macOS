@@ -104,7 +104,7 @@ private struct FrieveEditorSettingsView: View {
 
                 Section("Card") {
                     Toggle("Shadow", isOn: $settings.browserCardShadow)
-                    Toggle("Gradation", isOn: $settings.browserCardGradation)
+                    Toggle("Gradient", isOn: $settings.browserCardGradation)
                     Toggle("Ticker", isOn: $settings.browserTickerVisible)
                     Picker("Ticker Lines", selection: $settings.browserTickerLines) {
                         Text("1 Line").tag(1)
