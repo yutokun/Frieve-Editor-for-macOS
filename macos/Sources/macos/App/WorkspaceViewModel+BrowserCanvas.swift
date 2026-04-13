@@ -60,8 +60,7 @@ extension WorkspaceViewModel {
         let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
             guard let self else { return }
             Task { @MainActor in
-                self.applyBrowserAutoScrollStepIfNeeded()
-                self.applyBrowserAutoZoomStepIfNeeded()
+                self.applyBrowserViewportAnimationsFrameIfNeeded()
             }
         }
         RunLoop.main.add(timer, forMode: .common)
@@ -75,13 +74,13 @@ extension WorkspaceViewModel {
 
     func startBrowserAutoScroll(toward targetCenter: FrievePoint) {
         let now = CACurrentMediaTime()
+        resetBrowserFitAnimation()
         browserAutoScrollStartCenter = canvasCenter
         browserAutoScrollTargetCenter = targetCenter
         browserAutoScrollStartedAt = now - (1.0 / 60.0)
         browserAutoScrollSuspendedUntil = 0
         ensureBrowserAutoScrollTimer()
-        applyBrowserAutoScrollStepIfNeeded(at: now)
-        markBrowserSurfaceViewportDirty()
+        applyBrowserViewportAnimationsFrameIfNeeded(at: now)
     }
 
     func prepareBrowserAutoScrollForSelectionChange() {
@@ -97,7 +96,9 @@ extension WorkspaceViewModel {
         browserAutoScrollTargetCenter = nil
         browserAutoScrollStartedAt = nil
         browserAutoScrollSuspendedUntil = 0
-        stopBrowserAutoScrollTimer()
+        if !browserAutoArrangeEnabled && browserAutoZoomStartZoom == nil && browserFitAnimationStartedAt == nil {
+            stopBrowserAutoScrollTimer()
+        }
     }
 
     func suspendBrowserAutoScroll(for duration: CFTimeInterval = 0.5, at timestamp: CFTimeInterval = CACurrentMediaTime()) {
@@ -110,22 +111,41 @@ extension WorkspaceViewModel {
         }
     }
 
-    func applyBrowserAutoScrollStepIfNeeded(at timestamp: CFTimeInterval = CACurrentMediaTime()) {
+    @discardableResult
+    func applyBrowserViewportAnimationsFrameIfNeeded(
+        at timestamp: CFTimeInterval = CACurrentMediaTime(),
+        refresh: Bool = true
+    ) -> Bool {
+        let didScroll = applyBrowserAutoScrollStepIfNeeded(at: timestamp, refresh: false)
+        let didZoom = applyBrowserAutoZoomStepIfNeeded(at: timestamp, refresh: false)
+        let didFit = applyBrowserFitStepIfNeeded(at: timestamp, refresh: false)
+        let didChange = didScroll || didZoom || didFit
+        if didChange && refresh {
+            markBrowserSurfaceViewportDirty()
+        }
+        return didChange
+    }
+
+    @discardableResult
+    func applyBrowserAutoScrollStepIfNeeded(
+        at timestamp: CFTimeInterval = CACurrentMediaTime(),
+        refresh: Bool = true
+    ) -> Bool {
         guard selectedTab == .browser else {
             resetBrowserAutoScrollAnimation()
-            return
+            return false
         }
         guard autoScroll, let selectedCard else {
             resetBrowserAutoScrollAnimation()
-            return
+            return false
         }
         guard !hasActiveBrowserGesture else {
             browserAutoScrollStartCenter = nil
             browserAutoScrollTargetCenter = nil
             browserAutoScrollStartedAt = nil
-            return
+            return false
         }
-        guard timestamp >= browserAutoScrollSuspendedUntil else { return }
+        guard timestamp >= browserAutoScrollSuspendedUntil else { return false }
 
         let selectedTargetCenter = selectedCard.position
         if browserAutoScrollTargetCenter != selectedTargetCenter || browserAutoScrollStartCenter == nil || browserAutoScrollStartedAt == nil {
@@ -136,23 +156,27 @@ extension WorkspaceViewModel {
         guard let startCenter = browserAutoScrollStartCenter,
               let targetCenter = browserAutoScrollTargetCenter,
               let startedAt = browserAutoScrollStartedAt else {
-            return
+            return false
         }
 
         let deltaX = targetCenter.x - startCenter.x
         let deltaY = targetCenter.y - startCenter.y
         let distanceSquared = deltaX * deltaX + deltaY * deltaY
         if distanceSquared <= 0.00000025 {
+            var didChange = false
             if canvasCenter != targetCenter {
                 canvasCenter = targetCenter
-                markBrowserSurfaceViewportDirty()
+                didChange = true
             }
             browserAutoScrollStartCenter = nil
             browserAutoScrollStartedAt = nil
-            if !browserAutoArrangeEnabled && browserAutoZoomStartZoom == nil {
+            if !browserAutoArrangeEnabled && browserAutoZoomStartZoom == nil && browserFitAnimationStartedAt == nil {
                 stopBrowserAutoScrollTimer()
             }
-            return
+            if didChange && refresh {
+                markBrowserSurfaceViewportDirty()
+            }
+            return didChange
         }
 
         let rawProgress = min(max((timestamp - startedAt) / browserAutoScrollDuration, 0), 1)
@@ -161,19 +185,25 @@ extension WorkspaceViewModel {
             x: startCenter.x + deltaX * easedProgress,
             y: startCenter.y + deltaY * easedProgress
         )
+        var didChange = false
         if canvasCenter != nextCenter {
             canvasCenter = nextCenter
+            didChange = true
         }
-        markBrowserSurfaceViewportDirty()
 
         if rawProgress >= 1 {
             canvasCenter = targetCenter
             browserAutoScrollStartCenter = nil
             browserAutoScrollStartedAt = nil
-            if !browserAutoArrangeEnabled && browserAutoZoomStartZoom == nil {
+            didChange = true
+            if !browserAutoArrangeEnabled && browserAutoZoomStartZoom == nil && browserFitAnimationStartedAt == nil {
                 stopBrowserAutoScrollTimer()
             }
         }
+        if didChange && refresh {
+            markBrowserSurfaceViewportDirty()
+        }
+        return didChange
     }
 
     func performAutomaticMaintenance(now: Date = Date()) {
@@ -278,6 +308,7 @@ extension WorkspaceViewModel {
     }
 
     func resetCanvasToFit(in size: CGSize) {
+        resetBrowserFitAnimation()
         let bounds = browserDocumentBounds()
         canvasCenter = FrievePoint(x: bounds.midX, y: bounds.midY)
         let fittedScale = min(
@@ -466,7 +497,6 @@ extension WorkspaceViewModel {
         let sceneScale = max(browserScale(in: size), 1)
         let key = BrowserSurfaceContentCacheKey(
             contentRevision: browserSurfaceContentRevision,
-            sceneScale: sceneScale,
             detailLevel: detailLevel,
             canvasSize: size,
             canvasPadding: canvasPadding,
@@ -490,8 +520,6 @@ extension WorkspaceViewModel {
         visibleCards.reserveCapacity(64)
         var cards: [BrowserCardLayerSnapshot] = []
         cards.reserveCapacity(64)
-        var hitRegions: [BrowserCardHitRegion] = []
-        hitRegions.reserveCapacity(64)
         var visibleCardWorldFrames: [Int: CGRect] = [:]
         visibleCardWorldFrames.reserveCapacity(64)
 
@@ -512,18 +540,6 @@ extension WorkspaceViewModel {
                     detailLevel: detailLevel
                 )
             )
-            let center = canvasPoint(for: position, in: size)
-            hitRegions.append(
-                BrowserCardHitRegion(
-                    cardID: card.id,
-                    frame: CGRect(
-                        x: center.x - metadata.canvasSize.width / 2,
-                        y: center.y - metadata.canvasSize.height / 2,
-                        width: metadata.canvasSize.width,
-                        height: metadata.canvasSize.height
-                    )
-                )
-            )
         }
         let visibleCardIDs = Set(cards.map { $0.id })
         let links = visibleLinkLayerSnapshots(in: size, visibleCardIDs: visibleCardIDs)
@@ -540,12 +556,26 @@ extension WorkspaceViewModel {
             cardSnapshotSignature: browserCardSnapshotSignature(cards),
             links: links,
             linkSnapshotSignature: browserLinkSnapshotSignature(links),
-            labelGroups: labelGroups,
-            hitRegions: hitRegions
+            labelGroups: labelGroups
         )
         cachedBrowserSurfaceContentKey = key
         cachedBrowserSurfaceContent = entry
         return entry
+    }
+
+    func browserHitRegions(for cards: [BrowserCardLayerSnapshot], in size: CGSize) -> [BrowserCardHitRegion] {
+        cards.map { snapshot in
+            let center = canvasPoint(for: snapshot.position, in: size)
+            return BrowserCardHitRegion(
+                cardID: snapshot.id,
+                frame: CGRect(
+                    x: center.x - snapshot.metadata.canvasSize.width / 2,
+                    y: center.y - snapshot.metadata.canvasSize.height / 2,
+                    width: snapshot.metadata.canvasSize.width,
+                    height: snapshot.metadata.canvasSize.height
+                )
+            )
+        }
     }
 
     func browserSurfaceScene(in size: CGSize, canvasPadding: CGFloat = 260) -> BrowserSurfaceSceneSnapshot {
@@ -580,6 +610,7 @@ extension WorkspaceViewModel {
             marqueeRect: marqueeRect(),
             linkPreviewSegment: linkPreviewSegment(in: size)
         )
+        let hitRegions = browserHitRegions(for: cards, in: size)
         let scene = BrowserSurfaceSceneSnapshot(
             canvasSize: size,
             worldToCanvasTransform: browserWorldToCanvasTransform(in: size),
@@ -589,7 +620,7 @@ extension WorkspaceViewModel {
             links: links,
             linkSnapshotSignature: browserLinkSnapshotSignature(links),
             labelGroups: content.labelGroups,
-            hitRegions: content.hitRegions,
+            hitRegions: hitRegions,
             overlay: overlay,
             overlaySignature: browserOverlaySignature(overlay),
             viewportSummary: browserViewportSummary(in: size)
@@ -928,7 +959,7 @@ extension WorkspaceViewModel {
         let visibleCards = visibleSortedCards()
         let visibleIDs = Set(visibleCards.map(\.id))
         guard let primaryCard = cardByID(selectedCardID), visibleIDs.contains(primaryCard.id) else {
-            resetCanvasToFit(in: size)
+            startBrowserFitAnimation(in: size)
             return
         }
 
@@ -960,7 +991,6 @@ extension WorkspaceViewModel {
         }
         guard count > 0, xdSum > 0, ydSum > 0 else {
             suspendBrowserAutoScroll()
-            markBrowserSurfaceViewportDirty()
             return
         }
         let n = Double(count)
@@ -978,48 +1008,143 @@ extension WorkspaceViewModel {
         let targetZoom = min(max(zoom * zoomMultiplier, 0.2), 6.0)
         startBrowserAutoZoom(to: targetZoom)
         suspendBrowserAutoScroll()
-        markBrowserSurfaceViewportDirty()
     }
 
     private func startBrowserAutoZoom(to targetZoom: Double) {
         let now = CACurrentMediaTime()
+        resetBrowserFitAnimation()
         browserAutoZoomStartZoom = zoom
         browserAutoZoomTargetZoom = targetZoom
         browserAutoZoomStartedAt = now - (1.0 / 60.0)
         ensureBrowserAutoScrollTimer()
-        applyBrowserAutoZoomStepIfNeeded(at: now)
+        applyBrowserViewportAnimationsFrameIfNeeded(at: now)
     }
 
     func resetBrowserAutoZoomAnimation() {
         browserAutoZoomStartZoom = nil
         browserAutoZoomTargetZoom = nil
         browserAutoZoomStartedAt = nil
+        if !browserAutoArrangeEnabled && browserAutoScrollStartCenter == nil && browserFitAnimationStartedAt == nil {
+            stopBrowserAutoScrollTimer()
+        }
     }
 
-    func applyBrowserAutoZoomStepIfNeeded(at timestamp: CFTimeInterval = CACurrentMediaTime()) {
+    @discardableResult
+    func applyBrowserAutoZoomStepIfNeeded(
+        at timestamp: CFTimeInterval = CACurrentMediaTime(),
+        refresh: Bool = true
+    ) -> Bool {
         guard let startZoom = browserAutoZoomStartZoom,
               let targetZoom = browserAutoZoomTargetZoom,
-              let startedAt = browserAutoZoomStartedAt else { return }
+              let startedAt = browserAutoZoomStartedAt else { return false }
         guard !hasActiveBrowserGesture else {
             resetBrowserAutoZoomAnimation()
-            return
+            return false
         }
 
         let rawProgress = min(max((timestamp - startedAt) / browserAutoScrollDuration, 0), 1)
         let easedProgress = 1 - pow(1 - rawProgress, 3)
         let nextZoom = startZoom + (targetZoom - startZoom) * easedProgress
+        var didChange = false
         if abs(zoom - nextZoom) > 0.0001 {
             zoom = nextZoom
-            markBrowserSurfaceViewportDirty()
+            didChange = true
         }
 
         if rawProgress >= 1 {
             zoom = targetZoom
             resetBrowserAutoZoomAnimation()
-            if !browserAutoArrangeEnabled && browserAutoScrollStartCenter == nil {
+            didChange = true
+        }
+        if didChange && refresh {
+            markBrowserSurfaceViewportDirty()
+        }
+        return didChange
+    }
+
+    func startBrowserFitAnimation(in size: CGSize) {
+        let bounds = browserDocumentBounds()
+        let fittedScale = min(
+            (size.width * 0.84) / max(bounds.width, 0.0001),
+            (size.height * 0.84) / max(bounds.height, 0.0001)
+        )
+        let minDimension = max(min(size.width, size.height), 1)
+        let targetBaseScaleFactor = max(Double(fittedScale) / Double(minDimension), 0.05)
+        let targetZoom = min(max(Double(fittedScale) / (Double(minDimension) * browserBaseScaleFactor), 0.2), 6.0)
+        let now = CACurrentMediaTime()
+
+        resetBrowserAutoScrollAnimation()
+        browserFitAnimationStartCenter = canvasCenter
+        browserFitAnimationTargetCenter = FrievePoint(x: bounds.midX, y: bounds.midY)
+        browserFitAnimationStartZoom = zoom
+        browserFitAnimationTargetZoom = targetZoom
+        browserFitAnimationTargetBaseScaleFactor = targetBaseScaleFactor
+        browserFitAnimationStartedAt = now - (1.0 / 60.0)
+        ensureBrowserAutoScrollTimer()
+        applyBrowserViewportAnimationsFrameIfNeeded(at: now)
+    }
+
+    func resetBrowserFitAnimation() {
+        browserFitAnimationStartCenter = nil
+        browserFitAnimationTargetCenter = nil
+        browserFitAnimationStartZoom = nil
+        browserFitAnimationTargetZoom = nil
+        browserFitAnimationTargetBaseScaleFactor = nil
+        browserFitAnimationStartedAt = nil
+    }
+
+    @discardableResult
+    func applyBrowserFitStepIfNeeded(
+        at timestamp: CFTimeInterval = CACurrentMediaTime(),
+        refresh: Bool = true
+    ) -> Bool {
+        guard let startCenter = browserFitAnimationStartCenter,
+              let targetCenter = browserFitAnimationTargetCenter,
+              let startZoom = browserFitAnimationStartZoom,
+              let targetZoom = browserFitAnimationTargetZoom,
+              let startedAt = browserFitAnimationStartedAt else {
+            return false
+        }
+        guard !hasActiveBrowserGesture else {
+            resetBrowserFitAnimation()
+            return false
+        }
+
+        let rawProgress = min(max((timestamp - startedAt) / browserAutoScrollDuration, 0), 1)
+        let easedProgress = 1 - pow(1 - rawProgress, 3)
+        let nextCenter = FrievePoint(
+            x: startCenter.x + (targetCenter.x - startCenter.x) * easedProgress,
+            y: startCenter.y + (targetCenter.y - startCenter.y) * easedProgress
+        )
+        let nextZoom = startZoom + (targetZoom - startZoom) * easedProgress
+        var didChange = false
+        if canvasCenter != nextCenter {
+            canvasCenter = nextCenter
+            didChange = true
+        }
+        if abs(zoom - nextZoom) > 0.0001 {
+            zoom = nextZoom
+            didChange = true
+        }
+
+        if rawProgress >= 1 {
+            canvasCenter = targetCenter
+            if let targetBaseScaleFactor = browserFitAnimationTargetBaseScaleFactor {
+                browserBaseScaleFactor = targetBaseScaleFactor
+                zoom = 1.0
+            } else {
+                zoom = targetZoom
+            }
+            resetBrowserFitAnimation()
+            didChange = true
+            if !browserAutoArrangeEnabled && browserAutoScrollStartCenter == nil && browserAutoZoomStartZoom == nil {
                 stopBrowserAutoScrollTimer()
             }
         }
+        if didChange && refresh {
+            markBrowserSurfaceViewportDirty()
+        }
+        return didChange
     }
 
     func zoom(by factor: Double, anchor: CGPoint? = nil, in size: CGSize) {

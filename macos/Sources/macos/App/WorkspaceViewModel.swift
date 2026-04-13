@@ -244,16 +244,14 @@ enum BrowserAnimationMode: String, Identifiable {
 
 struct BrowserSurfaceContentCacheKey: Hashable {
     let contentRevision: Int
-    let sceneScale: UInt64
     let detailLevel: BrowserCardDetailLevel
     let canvasWidth: UInt64
     let canvasHeight: UInt64
     let canvasPadding: UInt64
     let labelsVisible: Bool
 
-    init(contentRevision: Int, sceneScale: Double, detailLevel: BrowserCardDetailLevel, canvasSize: CGSize, canvasPadding: CGFloat, labelsVisible: Bool) {
+    init(contentRevision: Int, detailLevel: BrowserCardDetailLevel, canvasSize: CGSize, canvasPadding: CGFloat, labelsVisible: Bool) {
         self.contentRevision = contentRevision
-        self.sceneScale = sceneScale.bitPattern
         self.detailLevel = detailLevel
         self.canvasWidth = Double(canvasSize.width).bitPattern
         self.canvasHeight = Double(canvasSize.height).bitPattern
@@ -269,7 +267,6 @@ struct BrowserSurfaceContentCacheEntry {
     let links: [BrowserLinkLayerSnapshot]
     let linkSnapshotSignature: Int
     let labelGroups: [BrowserLabelGroupLayerSnapshot]
-    let hitRegions: [BrowserCardHitRegion]
 }
 
 struct EditorRelatedCardLine: Identifiable, Hashable {
@@ -441,6 +438,12 @@ final class WorkspaceViewModel: ObservableObject {
     var browserAutoZoomStartZoom: Double?
     var browserAutoZoomTargetZoom: Double?
     var browserAutoZoomStartedAt: CFTimeInterval?
+    var browserFitAnimationStartCenter: FrievePoint?
+    var browserFitAnimationTargetCenter: FrievePoint?
+    var browserFitAnimationStartZoom: Double?
+    var browserFitAnimationTargetZoom: Double?
+    var browserFitAnimationTargetBaseScaleFactor: Double?
+    var browserFitAnimationStartedAt: CFTimeInterval?
     var browserInteractionModeEnabled: Bool = false
     var browserInteractionModeWorkItem: DispatchWorkItem?
     var browserInteractionModeRefreshHandler: ((Bool) -> Void)?

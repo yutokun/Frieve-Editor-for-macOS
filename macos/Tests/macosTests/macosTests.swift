@@ -582,6 +582,84 @@ import Testing
 }
 
 @MainActor
+@Test func browserSurfaceSceneRecomputesHitRegionsWhenZoomUsesCachedContent() async throws {
+    let model = WorkspaceViewModel()
+    let canvasSize = CGSize(width: 1280, height: 840)
+
+    model.newDocument()
+    let rootID = try #require(model.selectedCardID)
+    let childID = model.document.addCard(title: "Child", linkedFrom: rootID)
+    model.markBrowserSurfaceContentDirty()
+    model.resetCanvasToFit(in: canvasSize)
+
+    let baselineScene = model.browserSurfaceScene(in: canvasSize)
+    let baselineKey = try #require(model.cachedBrowserSurfaceContentKey)
+    let baselineRootMidX = try #require(baselineScene.hitRegions.first(where: { $0.cardID == rootID })).frame.midX
+    let baselineChildMidX = try #require(baselineScene.hitRegions.first(where: { $0.cardID == childID })).frame.midX
+
+    model.zoom = 1.2
+
+    let zoomedScene = model.browserSurfaceScene(in: canvasSize)
+    let zoomedKey = try #require(model.cachedBrowserSurfaceContentKey)
+    let zoomedRootMidX = try #require(zoomedScene.hitRegions.first(where: { $0.cardID == rootID })).frame.midX
+    let zoomedChildMidX = try #require(zoomedScene.hitRegions.first(where: { $0.cardID == childID })).frame.midX
+
+    #expect(baselineKey == zoomedKey)
+    #expect(baselineScene.cards.map(\.id) == zoomedScene.cards.map(\.id))
+    #expect(abs(zoomedRootMidX - baselineRootMidX) < 0.001)
+    #expect(abs(zoomedChildMidX - baselineChildMidX) > 0.001)
+}
+
+@MainActor
+@Test func browserAutoZoomKeepsSharedTimerAliveWhenAutoScrollIsOff() async throws {
+    let model = WorkspaceViewModel()
+
+    model.autoScroll = false
+    model.browserAutoZoomStartZoom = 1
+    model.browserAutoZoomTargetZoom = 1.4
+    model.browserAutoZoomStartedAt = CACurrentMediaTime()
+    model.ensureBrowserAutoScrollTimer()
+
+    let timerBeforeReset = model.browserAutoScrollTimer
+    model.resetBrowserAutoScrollAnimation()
+
+    #expect(timerBeforeReset != nil)
+    #expect(model.browserAutoScrollTimer != nil)
+
+    model.resetBrowserAutoZoomAnimation()
+    model.resetBrowserAutoScrollAnimation()
+    #expect(model.browserAutoScrollTimer == nil)
+}
+
+@MainActor
+@Test func browserViewportAnimationsBatchScrollAndZoomIntoSingleRefresh() async throws {
+    let model = WorkspaceViewModel()
+    var refreshCount = 0
+
+    model.newDocument()
+    model.selectedTab = .browser
+    model.autoScroll = true
+    model.browserSurfaceViewportRefreshHandler = {
+        refreshCount += 1
+    }
+    model.canvasCenter = FrievePoint(x: 0.2, y: 0.2)
+    model.zoom = 1
+    model.browserAutoScrollStartCenter = FrievePoint(x: 0.2, y: 0.2)
+    model.browserAutoScrollTargetCenter = try #require(model.selectedCard).position
+    model.browserAutoScrollStartedAt = 0
+    model.browserAutoZoomStartZoom = 1
+    model.browserAutoZoomTargetZoom = 2
+    model.browserAutoZoomStartedAt = 0
+
+    let didChange = model.applyBrowserViewportAnimationsFrameIfNeeded(at: 0.14)
+
+    #expect(didChange)
+    #expect(refreshCount == 1)
+    #expect(model.canvasCenter != FrievePoint(x: 0.2, y: 0.2))
+    #expect(model.zoom > 1)
+}
+
+@MainActor
 @Test func inspectorBindingsAllowEditingTitleAndLabels() async throws {
     let model = WorkspaceViewModel()
     model.newDocument()
@@ -928,7 +1006,7 @@ import Testing
 @Test func browserAutoZoomKeepsViewportStillWhenAutoScrollIsOff() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
-    let result = await MainActor.run { () -> (Bool, Bool, Bool, Bool) in
+    let result = await MainActor.run { () -> (Bool, Bool, Bool, Bool, Bool) in
         model.newDocument()
         model.browserCanvasSize = CGSize(width: 1200, height: 800)
         let rootID = model.selectedCardID ?? 0
@@ -954,17 +1032,24 @@ import Testing
         model.selectCard(childID)
         let centerWithAutoZoom = model.canvasCenter == centerBeforeAutoZoomSelection
         let zoomAdjustedForSelection = abs((model.browserAutoZoomTargetZoom ?? model.zoom) - zoomBeforeAutoZoomSelection) > 0.0001
+        let centerBeforeClear = model.canvasCenter
         model.clearSelection()
         let bounds = model.browserDocumentBounds()
-        let centeredOnDocumentAfterClear = hypot(model.canvasCenter.x - bounds.midX, model.canvasCenter.y - bounds.midY) < 0.001
+        let fitTargetExistsAfterClear = model.browserFitAnimationStartedAt != nil &&
+            (model.browserFitAnimationTargetCenter.map {
+                hypot($0.x - bounds.midX, $0.y - bounds.midY) < 0.001
+            } ?? false)
+        let clearDoesNotSnapToDocumentCenter = hypot(model.canvasCenter.x - centerBeforeClear.x, model.canvasCenter.y - centerBeforeClear.y) <
+            hypot(centerBeforeClear.x - bounds.midX, centerBeforeClear.y - bounds.midY)
 
-        return (centerWithoutAutoZoom, centerWithAutoZoom, zoomAdjustedForSelection, centeredOnDocumentAfterClear)
+        return (centerWithoutAutoZoom, centerWithAutoZoom, zoomAdjustedForSelection, fitTargetExistsAfterClear, clearDoesNotSnapToDocumentCenter)
     }
 
     #expect(result.0)
     #expect(result.1)
     #expect(result.2)
     #expect(result.3)
+    #expect(result.4)
 }
 
 @Test func browserAutoZoomSkipsSingleAxisSpreadLikeWindows() async throws {
