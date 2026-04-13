@@ -674,9 +674,9 @@ final class WorkspaceViewModel: ObservableObject {
         let zoomText = zoom.formatted(.number.precision(.fractionLength(2)))
         let summary = browserPerformance.summary()
         if let summaryRemainder = summary.split(separator: " ", maxSplits: 1).dropFirst().first {
-            return "Browser \(zoomText)× · \(summaryRemainder)"
+            return "\(zoomText)× · \(summaryRemainder)"
         }
-        return "Browser \(zoomText)×"
+        return "\(zoomText)×"
     }
 
     var fileDisplayName: String {
