@@ -422,8 +422,13 @@ vertex BrowserMetalLabelGroupOut browserLabelGroupVertex(
 }
 
 fragment float4 browserLabelGroupFragment(BrowserMetalLabelGroupOut in [[stage_in]]) {
-    float2 q = abs(in.localPoint) - (in.halfSize - in.cornerRadius);
-    float dist = length(max(q, 0.0f)) + min(max(q.x, q.y), 0.0f) - in.cornerRadius;
+    float dist;
+    if (in.cornerRadius < 0.0f) {
+        dist = length(in.localPoint) - min(in.halfSize.x, in.halfSize.y);
+    } else {
+        float2 q = abs(in.localPoint) - (in.halfSize - in.cornerRadius);
+        dist = length(max(q, 0.0f)) + min(max(q.x, q.y), 0.0f) - in.cornerRadius;
+    }
     float borderDist = abs(dist) - in.strokeWidth * 0.5f;
     float alpha = (1.0f - smoothstep(-0.5f, 0.5f, borderDist)) * in.color.a;
     if (alpha < 0.001f) discard_fragment();
