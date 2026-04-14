@@ -37,32 +37,13 @@ private struct BrowserLayerSurfaceView: View {
             let canvasSize = proxy.size
             let _ = viewModel.browserChromeRevision
             ZStack {
-                BrowserCanvasBackgroundView(viewModel: viewModel, colorScheme: colorScheme)
+                BrowserCanvasBackgroundView(
+                    viewModel: viewModel,
+                    colorScheme: colorScheme,
+                    browserTopInset: browserTopInset,
+                    canvasSize: canvasSize
+                )
                 BrowserSurfaceRepresentable(viewModel: viewModel, canvasSize: canvasSize)
-
-                if let hoverCard = viewModel.browserHoverCard {
-                    VStack(alignment: .leading) {
-                        HStack(alignment: .top, spacing: 0) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(hoverCard.title)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.primary)
-                                if !hoverCard.bodyText.isEmpty {
-                                    Text(hoverCard.bodyText)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            .frame(maxWidth: canvasSize.width / 2, alignment: .leading)
-                            Spacer(minLength: 0)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.top, browserTopInset + 16)
-                    .padding(.leading, 16)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .allowsHitTesting(false)
-                }
 
                 if viewModel.settings.browserCursorAnimation {
                     BrowserCursorPulseOverlay(viewModel: viewModel, canvasSize: canvasSize, colorScheme: colorScheme)
@@ -121,11 +102,37 @@ private struct BrowserLayerSurfaceView: View {
 private struct BrowserCanvasBackgroundView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
     let colorScheme: ColorScheme
+    let browserTopInset: CGFloat
+    let canvasSize: CGSize
 
     var body: some View {
         ZStack {
             Rectangle()
                 .fill(Color(nsColor: browserCanvasBackgroundColor(for: colorScheme)))
+
+            if let hoverCard = viewModel.browserHoverCard {
+                VStack(alignment: .leading) {
+                    HStack(alignment: .top, spacing: 0) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(hoverCard.title)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            if !hoverCard.bodyText.isEmpty {
+                                Text(hoverCard.bodyText)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .frame(maxWidth: canvasSize.width / 2, alignment: .leading)
+                        Spacer(minLength: 0)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, browserTopInset + 16)
+                .padding(.leading, 16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(false)
+            }
 
             if let image = wallpaperImage {
                 if viewModel.settings.browserWallpaperTiled {

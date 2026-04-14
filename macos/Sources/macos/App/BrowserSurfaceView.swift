@@ -514,7 +514,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     private func updateScene(_ scene: BrowserSurfaceSceneSnapshot, canvasSize: CGSize, mode: BrowserSceneUpdateMode) {
         let updateStart = CACurrentMediaTime()
         let appearance = resolvedAppearance
-        layer?.backgroundColor = resolvedCanvasBackgroundColor.withAlphaComponent(surfaceBackgroundAlpha).cgColor
+        layer?.backgroundColor = CGColor.clear
         layer?.borderColor = resolvedColor(for: appearance, NSColor.separatorColor).withAlphaComponent(0.10).cgColor
         layer?.borderWidth = 0.5
         currentHitRegions = scene.hitRegions
@@ -542,10 +542,11 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         rootLayer.cornerRadius = 10
         layer = rootLayer
 
-        metalView.clearColor = MTLClearColor(color: NSColor.textBackgroundColor)
+        metalView.clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
         metalView.colorPixelFormat = .bgra8Unorm
         metalView.sampleCount = 1
         metalView.framebufferOnly = false
+        metalView.layer?.isOpaque = false
         metalView.enableSetNeedsDisplay = true
         metalView.isPaused = true
         metalView.preferredFramesPerSecond = 120
@@ -766,7 +767,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
 
     private func applyDynamicAppearanceColors() {
         let appearance = resolvedAppearance
-        metalView.clearColor = MTLClearColor(color: resolvedCanvasBackgroundColor.withAlphaComponent(surfaceBackgroundAlpha))
+        metalView.clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
         marqueeOverlayLayer.fillColor = resolvedColor(for: appearance, NSColor.controlAccentColor).withAlphaComponent(0.10).cgColor
         marqueeOverlayLayer.strokeColor = resolvedColor(for: appearance, NSColor.controlAccentColor).withAlphaComponent(0.9).cgColor
         linkPreviewLayer.strokeColor = resolvedColor(for: appearance, NSColor.controlAccentColor).withAlphaComponent(0.65).cgColor
