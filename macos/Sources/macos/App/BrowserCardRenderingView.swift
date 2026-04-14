@@ -246,15 +246,15 @@ private struct BrowserTickerMarqueeView: View {
                 let speed = max(font.pointSize * 0.85, 10)
                 let elapsed = CGFloat(timeline.date.timeIntervalSinceReferenceDate * Double(speed))
                 let offset = elapsed.truncatingRemainder(dividingBy: max(travelDistance, 1))
+                let xPos = size.width - offset
 
                 context.clip(to: Path(CGRect(origin: .zero, size: size)))
-                context.draw(
+                let resolved = context.resolve(
                     Text(text)
                         .font(Font(font))
-                        .foregroundStyle(tint),
-                    at: CGPoint(x: size.width - offset, y: size.height / 2),
-                    anchor: .leading
+                        .foregroundStyle(tint)
                 )
+                context.draw(resolved, in: CGRect(x: xPos, y: 0, width: textWidth, height: size.height))
             }
         }
         .frame(height: ceil(font.ascender - font.descender + font.leading))

@@ -36,6 +36,7 @@ private struct BrowserLayerSurfaceView: View {
             let _ = viewModel.browserChromeRevision
             ZStack {
                 BrowserCanvasBackgroundView(viewModel: viewModel, colorScheme: colorScheme)
+                BrowserSurfaceRepresentable(viewModel: viewModel, canvasSize: canvasSize)
 
                 if let hoverCard = viewModel.browserHoverCard {
                     VStack(alignment: .leading) {
@@ -60,8 +61,6 @@ private struct BrowserLayerSurfaceView: View {
                     .padding(16)
                     .allowsHitTesting(false)
                 }
-
-                BrowserSurfaceRepresentable(viewModel: viewModel, canvasSize: canvasSize)
 
                 if viewModel.settings.browserCursorAnimation {
                     BrowserCursorPulseOverlay(viewModel: viewModel, canvasSize: canvasSize, colorScheme: colorScheme)
