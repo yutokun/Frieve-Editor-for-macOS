@@ -204,6 +204,8 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     private var resolvedAppearanceSignature: Int = 0
     private var resolvedAppearance: NSAppearance = NSAppearance(named: .aqua) ?? NSAppearance.currentDrawing()
     private var resolvedCanvasBackgroundColor: NSColor = NSColor.white
+    private var hasVisibleTickerCards: Bool = false
+    private var interactionModeEnabled: Bool = false
 
     var browserAppearanceSignature: Int {
         resolvedAppearanceSignature
@@ -517,6 +519,12 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         layer?.borderWidth = 0.5
         currentHitRegions = scene.hitRegions
 
+        let newHasTicker = viewModel.map { vm in scene.cards.contains { vm.browserCardTickerText(for: $0.card) != nil } } ?? false
+        if newHasTicker != hasVisibleTickerCards {
+            hasVisibleTickerCards = newHasTicker
+            applyMetalRenderingMode()
+        }
+
         renderer.updateScene(scene, mode: mode)
         metalView.draw()
 
@@ -592,7 +600,13 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
     }
 
     func updateInteractionMode(_ isEnabled: Bool) {
-        if isEnabled {
+        interactionModeEnabled = isEnabled
+        applyMetalRenderingMode()
+    }
+
+    private func applyMetalRenderingMode() {
+        let continuous = interactionModeEnabled || hasVisibleTickerCards
+        if continuous {
             if metalView.enableSetNeedsDisplay {
                 metalView.enableSetNeedsDisplay = false
             }

@@ -178,8 +178,10 @@ private struct WorkspaceContentView: View {
             Group {
                 switch viewModel.selectedTab {
                 case .browser:
-                    BrowserWorkspaceView(viewModel: viewModel)
-                        .ignoresSafeArea(.all, edges: .top)
+                    GeometryReader { geo in
+                        BrowserWorkspaceView(viewModel: viewModel, browserTopInset: geo.safeAreaInsets.top)
+                            .ignoresSafeArea(.all, edges: .top)
+                    }
                 case .editor:
                     EditorWorkspaceView(viewModel: viewModel)
                 case .drawing:

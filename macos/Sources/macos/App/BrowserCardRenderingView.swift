@@ -234,32 +234,29 @@ private struct BrowserTickerMarqueeView: View {
     let tint: Color
 
     var body: some View {
-        TimelineView(.animation) { timeline in
-            Canvas { context, size in
-                guard size.width > 0, size.height > 0 else { return }
+        Canvas { context, size in
+            guard size.width > 0, size.height > 0 else { return }
 
-                let attrs: [NSAttributedString.Key: Any] = [.font: font]
-                let attrStr = NSAttributedString(string: text, attributes: attrs)
-                let textWidth = max(ceil(attrStr.size().width), 1)
-                let travelDistance = textWidth + size.width
-                let speed = max(font.pointSize * 0.85, 10)
-                let elapsed = CGFloat(timeline.date.timeIntervalSinceReferenceDate * Double(speed))
-                let offset = elapsed.truncatingRemainder(dividingBy: max(travelDistance, 1))
-                let xPos = size.width - offset
-                let lineHeight = font.ascender - font.descender + font.leading
-                let yPos = (size.height - lineHeight) / 2
+            let attrs: [NSAttributedString.Key: Any] = [.font: font]
+            let attrStr = NSAttributedString(string: text, attributes: attrs)
+            let textWidth = max(ceil(attrStr.size().width), 1)
+            let travelDistance = textWidth + size.width
+            let speed = max(font.pointSize * 0.85, 10)
+            let elapsed = CGFloat(CACurrentMediaTime() * Double(speed))
+            let offset = elapsed.truncatingRemainder(dividingBy: max(travelDistance, 1))
+            let xPos = size.width - offset
+            let lineHeight = font.ascender - font.descender + font.leading
 
-                context.withCGContext { cgContext in
-                    cgContext.clip(to: CGRect(origin: .zero, size: size))
-                    cgContext.translateBy(x: 0, y: size.height)
-                    cgContext.scaleBy(x: 1, y: -1)
-                    let coloredAttrs: [NSAttributedString.Key: Any] = [
-                        .font: font,
-                        .foregroundColor: NSColor(tint)
-                    ]
-                    NSAttributedString(string: text, attributes: coloredAttrs)
-                        .draw(at: CGPoint(x: xPos, y: size.height - yPos - lineHeight))
-                }
+            context.withCGContext { cgContext in
+                cgContext.clip(to: CGRect(origin: .zero, size: size))
+                cgContext.translateBy(x: 0, y: size.height)
+                cgContext.scaleBy(x: 1, y: -1)
+                let coloredAttrs: [NSAttributedString.Key: Any] = [
+                    .font: font,
+                    .foregroundColor: NSColor(tint)
+                ]
+                NSAttributedString(string: text, attributes: coloredAttrs)
+                    .draw(at: CGPoint(x: xPos, y: (size.height - lineHeight) / 2))
             }
         }
         .frame(height: ceil(font.ascender - font.descender + font.leading))

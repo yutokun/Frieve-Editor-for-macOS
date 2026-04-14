@@ -3,11 +3,12 @@ import AppKit
 
 struct BrowserWorkspaceView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
+    var browserTopInset: CGFloat = 0
 
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .bottomTrailing) {
-                BrowserLayerSurfaceView(viewModel: viewModel)
+                BrowserLayerSurfaceView(viewModel: viewModel, browserTopInset: browserTopInset)
 
                 VStack(alignment: .trailing, spacing: 10) {
                     if viewModel.showOverview {
@@ -27,6 +28,7 @@ struct BrowserWorkspaceView: View {
 
 private struct BrowserLayerSurfaceView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
+    let browserTopInset: CGFloat
     @FocusState private var browserFocused: Bool
     @Environment(\.colorScheme) private var colorScheme
 
@@ -39,20 +41,26 @@ private struct BrowserLayerSurfaceView: View {
                 BrowserSurfaceRepresentable(viewModel: viewModel, canvasSize: canvasSize)
 
                 if let hoverCard = viewModel.browserHoverCard {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(hoverCard.title)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        if !hoverCard.bodyText.isEmpty {
-                            Text(hoverCard.bodyText)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                    VStack(alignment: .leading) {
+                        HStack(alignment: .top, spacing: 0) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(hoverCard.title)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                if !hoverCard.bodyText.isEmpty {
+                                    Text(hoverCard.bodyText)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .frame(maxWidth: canvasSize.width / 2, alignment: .leading)
+                            Spacer(minLength: 0)
                         }
                         Spacer(minLength: 0)
                     }
-                    .frame(width: canvasSize.width / 2, height: canvasSize.height - proxy.safeAreaInsets.top, alignment: .topLeading)
-                    .padding(.top, proxy.safeAreaInsets.top + 16)
+                    .padding(.top, browserTopInset + 16)
                     .padding(.leading, 16)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .allowsHitTesting(false)
                 }
 
