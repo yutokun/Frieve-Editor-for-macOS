@@ -39,26 +39,20 @@ private struct BrowserLayerSurfaceView: View {
                 BrowserSurfaceRepresentable(viewModel: viewModel, canvasSize: canvasSize)
 
                 if let hoverCard = viewModel.browserHoverCard {
-                    VStack(alignment: .leading) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(hoverCard.title)
-                                .font(.caption.weight(.semibold))
-                                .lineLimit(1)
-                            if !hoverCard.bodyText.isEmpty {
-                                Text(hoverCard.bodyText)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(5)
-                            }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(hoverCard.title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        if !hoverCard.bodyText.isEmpty {
+                            Text(hoverCard.bodyText)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .frame(maxWidth: 240, alignment: .leading)
-                        Spacer()
+                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(16)
+                    .frame(width: canvasSize.width / 2, height: canvasSize.height - proxy.safeAreaInsets.top, alignment: .topLeading)
+                    .padding(.top, proxy.safeAreaInsets.top + 16)
+                    .padding(.leading, 16)
                     .allowsHitTesting(false)
                 }
 
