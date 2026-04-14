@@ -234,26 +234,28 @@ private struct BrowserTickerMarqueeView: View {
     let tint: Color
 
     var body: some View {
-        Canvas { context, size in
-            guard size.width > 0, size.height > 0 else { return }
+        TimelineView(.animation) { timeline in
+            Canvas { context, size in
+                guard size.width > 0, size.height > 0 else { return }
 
-            let textWidth = max(
-                ceil(NSAttributedString(string: text, attributes: [.font: font]).size().width),
-                1
-            )
-            let travelDistance = textWidth + size.width
-            let speed = max(font.pointSize * 0.85, 10)
-            let elapsed = CGFloat(CACurrentMediaTime() * Double(speed))
-            let offset = elapsed.truncatingRemainder(dividingBy: max(travelDistance, 1))
+                let textWidth = max(
+                    ceil(NSAttributedString(string: text, attributes: [.font: font]).size().width),
+                    1
+                )
+                let travelDistance = textWidth + size.width
+                let speed = max(font.pointSize * 0.85, 10)
+                let elapsed = CGFloat(timeline.date.timeIntervalSinceReferenceDate * Double(speed))
+                let offset = elapsed.truncatingRemainder(dividingBy: max(travelDistance, 1))
 
-            context.clip(to: Path(CGRect(origin: .zero, size: size)))
-            context.draw(
-                Text(text)
-                    .font(Font(font))
-                    .foregroundStyle(tint),
-                at: CGPoint(x: size.width - offset, y: size.height / 2),
-                anchor: .leading
-            )
+                context.clip(to: Path(CGRect(origin: .zero, size: size)))
+                context.draw(
+                    Text(text)
+                        .font(Font(font))
+                        .foregroundStyle(tint),
+                    at: CGPoint(x: size.width - offset, y: size.height / 2),
+                    anchor: .leading
+                )
+            }
         }
         .frame(height: ceil(font.ascender - font.descender + font.leading))
     }
