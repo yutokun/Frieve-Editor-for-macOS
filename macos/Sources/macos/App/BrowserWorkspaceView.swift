@@ -36,6 +36,31 @@ private struct BrowserLayerSurfaceView: View {
             let _ = viewModel.browserChromeRevision
             ZStack {
                 BrowserCanvasBackgroundView(viewModel: viewModel, colorScheme: colorScheme)
+
+                if let hoverCard = viewModel.browserHoverCard {
+                    VStack(alignment: .leading) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(hoverCard.title)
+                                .font(.caption.weight(.semibold))
+                                .lineLimit(1)
+                            if !hoverCard.bodyText.isEmpty {
+                                Text(hoverCard.bodyText)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(5)
+                            }
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .frame(maxWidth: 240, alignment: .leading)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .allowsHitTesting(false)
+                }
+
                 BrowserSurfaceRepresentable(viewModel: viewModel, canvasSize: canvasSize)
 
                 if viewModel.settings.browserCursorAnimation {
@@ -63,13 +88,6 @@ private struct BrowserLayerSurfaceView: View {
                 VStack {
                     Spacer()
                     HStack(alignment: .bottom) {
-                        if let hoverCard = viewModel.browserHoverCard {
-                            Text(hoverCard.title)
-                                .font(.caption.weight(.semibold))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 8)
-                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        }
                         Spacer()
                         Text(viewModel.browserViewportSummary(in: canvasSize))
                             .font(.caption2)
