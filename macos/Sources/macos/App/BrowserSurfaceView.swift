@@ -1114,6 +1114,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         solidDescriptor.vertexFunction = library.makeFunction(name: "browserColorVertex")
         solidDescriptor.fragmentFunction = library.makeFunction(name: "browserColorFragment")
         solidDescriptor.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
+        solidDescriptor.rasterSampleCount = metalView.sampleCount
 
         BrowserMetalRenderer.configureAlphaBlending(for: solidDescriptor.colorAttachments[0])
         let solidVertexDescriptor = MTLVertexDescriptor()
@@ -1132,6 +1133,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         labelGroupDescriptor.vertexFunction = library.makeFunction(name: "browserLabelGroupVertex")
         labelGroupDescriptor.fragmentFunction = library.makeFunction(name: "browserLabelGroupFragment")
         labelGroupDescriptor.colorAttachments[0].pixelFormat = metalView.colorPixelFormat
+        labelGroupDescriptor.rasterSampleCount = metalView.sampleCount
         BrowserMetalRenderer.configureAlphaBlending(for: labelGroupDescriptor.colorAttachments[0])
         labelGroupPipeline = try! device.makeRenderPipelineState(descriptor: labelGroupDescriptor)
 
@@ -1223,7 +1225,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         }
         renderPassDescriptor.colorAttachments[0].clearColor = view.clearColor
         renderPassDescriptor.colorAttachments[0].loadAction = .clear
-        renderPassDescriptor.colorAttachments[0].storeAction = .store
+        renderPassDescriptor.colorAttachments[0].storeAction = view.sampleCount > 1 ? .multisampleResolve : .store
 
         guard let commandBuffer = commandQueue.makeCommandBuffer(),
               let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
