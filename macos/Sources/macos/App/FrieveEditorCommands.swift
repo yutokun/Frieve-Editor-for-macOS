@@ -167,13 +167,6 @@ struct FrieveEditorCommands: Commands {
                 .disabled(viewModel.selectedCardID == nil)
             Button("Stop Read Aloud") { viewModel.stopReadAloud() }
             Divider()
-            Toggle("Show Overview", isOn: $viewModel.showOverview)
-            Toggle("Show Link Labels", isOn: $viewModel.linkLabelsVisible)
-            Toggle("Show Label Rectangles", isOn: Binding(
-                get: { viewModel.labelRectanglesVisible },
-                set: { viewModel.setBrowserLabelRectanglesVisible($0) }
-            ))
-            Divider()
             Toggle("Show Status Bar", isOn: $viewModel.showStatusBar)
             Toggle("Show Inspector", isOn: $viewModel.showInspector)
         }
