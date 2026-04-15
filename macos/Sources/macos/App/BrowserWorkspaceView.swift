@@ -102,6 +102,12 @@ struct BrowserFlowingLineParticle: Hashable {
     }
 }
 
+struct BrowserBubbleParticle: Hashable {
+    let rect: CGRect
+    let opacity: Double
+    let lineWidth: CGFloat
+}
+
 func browserAnimationNoise(_ index: Int, salt: Double) -> Double {
     let value = sin(Double(index) * 12.9898 + salt * 78.233) * 43_758.5453
     return value - floor(value)
@@ -144,6 +150,31 @@ func browserFlowingLineParticles(in size: CGSize, time: TimeInterval) -> [Browse
                 opacity: opacity
             )
         }
+    }
+}
+
+func browserBubbleParticles(in size: CGSize, time: TimeInterval) -> [BrowserBubbleParticle] {
+    guard size.width > 0, size.height > 0 else { return [] }
+
+    return (0..<36).map { index in
+        let sizeSeed = browserAnimationNoise(index, salt: 1.41)
+        let driftSeed = browserAnimationNoise(index, salt: 1.57)
+        let phase = browserAnimationNoise(index, salt: 1.73)
+        let xSeed = browserAnimationNoise(index, salt: 1.89)
+        let diameter = CGFloat(10 + sizeSeed * 24)
+        let riseSpeed = 0.035 + sizeSeed * 0.08
+        let yProgress = CGFloat((time * riseSpeed + phase).truncatingRemainder(dividingBy: 1))
+        let y = size.height + diameter - yProgress * (size.height + diameter * 2)
+        let swayAmplitude = CGFloat(12 + driftSeed * 30)
+        let sway = sin(time * (0.8 + driftSeed * 1.4) + phase * .pi * 2) * swayAmplitude
+        let wobble = sin(time * (1.7 + driftSeed * 1.1) + Double(index)) * (swayAmplitude * 0.35)
+        let x = CGFloat(xSeed) * size.width + sway + wobble
+        let opacity = 0.08 + sizeSeed * 0.16
+        return BrowserBubbleParticle(
+            rect: CGRect(x: x - diameter / 2, y: y - diameter / 2, width: diameter, height: diameter),
+            opacity: opacity,
+            lineWidth: 1 + CGFloat(driftSeed * 1.8)
+        )
     }
 }
 
@@ -450,17 +481,11 @@ private struct BrowserAnimatedBackgroundOverlay: View {
     }
 
     private func drawBubbles(context: inout GraphicsContext, size: CGSize, time: TimeInterval) {
-        let color = Color(nsColor: browserLinkStrokeColor(for: colorScheme, highlighted: false))
-        for index in 0..<28 {
-            let normalized = Double(index) / 28
-            let x = CGFloat((normalized * 1_137).truncatingRemainder(dividingBy: 1)) * max(size.width, 1)
-            let yProgress = CGFloat(((time * 0.08) + normalized).truncatingRemainder(dividingBy: 1))
-            let y = size.height - (size.height + 80) * yProgress
-            let diameter = CGFloat(10 + (index % 5) * 6)
-            context.fill(
-                Path(ellipseIn: CGRect(x: x, y: y, width: diameter, height: diameter)),
-                with: .color(color.opacity(0.18))
-            )
+        let baseColor = Color(nsColor: browserLinkStrokeColor(for: colorScheme, highlighted: false))
+        for particle in browserBubbleParticles(in: size, time: time) {
+            let path = Path(ellipseIn: particle.rect)
+            context.fill(path, with: .color(baseColor.opacity(particle.opacity * 0.35)))
+            context.stroke(path, with: .color(baseColor.opacity(particle.opacity)), lineWidth: particle.lineWidth)
         }
     }
 

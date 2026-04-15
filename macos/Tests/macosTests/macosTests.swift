@@ -115,6 +115,16 @@ import Testing
     #expect(movedVertically)
 }
 
+@Test func browserBubbleParticlesDriftSidewaysWhileRising() throws {
+    let initial = browserBubbleParticles(in: CGSize(width: 1280, height: 720), time: 1.0)
+    let later = browserBubbleParticles(in: CGSize(width: 1280, height: 720), time: 2.0)
+
+    #expect(initial.count == 36)
+    #expect(Set(initial.map { Int($0.rect.width.rounded()) }).count > 6)
+    #expect(zip(initial, later).contains { first, second in second.rect.midY < first.rect.midY - 8 })
+    #expect(zip(initial, later).contains { first, second in abs(second.rect.midX - first.rect.midX) > 6 })
+}
+
 @Test func browserLinkStrokePaletteMatchesColorScheme() throws {
     let light = browserLinkStrokeColor(for: .light, highlighted: false).usingColorSpace(.deviceRGB)
     let dark = browserLinkStrokeColor(for: .dark, highlighted: false).usingColorSpace(.deviceRGB)
