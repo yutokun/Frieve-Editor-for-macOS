@@ -411,6 +411,34 @@ import Testing
 }
 
 @MainActor
+@Test func browserBadgesPreferMarkerOverFoldedText() throws {
+    let model = WorkspaceViewModel()
+    let card = FrieveCard(
+        id: 1,
+        title: "Pinned",
+        bodyText: "",
+        drawingEncoded: "",
+        visible: true,
+        shape: 2,
+        size: 100,
+        isTop: true,
+        isFixed: true,
+        isFolded: true,
+        position: FrievePoint(x: 0.5, y: 0.5),
+        created: "",
+        updated: "",
+        viewed: "",
+        labelIDs: [],
+        score: 0,
+        imagePath: nil,
+        videoPath: nil
+    )
+
+    let badges = model.buildBrowserBadgeItems(for: card, labelNames: [], linkCount: 0, hasDrawingPreview: false)
+    #expect(badges == ["Top", "Fixed"])
+}
+
+@MainActor
 @Test func importingHierarchicalTextFile2BuildsTreeAndBodies() throws {
     let model = WorkspaceViewModel()
     model.newDocument()

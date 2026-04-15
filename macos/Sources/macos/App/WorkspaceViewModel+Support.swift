@@ -920,9 +920,6 @@ extension WorkspaceViewModel {
         if card.hasMedia {
             badges.append("Media")
         }
-        if card.isFolded {
-            badges.append("Folded")
-        }
         return Array(badges.prefix(6))
     }
 

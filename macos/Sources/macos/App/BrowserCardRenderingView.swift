@@ -161,68 +161,101 @@ struct BrowserCardRasterContentView: View {
         let titleFont = Font(viewModel.browserCardTitleNSFont(for: card))
         let scoreBarLayout = viewModel.browserCardScoreBarLayout(for: card)
 
-        VStack(alignment: horizontalAlignment, spacing: 8) {
-            Text(title)
-                .font(titleFont)
-                .foregroundStyle(.primary)
-                .multilineTextAlignment(titleAlignment)
-                .lineLimit(3)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
-
-            if hasImagePreview || hasVideoPreview || hasDrawingPreview {
-                HStack(alignment: .top, spacing: 8) {
-                    if hasImagePreview {
-                        BrowserMediaPreviewView(
-                            viewModel: viewModel,
-                            card: card,
-                            kind: .image,
-                            badgeText: "Image",
-                            previewImage: previewImage
-                        )
-                        .frame(width: previewSize.width, height: previewSize.height)
-                    }
-                    if hasVideoPreview {
-                        BrowserMediaPreviewView(
-                            viewModel: viewModel,
-                            card: card,
-                            kind: .video,
-                            badgeText: "Video",
-                            previewImage: videoPreviewImage
-                        )
-                        .frame(width: previewSize.width, height: previewSize.height)
-                    }
-                    if hasDrawingPreview {
-                        BrowserDrawingOverlay(
-                            viewModel: viewModel,
-                            card: card,
-                            targetSize: drawingSize,
-                            drawingPreviewImage: drawingPreviewImage
-                        )
-                        .frame(width: drawingSize.width, height: drawingSize.height)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-            }
-
-            if let scoreBarLayout {
-                BrowserCardScoreBarView(layout: scoreBarLayout)
-                    .frame(height: viewModel.browserCardScoreBarTrackHeight(for: card))
-                    .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
-            }
-
-            if !metadata.badges.isEmpty {
-                Text(metadata.badges.joined(separator: "  ·  "))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+        ZStack(alignment: .topLeading) {
+            VStack(alignment: horizontalAlignment, spacing: 8) {
+                Text(title)
+                    .font(titleFont)
+                    .foregroundStyle(.primary)
                     .multilineTextAlignment(titleAlignment)
-                    .lineLimit(viewModel.settings.browserTextWordWrap ? 2 : 1)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
+
+                if hasImagePreview || hasVideoPreview || hasDrawingPreview {
+                    HStack(alignment: .top, spacing: 8) {
+                        if hasImagePreview {
+                            BrowserMediaPreviewView(
+                                viewModel: viewModel,
+                                card: card,
+                                kind: .image,
+                                badgeText: "Image",
+                                previewImage: previewImage
+                            )
+                            .frame(width: previewSize.width, height: previewSize.height)
+                        }
+                        if hasVideoPreview {
+                            BrowserMediaPreviewView(
+                                viewModel: viewModel,
+                                card: card,
+                                kind: .video,
+                                badgeText: "Video",
+                                previewImage: videoPreviewImage
+                            )
+                            .frame(width: previewSize.width, height: previewSize.height)
+                        }
+                        if hasDrawingPreview {
+                            BrowserDrawingOverlay(
+                                viewModel: viewModel,
+                                card: card,
+                                targetSize: drawingSize,
+                                drawingPreviewImage: drawingPreviewImage
+                            )
+                            .frame(width: drawingSize.width, height: drawingSize.height)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                }
+
+                if let scoreBarLayout {
+                    BrowserCardScoreBarView(layout: scoreBarLayout)
+                        .frame(height: viewModel.browserCardScoreBarTrackHeight(for: card))
+                        .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
+                }
+
+                if !metadata.badges.isEmpty {
+                    Text(metadata.badges.joined(separator: "  ·  "))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(titleAlignment)
+                        .lineLimit(viewModel.settings.browserTextWordWrap ? 2 : 1)
+                        .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
+
+            if card.isFolded {
+                BrowserFoldedMarkerOverlay()
+            }
         }
         .padding(padding)
         .frame(width: metadata.canvasSize.width, height: metadata.canvasSize.height, alignment: .topLeading)
+    }
+}
+
+private struct BrowserFoldedMarkerOverlay: View {
+    var body: some View {
+        GeometryReader { geometry in
+            let size = max(min(geometry.size.width, geometry.size.height) * 0.12, 12)
+
+            ZStack {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(Color(NSColor.windowBackgroundColor).opacity(0.92))
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .stroke(Color.primary.opacity(0.7), lineWidth: 1)
+                Rectangle()
+                    .fill(Color.primary.opacity(0.82))
+                    .frame(width: size * 0.48, height: 1.2)
+                Rectangle()
+                    .fill(Color.primary.opacity(0.82))
+                    .frame(width: 1.2, height: size * 0.48)
+            }
+            .frame(width: size, height: size)
+            .position(
+                x: geometry.size.width - size * 0.9,
+                y: geometry.size.height - size * 1.1
+            )
+        }
+        .allowsHitTesting(false)
     }
 }
 
