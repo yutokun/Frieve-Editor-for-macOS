@@ -503,8 +503,7 @@ final class WorkspaceViewModel: ObservableObject {
         showOverview = settings.showOverview
         showFileList = true
         self.settings.showFileList = true
-        showCardList = true
-        self.settings.showCardList = true
+        showCardList = settings.showCardList
         showInspector = settings.showInspector
         showStatusBar = settings.showStatusBar
         linkLabelsVisible = settings.browserLinkNameVisible
@@ -562,11 +561,8 @@ final class WorkspaceViewModel: ObservableObject {
         if !showFileList {
             showFileList = true
         }
-        if !settings.showCardList {
-            settings.showCardList = true
-        }
-        if !showCardList {
-            showCardList = true
+        if showCardList != settings.showCardList {
+            showCardList = settings.showCardList
         }
         if showInspector != settings.showInspector {
             showInspector = settings.showInspector

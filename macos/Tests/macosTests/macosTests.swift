@@ -2297,6 +2297,30 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(states.1 == true)
 }
 
+@Test func cardListVisibilityPersistsWhenToggled() async throws {
+    let suiteName = "FrieveEditorMacTests.cardListToggle"
+
+    let states = await MainActor.run { () -> (Bool, Bool, Bool) in
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        let settings = AppSettings(userDefaults: defaults)
+        let model = WorkspaceViewModel(settings: settings)
+
+        model.showCardList = false
+        let hidden = model.settings.showCardList
+        let reloadedModel = WorkspaceViewModel(settings: AppSettings(userDefaults: defaults))
+        let restoredHidden = reloadedModel.showCardList
+
+        model.showCardList = true
+        let shown = model.settings.showCardList
+        return (hidden, restoredHidden, shown)
+    }
+
+    #expect(states.0 == false)
+    #expect(states.1 == false)
+    #expect(states.2 == true)
+}
+
 @Test func automationSettingsPersistWhenEditedDirectly() async throws {
     let suiteName = "FrieveEditorMacTests.automationSettings"
 
