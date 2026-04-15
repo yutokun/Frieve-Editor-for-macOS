@@ -2,6 +2,7 @@ import Foundation
 import AppKit
 import MetalKit
 import SwiftUI
+import Combine
 import Testing
 @testable import macos
 
@@ -65,6 +66,22 @@ import Testing
     #expect(model.selectedCardIDs == [childID])
     #expect(model.selectedTab == .editor)
     #expect(model.editorBodyFocusTrigger)
+}
+
+@MainActor
+@Test func browserViewportUpdatesPublishForOverlayConsumers() throws {
+    let model = WorkspaceViewModel()
+    let initialRevision = model.browserSurfaceViewportRevision
+    var observed: [Int] = []
+    let cancellable = model.$browserSurfaceViewportRevision
+        .dropFirst()
+        .sink { observed.append($0) }
+
+    model.markBrowserSurfaceViewportDirty()
+
+    #expect(model.browserSurfaceViewportRevision == initialRevision + 1)
+    #expect(observed == [initialRevision + 1])
+    cancellable.cancel()
 }
 
 @Test func browserAppearanceHelperMatchesSwiftUIColorScheme() throws {

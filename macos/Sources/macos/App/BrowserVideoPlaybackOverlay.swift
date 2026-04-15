@@ -15,7 +15,7 @@ struct BrowserVideoPlaybackOverlay: View {
     let canvasSize: CGSize
 
     var body: some View {
-        let _ = viewModel.browserViewportRevision
+        let _ = viewModel.browserSurfaceViewportRevision
         let entries = playbackEntries()
         ZStack(alignment: .topLeading) {
             ForEach(entries) { entry in

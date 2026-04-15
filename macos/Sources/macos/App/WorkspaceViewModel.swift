@@ -397,8 +397,8 @@ final class WorkspaceViewModel: ObservableObject {
 @Published var lastGPTPrompt: String = ""
     @Published var browserViewportRevision: Int = 0
     @Published var browserChromeRevision: Int = 0
+    @Published var browserSurfaceViewportRevision: Int = 0
     var browserSurfaceContentRevision: Int = 0
-    var browserSurfaceViewportRevision: Int = 0
     var browserSurfacePresentationRevision: Int = 0
     var canvasCenter: FrievePoint = .zero
     var marqueeStartPoint: CGPoint?
