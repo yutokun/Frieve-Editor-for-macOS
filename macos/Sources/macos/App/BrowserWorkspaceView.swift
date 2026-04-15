@@ -60,6 +60,31 @@ func browserWallpaperTileOrigin(anchor: CGPoint, tileSize: CGSize, in viewportRe
     )
 }
 
+func browserTextOverlayViewportRect(in canvasSize: CGSize, topInset: CGFloat) -> CGRect {
+    browserWallpaperViewportRect(in: canvasSize, topInset: topInset)
+}
+
+@MainActor
+private enum BrowserWallpaperImageCache {
+    static let cache = NSCache<NSString, NSImage>()
+
+    static func image(for url: URL) -> NSImage? {
+        let cacheKey = wallpaperCacheKey(for: url)
+        if let cached = cache.object(forKey: cacheKey as NSString) {
+            return cached
+        }
+        guard let image = NSImage(contentsOf: url) else { return nil }
+        cache.setObject(image, forKey: cacheKey as NSString)
+        return image
+    }
+
+    private static func wallpaperCacheKey(for url: URL) -> String {
+        let resourceValues = try? url.resourceValues(forKeys: [.contentModificationDateKey])
+        let modifiedAt = resourceValues?.contentModificationDate?.timeIntervalSince1970 ?? 0
+        return "\(url.path)|\(modifiedAt)"
+    }
+}
+
 func browserTickerVisibleRects(in stripRect: CGRect, occludingRects: [CGRect]) -> [CGRect] {
     guard !stripRect.isNull, !stripRect.isEmpty else { return [] }
 
@@ -518,54 +543,6 @@ private struct BrowserCanvasBackgroundView: View {
             Rectangle()
                 .fill(Color(nsColor: browserCanvasBackgroundColor(for: colorScheme)))
 
-            if let detailCard = viewModel.browserCardTextCard,
-               viewModel.browserShowsCardTextOverlay {
-                let titleFont = Font(viewModel.browserOverlayTitleNSFont())
-                let bodyFont = Font(viewModel.browserOverlayBodyNSFont())
-                let textAlignment = viewModel.browserCardTextOverlayTextAlignment()
-                let overlayMaxWidth = viewModel.browserCardTextOverlayMaxWidth(in: canvasSize)
-                let isCentered = viewModel.settings.browserTextCentering
-
-                Group {
-                    if let overlayMaxWidth {
-                        VStack(alignment: isCentered ? .center : .leading, spacing: 3) {
-                            Text(detailCard.title)
-                                .font(titleFont)
-                                .foregroundStyle(.primary)
-                                .multilineTextAlignment(textAlignment)
-                                .frame(width: overlayMaxWidth, alignment: isCentered ? .center : .leading)
-                            if !detailCard.bodyText.isEmpty {
-                                Text(detailCard.bodyText)
-                                    .font(bodyFont)
-                                    .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(textAlignment)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .frame(width: overlayMaxWidth, alignment: isCentered ? .center : .leading)
-                            }
-                        }
-                    } else {
-                        VStack(alignment: isCentered ? .center : .leading, spacing: 3) {
-                            Text(detailCard.title)
-                                .font(titleFont)
-                                .foregroundStyle(.primary)
-                                .multilineTextAlignment(textAlignment)
-                            if !detailCard.bodyText.isEmpty {
-                                Text(detailCard.bodyText)
-                                    .font(bodyFont)
-                                    .foregroundStyle(.secondary)
-                                    .multilineTextAlignment(textAlignment)
-                                    .fixedSize(horizontal: true, vertical: true)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, isCentered ? 0 : browserTopInset + 16)
-                .frame(width: canvasSize.width, height: canvasSize.height, alignment: viewModel.browserCardTextOverlayFrameAlignment())
-                .clipped()
-                .allowsHitTesting(false)
-            }
-
             if let image = wallpaperImage {
                 let viewportRect = browserWallpaperViewportRect(in: canvasSize, topInset: browserTopInset)
                 if viewModel.settings.browserWallpaperTiled {
@@ -626,6 +603,60 @@ private struct BrowserCanvasBackgroundView: View {
                 }
             }
 
+            if let detailCard = viewModel.browserCardTextCard,
+               viewModel.browserShowsCardTextOverlay {
+                let titleFont = Font(viewModel.browserOverlayTitleNSFont())
+                let bodyFont = Font(viewModel.browserOverlayBodyNSFont())
+                let textAlignment = viewModel.browserCardTextOverlayTextAlignment()
+                let overlayMaxWidth = viewModel.browserCardTextOverlayMaxWidth(in: canvasSize)
+                let isCentered = viewModel.settings.browserTextCentering
+                let overlayViewportRect = browserTextOverlayViewportRect(in: canvasSize, topInset: browserTopInset)
+
+                Group {
+                    if let overlayMaxWidth {
+                        VStack(alignment: isCentered ? .center : .leading, spacing: 3) {
+                            Text(detailCard.title)
+                                .font(titleFont)
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(textAlignment)
+                                .frame(width: overlayMaxWidth, alignment: isCentered ? .center : .leading)
+                            if !detailCard.bodyText.isEmpty {
+                                Text(detailCard.bodyText)
+                                    .font(bodyFont)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(textAlignment)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(width: overlayMaxWidth, alignment: isCentered ? .center : .leading)
+                            }
+                        }
+                    } else {
+                        VStack(alignment: isCentered ? .center : .leading, spacing: 3) {
+                            Text(detailCard.title)
+                                .font(titleFont)
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(textAlignment)
+                            if !detailCard.bodyText.isEmpty {
+                                Text(detailCard.bodyText)
+                                    .font(bodyFont)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(textAlignment)
+                                    .fixedSize(horizontal: true, vertical: true)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, isCentered ? 0 : 16)
+                .frame(
+                    width: overlayViewportRect.width,
+                    height: overlayViewportRect.height,
+                    alignment: viewModel.browserCardTextOverlayFrameAlignment()
+                )
+                .position(x: overlayViewportRect.midX, y: overlayViewportRect.midY)
+                .clipped()
+                .allowsHitTesting(false)
+            }
+
             if viewModel.settings.browserBackgroundAnimation {
                 BrowserAnimatedBackgroundOverlay(
                     viewModel: viewModel,
@@ -638,7 +669,7 @@ private struct BrowserCanvasBackgroundView: View {
 
     private var wallpaperImage: NSImage? {
         guard let url = viewModel.browserWallpaperURL() else { return nil }
-        return NSImage(contentsOf: url)
+        return BrowserWallpaperImageCache.image(for: url)
     }
 }
 

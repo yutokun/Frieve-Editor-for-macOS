@@ -2545,6 +2545,11 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(drawRect.midY == viewport.midY)
 }
 
+@Test func browserCenteredTextUsesViewportBelowToolbar() {
+    let overlayViewport = browserTextOverlayViewportRect(in: CGSize(width: 1200, height: 800), topInset: 52)
+    #expect(overlayViewport == CGRect(x: 0, y: 52, width: 1200, height: 748))
+}
+
 @Test func browserScrollableWallpaperTracksBrowserZoomAtOriginalSize() {
     let zoomOneRect = browserScrollableWallpaperRect(
         for: CGSize(width: 320, height: 180),
