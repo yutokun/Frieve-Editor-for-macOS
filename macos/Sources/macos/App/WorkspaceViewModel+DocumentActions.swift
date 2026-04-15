@@ -868,12 +868,22 @@ extension WorkspaceViewModel {
         let stepScale = browserAutoArrangeStepScale()
 
         switch arrangeMode {
+        case "Normalize":
+            applyBrowserNormalizeArrangeStep()
+        case "Repulsion":
+            applyBrowserRepulsionAutoArrangeStep(stepScale: stepScale)
         case "Link":
             applyBrowserLinkAutoArrangeStep(stepScale: stepScale)
         case "Link(Soft)":
             applyBrowserLinkAutoArrangeStep(ratio: 0.33, stepScale: stepScale)
+        case "Label":
+            applyBrowserLabelAutoArrangeStep(stepScale: stepScale)
+        case "Index":
+            applyBrowserIndexAutoArrangeStep(stepScale: stepScale)
         case "Matrix":
             applyBrowserMatrixAutoArrangeStep(stepScale: stepScale)
+        case "Similarity":
+            applyBrowserSimilarityAutoArrangeStep(stepScale: stepScale)
         case "Tree":
             applyBrowserTreeAutoArrangeStep(stepScale: stepScale)
         default:
@@ -910,51 +920,10 @@ extension WorkspaceViewModel {
         guard visibleCards.count > 1 else { return }
         let freezeSelectedCards = hasActiveBrowserGesture
 
-        var positions: [Int: FrievePoint] = [:]
-        positions.reserveCapacity(visibleCards.count)
-        for card in visibleCards {
-            positions[card.id] = card.position
-        }
-
-        let repulsionRatio = 0.5
+        let positions = Dictionary(uniqueKeysWithValues: visibleCards.map { ($0.id, $0.position) })
         let baseLinkRatio = ratio * 0.66 * 0.3
         let linkRatio = 1 - pow(max(1 - baseLinkRatio, 0.0001), stepScale)
-        var nextPositions = positions
-
-        for card in visibleCards where !card.isFixed && !(freezeSelectedCards && selectedCardIDs.contains(card.id)) {
-            guard let original = positions[card.id] else { continue }
-            var repelX = 0.0
-            var repelY = 0.0
-            var repelWeight = 0.0
-            var repelCount = 0
-
-            for other in visibleCards where other.id != card.id {
-                guard let otherPosition = positions[other.id] else { continue }
-                let fx = original.x - otherPosition.x
-                let fy = original.y - otherPosition.y
-                let distanceSquared = fx * fx + fy * fy
-                if distanceSquared > 0.0 {
-                    let w = sqrt(100.0 / distanceSquared)
-                    repelX += fx * w
-                    repelY += fy * w
-                    repelWeight += 1.0
-                    repelCount += 1
-                } else {
-                    repelX += Double.random(in: -0.005 ... 0.005)
-                    repelY += Double.random(in: -0.005 ... 0.005)
-                    repelWeight += 1.0
-                    repelCount += 1
-                }
-            }
-
-            if repelWeight > 0, repelCount > 0 {
-                let weight = repelWeight / Double(repelCount * repelCount) / 5.0 * repulsionRatio * stepScale
-                nextPositions[card.id] = FrievePoint(
-                    x: original.x + repelX * weight,
-                    y: original.y + repelY * weight
-                )
-            }
-        }
+        var nextPositions = browserRepulsedPositions(for: visibleCards, stepScale: stepScale, ratio: 0.5)
 
         var linkedAverageByCardID: [Int: FrievePoint] = [:]
         for card in visibleCards where !card.isFixed && !(freezeSelectedCards && selectedCardIDs.contains(card.id)) {
@@ -992,6 +961,166 @@ extension WorkspaceViewModel {
         guard !targetIDs.isEmpty else { return }
 
         normalizeAndApplyBrowserAutoArrangePositions(nextPositions, targetIDs: targetIDs)
+    }
+
+    func applyBrowserNormalizeArrangeStep() {
+        let visibleCards = visibleSortedCards()
+        let targetIDs = Set(visibleCards.filter { !$0.isFixed }.map(\.id))
+        guard !targetIDs.isEmpty else { return }
+        let positions = Dictionary(uniqueKeysWithValues: visibleCards.map { ($0.id, $0.position) })
+        normalizeAndApplyBrowserAutoArrangePositions(positions, targetIDs: targetIDs)
+    }
+
+    func applyBrowserRepulsionAutoArrangeStep(stepScale: Double = 1.0, ratio: Double = 1.0) {
+        let visibleCards = visibleSortedCards()
+        guard visibleCards.count > 1 else { return }
+        let targetIDs = Set(visibleCards.filter { !$0.isFixed && !(hasActiveBrowserGesture && selectedCardIDs.contains($0.id)) }.map(\.id))
+        guard !targetIDs.isEmpty else { return }
+        let nextPositions = browserRepulsedPositions(for: visibleCards, stepScale: stepScale, ratio: ratio)
+        normalizeAndApplyBrowserAutoArrangePositions(nextPositions, targetIDs: targetIDs)
+    }
+
+    func browserRepulsedPositions(for visibleCards: [FrieveCard], stepScale: Double, ratio: Double) -> [Int: FrievePoint] {
+        let freezeSelectedCards = hasActiveBrowserGesture
+        let positions = Dictionary(uniqueKeysWithValues: visibleCards.map { ($0.id, $0.position) })
+        var nextPositions = positions
+
+        for card in visibleCards where !card.isFixed && !(freezeSelectedCards && selectedCardIDs.contains(card.id)) {
+            guard let original = positions[card.id] else { continue }
+            var repelX = 0.0
+            var repelY = 0.0
+            var repelWeight = 0.0
+            var repelCount = 0
+
+            for other in visibleCards where other.id != card.id {
+                guard let otherPosition = positions[other.id] else { continue }
+                let fx = original.x - otherPosition.x
+                let fy = original.y - otherPosition.y
+                let distanceSquared = fx * fx + fy * fy
+                if distanceSquared > 0.0 {
+                    let w = sqrt(100.0 / distanceSquared)
+                    repelX += fx * w
+                    repelY += fy * w
+                    repelWeight += 1.0
+                    repelCount += 1
+                } else {
+                    repelX += Double.random(in: -0.005 ... 0.005)
+                    repelY += Double.random(in: -0.005 ... 0.005)
+                    repelWeight += 1.0
+                    repelCount += 1
+                }
+            }
+
+            if repelWeight > 0, repelCount > 0 {
+                let weight = repelWeight / Double(repelCount * repelCount) / 5.0 * ratio * stepScale
+                nextPositions[card.id] = FrievePoint(
+                    x: original.x + repelX * weight,
+                    y: original.y + repelY * weight
+                )
+            }
+        }
+
+        return nextPositions
+    }
+
+    func applyBrowserLabelAutoArrangeStep(stepScale: Double = 1.0) {
+        let orderedCards = browserAutoArrangeCardsInDocumentOrder().sorted { lhs, rhs in
+            let lhsLabel = cardLabelNames(for: lhs).first ?? ""
+            let rhsLabel = cardLabelNames(for: rhs).first ?? ""
+            if lhsLabel != rhsLabel { return lhsLabel.localizedStandardCompare(rhsLabel) == .orderedAscending }
+            return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+        }
+        applyBrowserOrderedTargetArrangeStep(cards: orderedCards, stepScale: stepScale)
+    }
+
+    func applyBrowserIndexAutoArrangeStep(stepScale: Double = 1.0) {
+        applyBrowserOrderedTargetArrangeStep(cards: browserAutoArrangeCardsInDocumentOrder(), stepScale: stepScale)
+    }
+
+    func applyBrowserSimilarityAutoArrangeStep(stepScale: Double = 1.0) {
+        let visibleCards = visibleSortedCards()
+        guard visibleCards.count > 1 else { return }
+        let freezeSelectedCards = hasActiveBrowserGesture
+        let positions = browserRepulsedPositions(for: visibleCards, stepScale: stepScale, ratio: 0.5)
+        var nextPositions = positions
+        let linkNeighborSets = Dictionary(uniqueKeysWithValues: visibleCards.map { card in
+            (card.id, Set(linksForCard(card.id).flatMap { [$0.fromCardID, $0.toCardID] }.filter { $0 != card.id }))
+        })
+        let blend = 1 - pow(0.5, stepScale)
+
+        for card in visibleCards where !card.isFixed && !(freezeSelectedCards && selectedCardIDs.contains(card.id)) {
+            var totalWeight = 0.0
+            var sum = FrievePoint(x: 0, y: 0)
+            let cardLabels = Set(card.labelIDs)
+            let cardNeighbors = linkNeighborSets[card.id] ?? []
+
+            for other in visibleCards where other.id != card.id {
+                let sharedLabels = Double(cardLabels.intersection(other.labelIDs).count)
+                let sharedNeighbors = Double(cardNeighbors.intersection(linkNeighborSets[other.id] ?? []).count)
+                let weight = sharedLabels * 1.6 + sharedNeighbors * 0.8
+                guard weight > 0, let position = positions[other.id] else { continue }
+                totalWeight += weight
+                sum.x += position.x * weight
+                sum.y += position.y * weight
+            }
+
+            guard totalWeight > 0, let current = nextPositions[card.id] else { continue }
+            let target = FrievePoint(x: sum.x / totalWeight, y: sum.y / totalWeight)
+            nextPositions[card.id] = FrievePoint(
+                x: current.x * (1 - blend) + target.x * blend,
+                y: current.y * (1 - blend) + target.y * blend
+            )
+        }
+
+        let targetIDs = Set(visibleCards.filter { !$0.isFixed && !(freezeSelectedCards && selectedCardIDs.contains($0.id)) }.map(\.id))
+        guard !targetIDs.isEmpty else { return }
+        normalizeAndApplyBrowserAutoArrangePositions(nextPositions, targetIDs: targetIDs)
+    }
+
+    func applyBrowserOrderedTargetArrangeStep(cards: [FrieveCard], stepScale: Double = 1.0) {
+        guard !cards.isEmpty else { return }
+        let aspectRatio = browserMatrixAspectRatio(for: cards)
+        let dimensions = browserMatrixDimensions(count: cards.count, aspectRatio: aspectRatio)
+        let width = max(dimensions.width, 1)
+        let height = max(dimensions.height, 1)
+
+        var targets: [Int: FrievePoint] = [:]
+        targets.reserveCapacity(cards.count)
+        for (index, card) in cards.enumerated() {
+            let x = index % width
+            let y = index / width
+            targets[card.id] = FrievePoint(
+                x: width > 1 ? Double(x) / Double(width - 1) : 0.5,
+                y: height > 1 ? Double(y) / Double(height - 1) : 0.5
+            )
+        }
+        blendAndApplyBrowserAutoArrangeTargets(targets, cards: cards, stepScale: stepScale)
+    }
+
+    func blendAndApplyBrowserAutoArrangeTargets(_ targets: [Int: FrievePoint], cards: [FrieveCard], stepScale: Double = 1.0) {
+        let freezeSelectedCards = hasActiveBrowserGesture
+        let blend = 1 - pow(0.5, stepScale)
+        var changed = false
+
+        for card in cards {
+            guard let target = targets[card.id] else { continue }
+            if card.isFixed || (freezeSelectedCards && selectedCardIDs.contains(card.id)) {
+                continue
+            }
+
+            let next = FrievePoint(
+                x: card.position.x * (1 - blend) + target.x * blend,
+                y: card.position.y * (1 - blend) + target.y * blend
+            )
+            guard next != card.position else { continue }
+            changed = true
+            document.updateCard(card.id) { targetCard in
+                targetCard.position = next
+            }
+        }
+
+        guard changed else { return }
+        finalizeBrowserAutoArrangeMutation()
     }
 
     func applyBrowserMatrixAutoArrangeStep(stepScale: Double = 1.0) {

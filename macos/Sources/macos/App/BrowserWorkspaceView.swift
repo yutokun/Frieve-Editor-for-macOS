@@ -878,9 +878,14 @@ private struct BrowserCanvasHUD: View {
             HStack(spacing: 12) {
                 Picker("Arrange", selection: $viewModel.arrangeMode) {
                     Text("None").tag("None")
+                    Text("Normalize").tag("Normalize")
+                    Text("Repulsion").tag("Repulsion")
                     Text("Link").tag("Link")
                     Text("Link(Soft)").tag("Link(Soft)")
+                    Text("Label").tag("Label")
+                    Text("Index").tag("Index")
                     Text("Matrix").tag("Matrix")
+                    Text("Similarity").tag("Similarity")
                     Text("Tree").tag("Tree")
                 }
                 .fixedSize()
