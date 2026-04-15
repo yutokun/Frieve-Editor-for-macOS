@@ -89,6 +89,29 @@ private enum BrowserWallpaperImageCache {
     }
 }
 
+@MainActor
+private enum BrowserWallpaperTileCache {
+    static let cache = NSCache<NSString, NSImage>()
+
+    static func image(for url: URL, tileSize: CGSize) -> NSImage? {
+        guard tileSize.width > 0, tileSize.height > 0,
+              let sourceImage = BrowserWallpaperImageCache.image(for: url) else { return nil }
+        let key = "\(url.path)|\(Int(tileSize.width.rounded()))x\(Int(tileSize.height.rounded()))" as NSString
+        if let cached = cache.object(forKey: key) {
+            return cached
+        }
+
+        let scaledSize = NSSize(width: max(tileSize.width.rounded(), 1), height: max(tileSize.height.rounded(), 1))
+        let image = NSImage(size: scaledSize)
+        image.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .medium
+        sourceImage.draw(in: CGRect(origin: .zero, size: scaledSize))
+        image.unlockFocus()
+        cache.setObject(image, forKey: key)
+        return image
+    }
+}
+
 func browserTickerVisibleRects(in stripRect: CGRect, occludingRects: [CGRect]) -> [CGRect] {
     guard !stripRect.isNull, !stripRect.isEmpty else { return [] }
 
@@ -551,59 +574,57 @@ private struct BrowserCanvasBackgroundView: View {
                 let viewportRect = browserWallpaperViewportRect(in: canvasSize, topInset: browserTopInset)
                 let wallpaperAsset = Image(nsImage: image)
                 if viewModel.settings.browserWallpaperTiled {
-                    GeometryReader { proxy in
-                        Canvas(opaque: false, colorMode: .nonLinear, rendersAsynchronously: true) { context, size in
-                            let tileSize = browserWallpaperTileSize(
+                    let tileSize = browserWallpaperTileSize(
+                        for: image.size,
+                        fixed: viewModel.settings.browserWallpaperFixed,
+                        zoom: viewModel.zoom
+                    )
+                    if tileSize.width > 0,
+                       tileSize.height > 0,
+                       let url = viewModel.browserWallpaperURL(),
+                       let patternImage = BrowserWallpaperTileCache.image(for: url, tileSize: tileSize) {
+                        let anchor = if viewModel.settings.browserWallpaperFixed {
+                            viewportRect.origin
+                        } else {
+                            browserScrollableWallpaperRect(
                                 for: image.size,
-                                fixed: viewModel.settings.browserWallpaperFixed,
+                                anchor: viewModel.canvasPoint(for: FrievePoint(x: 0, y: 0), in: canvasSize),
                                 zoom: viewModel.zoom
-                            )
-                            guard tileSize.width > 0, tileSize.height > 0 else { return }
-                            let anchor = if viewModel.settings.browserWallpaperFixed {
-                                viewportRect.origin
-                            } else {
-                                browserScrollableWallpaperRect(
-                                    for: image.size,
-                                    anchor: viewModel.canvasPoint(for: FrievePoint(x: 0, y: 0), in: size),
-                                    zoom: viewModel.zoom
-                                ).origin
-                            }
-                            let startOrigin = browserWallpaperTileOrigin(anchor: anchor, tileSize: tileSize, in: viewportRect)
-                            let columns = Int(ceil((viewportRect.maxX - startOrigin.x) / tileSize.width)) + 1
-                            let rows = Int(ceil((viewportRect.maxY - startOrigin.y) / tileSize.height)) + 1
-                            context.clip(to: Path(viewportRect))
-                            for row in 0..<rows {
-                                for column in 0..<columns {
-                                    let origin = CGPoint(
-                                        x: startOrigin.x + CGFloat(column) * tileSize.width,
-                                        y: startOrigin.y + CGFloat(row) * tileSize.height
-                                    )
-                                    context.draw(
-                                        wallpaperAsset,
-                                        in: CGRect(origin: origin, size: tileSize)
-                                    )
-                                }
-                            }
+                            ).origin
                         }
-                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        let startOrigin = browserWallpaperTileOrigin(anchor: anchor, tileSize: tileSize, in: viewportRect)
+                        let columns = Int(ceil((viewportRect.maxX - startOrigin.x) / tileSize.width)) + 1
+                        let rows = Int(ceil((viewportRect.maxY - startOrigin.y) / tileSize.height)) + 1
+                        let coverRect = CGRect(
+                            x: startOrigin.x,
+                            y: startOrigin.y,
+                            width: max(CGFloat(columns) * tileSize.width, viewportRect.width),
+                            height: max(CGFloat(rows) * tileSize.height, viewportRect.height)
+                        )
+
+                        Rectangle()
+                            .fill(Color(nsColor: NSColor(patternImage: patternImage)))
+                            .frame(width: coverRect.width, height: coverRect.height)
+                            .position(x: coverRect.midX, y: coverRect.midY)
+                            .clipShape(Path(viewportRect))
                     }
                 } else {
-                    GeometryReader { proxy in
-                        Canvas(opaque: false, colorMode: .nonLinear, rendersAsynchronously: true) { context, size in
-                            let drawRect = if viewModel.settings.browserWallpaperFixed {
-                                browserWallpaperRect(for: image.size, in: viewportRect, fixed: true)
-                            } else {
-                                browserScrollableWallpaperRect(
-                                    for: image.size,
-                                    anchor: viewModel.canvasPoint(for: FrievePoint(x: 0, y: 0), in: size),
-                                    zoom: viewModel.zoom
-                                )
-                            }
-                            guard drawRect.width > 0, drawRect.height > 0 else { return }
-                            context.clip(to: Path(viewportRect))
-                            context.draw(wallpaperAsset, in: drawRect)
-                        }
-                        .frame(width: proxy.size.width, height: proxy.size.height)
+                    let drawRect = if viewModel.settings.browserWallpaperFixed {
+                        browserWallpaperRect(for: image.size, in: viewportRect, fixed: true)
+                    } else {
+                        browserScrollableWallpaperRect(
+                            for: image.size,
+                            anchor: viewModel.canvasPoint(for: FrievePoint(x: 0, y: 0), in: canvasSize),
+                            zoom: viewModel.zoom
+                        )
+                    }
+                    if drawRect.width > 0, drawRect.height > 0 {
+                        wallpaperAsset
+                            .resizable()
+                            .interpolation(.medium)
+                            .frame(width: drawRect.width, height: drawRect.height)
+                            .position(x: drawRect.midX, y: drawRect.midY)
+                            .clipShape(Path(viewportRect))
                     }
                 }
             }
