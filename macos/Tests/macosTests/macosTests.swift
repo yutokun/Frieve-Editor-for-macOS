@@ -71,6 +71,22 @@ import Testing
     #expect(browserAppearance(for: .dark).bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
 }
 
+@Test func browserWallpaperRectUsesFillForFixedAndFitOtherwise() throws {
+    let fitRect = browserWallpaperRect(
+        for: CGSize(width: 400, height: 200),
+        in: CGSize(width: 300, height: 300),
+        fixed: false
+    )
+    let fillRect = browserWallpaperRect(
+        for: CGSize(width: 400, height: 200),
+        in: CGSize(width: 300, height: 300),
+        fixed: true
+    )
+
+    #expect(fitRect == CGRect(x: 0, y: 75, width: 300, height: 150))
+    #expect(fillRect == CGRect(x: -150, y: 0, width: 600, height: 300))
+}
+
 @Test func browserCanvasBackgroundHelperMatchesColorScheme() throws {
     let light = browserCanvasBackgroundColor(for: .light).usingColorSpace(.deviceRGB)
     let dark = browserCanvasBackgroundColor(for: .dark).usingColorSpace(.deviceRGB)

@@ -1,6 +1,20 @@
 import SwiftUI
 import AppKit
 
+func browserWallpaperRect(for imageSize: CGSize, in canvasSize: CGSize, fixed: Bool) -> CGRect {
+    guard imageSize.width > 0, imageSize.height > 0, canvasSize.width > 0, canvasSize.height > 0 else { return .zero }
+    let widthRatio = canvasSize.width / imageSize.width
+    let heightRatio = canvasSize.height / imageSize.height
+    let scale = fixed ? max(widthRatio, heightRatio) : min(widthRatio, heightRatio)
+    let drawSize = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+    return CGRect(
+        x: (canvasSize.width - drawSize.width) / 2,
+        y: (canvasSize.height - drawSize.height) / 2,
+        width: drawSize.width,
+        height: drawSize.height
+    )
+}
+
 func browserTickerVisibleRects(in stripRect: CGRect, occludingRects: [CGRect]) -> [CGRect] {
     guard !stripRect.isNull, !stripRect.isEmpty else { return [] }
 
@@ -310,12 +324,18 @@ private struct BrowserCanvasBackgroundView: View {
                         .frame(width: proxy.size.width, height: proxy.size.height)
                     }
                 } else {
-                    Image(nsImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: viewModel.settings.browserWallpaperFixed ? .fill : .fit)
-                        .opacity(0.30)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .clipped()
+                    GeometryReader { proxy in
+                        Canvas { context, size in
+                            let drawRect = browserWallpaperRect(
+                                for: image.size,
+                                in: size,
+                                fixed: viewModel.settings.browserWallpaperFixed
+                            )
+                            guard drawRect.width > 0, drawRect.height > 0 else { return }
+                            context.draw(Image(nsImage: image), in: drawRect)
+                        }
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                    }
                 }
             }
 
