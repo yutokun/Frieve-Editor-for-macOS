@@ -50,6 +50,22 @@ import Testing
     #expect(model.browserCardTextCard?.id == 0)
 }
 
+@MainActor
+@Test func openCardInEditorSelectsCardAndSwitchesToEditorTab() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.addChildCard()
+    let childID = try #require(model.selectedCardID)
+    model.selectedTab = .browser
+    model.selectCard(0)
+
+    model.openCardInEditor(childID)
+
+    #expect(model.selectedCardID == childID)
+    #expect(model.selectedCardIDs == [childID])
+    #expect(model.selectedTab == .editor)
+}
+
 @Test func browserAppearanceHelperMatchesSwiftUIColorScheme() throws {
     #expect(browserAppearance(for: .light).bestMatch(from: [.aqua, .darkAqua]) == .aqua)
     #expect(browserAppearance(for: .dark).bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)

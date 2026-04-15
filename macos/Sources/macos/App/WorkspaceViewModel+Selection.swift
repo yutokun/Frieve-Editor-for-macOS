@@ -259,6 +259,13 @@ extension WorkspaceViewModel {
         statusMessage = "Centered browser on \(card.title)"
     }
 
+    func openCardInEditor(_ cardID: Int) {
+        guard let card = cardByID(cardID) else { return }
+        selectCard(cardID)
+        selectedTab = .editor
+        statusMessage = "Opened \(card.title) in the editor"
+    }
+
     private func openBrowserInlineEditor(for cardID: Int) {
         guard settings.browserEditInBrowser else {
             browserInlineEditorCardID = nil

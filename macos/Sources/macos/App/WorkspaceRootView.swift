@@ -153,6 +153,10 @@ private struct CardListPane: View {
                         .fontWeight(viewModel.selectedCardIDs.contains(card.id) ? .semibold : .regular)
                         .lineLimit(1)
                         .truncationMode(.tail)
+                        .contentShape(Rectangle())
+                        .onTapGesture(count: 2) {
+                            viewModel.openCardInEditor(card.id)
+                        }
                         .tag(card.id)
                 }
             }
