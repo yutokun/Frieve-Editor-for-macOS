@@ -418,39 +418,45 @@ private struct BrowserCanvasBackgroundView: View {
                 let bodyFont = Font(viewModel.browserOverlayBodyNSFont())
                 let textAlignment = viewModel.browserCardTextOverlayTextAlignment()
                 let overlayMaxWidth = viewModel.browserCardTextOverlayMaxWidth(in: canvasSize)
-                let bodyText = viewModel.settings.browserTextWordWrap
-                    ? detailCard.bodyText
-                    : detailCard.bodyText.replacingOccurrences(of: "\n", with: " ")
-                VStack(alignment: .leading) {
-                    HStack(alignment: .top, spacing: 0) {
-                        VStack(alignment: .leading, spacing: 3) {
+                let isCentered = viewModel.settings.browserTextCentering
+
+                Group {
+                    if let overlayMaxWidth {
+                        VStack(alignment: isCentered ? .center : .leading, spacing: 3) {
                             Text(detailCard.title)
                                 .font(titleFont)
                                 .foregroundStyle(.primary)
                                 .multilineTextAlignment(textAlignment)
-                                .frame(maxWidth: .infinity, alignment: viewModel.settings.browserTextCentering ? .center : .leading)
+                                .frame(width: overlayMaxWidth, alignment: isCentered ? .center : .leading)
                             if !detailCard.bodyText.isEmpty {
-                                Text(bodyText)
+                                Text(detailCard.bodyText)
                                     .font(bodyFont)
                                     .foregroundStyle(.secondary)
                                     .multilineTextAlignment(textAlignment)
-                                    .lineLimit(viewModel.settings.browserTextWordWrap ? nil : 1)
-                                    .fixedSize(horizontal: !viewModel.settings.browserTextWordWrap, vertical: viewModel.settings.browserTextWordWrap)
-                                    .frame(maxWidth: .infinity, alignment: viewModel.settings.browserTextCentering ? .center : .leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(width: overlayMaxWidth, alignment: isCentered ? .center : .leading)
                             }
                         }
-                        .frame(maxWidth: overlayMaxWidth, alignment: viewModel.settings.browserTextCentering ? .center : .leading)
-                        Spacer(minLength: 0)
+                    } else {
+                        VStack(alignment: isCentered ? .center : .leading, spacing: 3) {
+                            Text(detailCard.title)
+                                .font(titleFont)
+                                .foregroundStyle(.primary)
+                                .multilineTextAlignment(textAlignment)
+                            if !detailCard.bodyText.isEmpty {
+                                Text(detailCard.bodyText)
+                                    .font(bodyFont)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(textAlignment)
+                                    .fixedSize(horizontal: true, vertical: true)
+                            }
+                        }
                     }
-                    Spacer(minLength: 0)
                 }
-                .padding(.top, viewModel.settings.browserTextCentering ? 0 : browserTopInset + 16)
-                .padding(.leading, viewModel.settings.browserTextCentering ? 0 : 16)
-                .frame(
-                    maxWidth: .infinity,
-                    maxHeight: .infinity,
-                    alignment: viewModel.browserCardTextOverlayFrameAlignment()
-                )
+                .padding(.horizontal, 16)
+                .padding(.top, isCentered ? 0 : browserTopInset + 16)
+                .frame(width: canvasSize.width, height: canvasSize.height, alignment: viewModel.browserCardTextOverlayFrameAlignment())
+                .clipped()
                 .allowsHitTesting(false)
             }
 

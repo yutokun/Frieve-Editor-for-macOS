@@ -175,7 +175,7 @@ extension WorkspaceViewModel {
 
     func browserCardTextOverlayMaxWidth(in canvasSize: CGSize) -> CGFloat? {
         guard settings.browserTextWordWrap else { return nil }
-        return min(max(canvasSize.width * 0.48, 280), 640)
+        return max(min(canvasSize.width * 0.5, canvasSize.width - 32), 220)
     }
 
     func browserWallpaperURL() -> URL? {

@@ -2259,7 +2259,7 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(model.browserShowsCardTextOverlay)
     #expect(model.browserCardTextOverlayFrameAlignment() == .center)
     #expect(model.browserCardTextOverlayTextAlignment() == .center)
-    #expect(model.browserCardTextOverlayMaxWidth(in: CGSize(width: 1200, height: 800)) == 576)
+    #expect(model.browserCardTextOverlayMaxWidth(in: CGSize(width: 1200, height: 800)) == 600)
     #expect(model.browserOverlayTitleNSFont().fontName.localizedCaseInsensitiveContains("helvetica"))
     #expect(model.browserOverlayTitleNSFont().pointSize == 18)
 
