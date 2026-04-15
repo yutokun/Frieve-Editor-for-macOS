@@ -193,8 +193,15 @@ extension WorkspaceViewModel {
     }
 
     func browserShowsMediaPreview(for card: FrieveCard) -> Bool {
-        (settings.browserImageVisible && !(card.imagePath?.trimmed.isEmpty ?? true)) ||
-        (settings.browserVideoVisible && !(card.videoPath?.trimmed.isEmpty ?? true))
+        browserShowsImagePreview(for: card) || browserShowsVideoPreview(for: card)
+    }
+
+    func browserShowsImagePreview(for card: FrieveCard) -> Bool {
+        settings.browserImageVisible && !(card.imagePath?.trimmed.isEmpty ?? true)
+    }
+
+    func browserShowsVideoPreview(for card: FrieveCard) -> Bool {
+        settings.browserVideoVisible && !(card.videoPath?.trimmed.isEmpty ?? true)
     }
 
     func browserShowsDrawingPreview(for card: FrieveCard, hasDrawingPreview: Bool? = nil) -> Bool {
@@ -213,6 +220,25 @@ extension WorkspaceViewModel {
         let width = min(max(limit * 1.2, 72), 220)
         let height = min(max(limit * 0.9, 54), 180)
         return CGSize(width: width, height: height)
+    }
+
+    func browserPreviewStripSize(for card: FrieveCard, hasDrawingPreview: Bool? = nil) -> CGSize {
+        var itemSizes: [CGSize] = []
+        if browserShowsImagePreview(for: card) {
+            itemSizes.append(browserMediaPreviewSize(for: card))
+        }
+        if browserShowsVideoPreview(for: card) {
+            itemSizes.append(browserMediaPreviewSize(for: card))
+        }
+        if browserShowsDrawingPreview(for: card, hasDrawingPreview: hasDrawingPreview) {
+            itemSizes.append(browserDrawingPreviewSize(for: card))
+        }
+        guard !itemSizes.isEmpty else { return .zero }
+        let spacing = CGFloat(max(itemSizes.count - 1, 0)) * 8
+        return CGSize(
+            width: itemSizes.reduce(0) { $0 + $1.width } + spacing,
+            height: itemSizes.map(\.height).max() ?? 0
+        )
     }
 
     func browserCardTickerText(for card: FrieveCard) -> String? {
@@ -819,16 +845,10 @@ extension WorkspaceViewModel {
         var width = max(padding * 2, textWidth + padding * 2)
         var height = max(padding * 2, textHeight + padding * 2)
 
-        if browserShowsMediaPreview(for: card) {
-            let previewSize = browserMediaPreviewSize(for: card)
-            width = max(width, previewSize.width + padding * 2)
-            height += previewSize.height + 10
-        }
-
-        if browserShowsDrawingPreview(for: card, hasDrawingPreview: !drawingPreviewItems(for: card).isEmpty) {
-            let previewSize = browserDrawingPreviewSize(for: card)
-            width = max(width, previewSize.width + padding * 2)
-            height += previewSize.height + 10
+        let previewStripSize = browserPreviewStripSize(for: card, hasDrawingPreview: !drawingPreviewItems(for: card).isEmpty)
+        if previewStripSize != .zero {
+            width = max(width, previewStripSize.width + padding * 2)
+            height += previewStripSize.height + 10
         }
 
         let tickerHeight = browserCardTickerHeight(for: card)

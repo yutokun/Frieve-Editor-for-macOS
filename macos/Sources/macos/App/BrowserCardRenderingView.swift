@@ -1,6 +1,11 @@
 import SwiftUI
 import AppKit
 
+private enum BrowserMediaPreviewKind {
+    case image
+    case video
+}
+
 struct BrowserCardShape: Shape {
     let shapeIndex: Int
 
@@ -148,18 +153,48 @@ struct BrowserCardRasterContentView: View {
         let padding = browserCardContentPadding(for: card)
         let previewSize = viewModel.browserMediaPreviewSize(for: card)
         let drawingSize = viewModel.browserDrawingPreviewSize(for: card)
+        let hasImagePreview = viewModel.browserShowsImagePreview(for: card)
+        let hasVideoPreview = viewModel.browserShowsVideoPreview(for: card)
+        let hasDrawingPreview = viewModel.browserShowsDrawingPreview(for: card, hasDrawingPreview: metadata.hasDrawingPreview)
         let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : card.title
         let titleFont = Font(viewModel.browserCardTitleNSFont(for: card))
         let scoreFont = Font(viewModel.browserCardScoreNSFont(for: card))
 
         VStack(alignment: horizontalAlignment, spacing: 8) {
-            if viewModel.browserShowsDrawingPreview(for: card, hasDrawingPreview: metadata.hasDrawingPreview) {
-                BrowserDrawingOverlay(
-                    viewModel: viewModel,
-                    card: card,
-                    targetSize: drawingSize,
-                    drawingPreviewImage: drawingPreviewImage
-                )
+            if hasImagePreview || hasVideoPreview || hasDrawingPreview {
+                HStack(alignment: .top, spacing: 8) {
+                    if hasImagePreview {
+                        BrowserMediaPreviewView(
+                            viewModel: viewModel,
+                            card: card,
+                            kind: .image,
+                            path: card.imagePath,
+                            badgeText: card.imagePath.flatMap { URL(fileURLWithPath: $0).lastPathComponent.nilIfEmpty } ?? "Image",
+                            previewImage: previewImage
+                        )
+                        .frame(width: previewSize.width, height: previewSize.height)
+                    }
+                    if hasVideoPreview {
+                        BrowserMediaPreviewView(
+                            viewModel: viewModel,
+                            card: card,
+                            kind: .video,
+                            path: card.videoPath,
+                            badgeText: card.videoPath.flatMap { URL(fileURLWithPath: $0).lastPathComponent.nilIfEmpty } ?? "Video",
+                            previewImage: nil
+                        )
+                        .frame(width: previewSize.width, height: previewSize.height)
+                    }
+                    if hasDrawingPreview {
+                        BrowserDrawingOverlay(
+                            viewModel: viewModel,
+                            card: card,
+                            targetSize: drawingSize,
+                            drawingPreviewImage: drawingPreviewImage
+                        )
+                        .frame(width: drawingSize.width, height: drawingSize.height)
+                    }
+                }
                 .frame(maxWidth: .infinity, alignment: .center)
             }
 
@@ -189,18 +224,6 @@ struct BrowserCardRasterContentView: View {
                     .lineLimit(viewModel.settings.browserTextWordWrap ? 2 : 1)
                     .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
             }
-
-            if viewModel.browserShowsMediaPreview(for: card) {
-                BrowserMediaPreviewView(
-                    viewModel: viewModel,
-                    card: card,
-                    badgeText: metadata.mediaBadgeText,
-                    previewImage: previewImage
-                )
-                .frame(width: previewSize.width, height: previewSize.height)
-                .frame(maxWidth: .infinity, alignment: .center)
-            }
-
             Spacer(minLength: 0)
         }
         .padding(padding)
@@ -246,12 +269,14 @@ struct BrowserTickerMarqueeView: View {
 private struct BrowserMediaPreviewView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
     let card: FrieveCard
+    let kind: BrowserMediaPreviewKind
+    let path: String?
     let badgeText: String
     let previewImage: NSImage?
 
     var body: some View {
         Group {
-            if let previewImage {
+            if kind == .image, let previewImage {
                 Image(nsImage: previewImage)
                     .resizable()
                     .scaledToFill()
@@ -266,7 +291,7 @@ private struct BrowserMediaPreviewView: View {
                                 .padding(6)
                         }
                     }
-            } else if let image = viewModel.cachedPreviewImage(for: card) {
+            } else if kind == .image, let image = viewModel.cachedPreviewImage(for: card) {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFill()
@@ -279,7 +304,7 @@ private struct BrowserMediaPreviewView: View {
                             .background(.ultraThinMaterial, in: Capsule())
                             .padding(6)
                     }
-            } else if let url = viewModel.mediaURL(for: card.videoPath) {
+            } else if kind == .video, let url = viewModel.mediaURL(for: path) {
                 ZStack {
                     LinearGradient(colors: [.black.opacity(0.18), .black.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing)
                     VStack(spacing: 6) {
@@ -291,7 +316,18 @@ private struct BrowserMediaPreviewView: View {
                             .multilineTextAlignment(.center)
                     }
                     .foregroundStyle(.secondary)
+                    .overlay(alignment: .bottomTrailing) {
+                        if !badgeText.isEmpty {
+                            Label(badgeText, systemImage: "film")
+                                .font(.caption2)
+                                .padding(6)
+                                .background(.ultraThinMaterial, in: Capsule())
+                                .padding(6)
+                        }
+                    }
                 }
+            } else {
+                EmptyView()
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))

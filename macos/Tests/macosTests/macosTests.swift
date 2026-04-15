@@ -979,6 +979,23 @@ import Testing
 }
 
 @MainActor
+@Test func browserPreviewStripIncludesImageVideoAndDrawingWidths() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.updateSelectedCardImagePath("/tmp/sample.png")
+    model.updateSelectedCardVideoPath("/tmp/sample.mov")
+    model.updateSelectedCardDrawing("rect 0.1 0.1 0.9 0.9 color=00FF00 fill=00FF00")
+
+    let card = try #require(model.selectedCard)
+    let stripSize = model.browserPreviewStripSize(for: card, hasDrawingPreview: true)
+    let mediaSize = model.browserMediaPreviewSize(for: card)
+    let drawingSize = model.browserDrawingPreviewSize(for: card)
+
+    #expect(stripSize.width == mediaSize.width * 2 + drawingSize.width + 16)
+    #expect(stripSize.height == max(mediaSize.height, drawingSize.height))
+}
+
+@MainActor
 @Test func browserSurfaceSceneRecomputesHitRegionsWhenZoomUsesCachedContent() async throws {
     let suiteName = "FrieveEditorMacTests.browserSurfaceHitRegions"
     let model = WorkspaceViewModel(settings: AppSettings(userDefaults: {
