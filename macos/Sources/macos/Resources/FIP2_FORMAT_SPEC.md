@@ -110,11 +110,15 @@ updated=<date string>
 viewed=<date string>
 labelList=<comma-separated label ids, may be empty>
 drawing=<TDrawing::Encode string, may be empty>
+image=<file path, optional>
+video=<file path, optional>
 <!--BODY token=<HEX16>-->
 ... raw body lines (any content except exact end marker line) ...
 <!--END_BODY token=<HEX16>-->
 [[END:CARD]]
 ```
+
+- `image` and `video` are optional dedicated media-path fields for Browser card previews. They are independent from the raw body text and should not be inferred from body lines when these fields are present.
 
 ### 6.1 Body boundaries
 
@@ -153,4 +157,3 @@ If this happens, saving from the app will regenerate a safe token.
 ## 8. Format version
 
 The first non-empty line `FIP2/1` is the format version indicator.
-

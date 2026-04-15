@@ -350,6 +350,8 @@ import Testing
         card.drawingEncoded = "DrawPayload"
         card.labelIDs = [1]
         card.score = 2.75
+        card.imagePath = "/tmp/sample-image.png"
+        card.videoPath = "/tmp/sample-video.mov"
     }
     document.metadata["Language"] = "Japanese"
 
@@ -361,6 +363,8 @@ import Testing
     #expect(decoded.card(withID: childID)?.bodyText == "Body\nSecond line")
     #expect(decoded.card(withID: childID)?.drawingEncoded == "DrawPayload")
     #expect(decoded.card(withID: childID)?.score == 2.75)
+    #expect(decoded.card(withID: childID)?.imagePath == "/tmp/sample-image.png")
+    #expect(decoded.card(withID: childID)?.videoPath == "/tmp/sample-video.mov")
     #expect(decoded.metadata["Language"] == "Japanese")
     #expect(decoded.metadata["Title"] == decoded.title)
 }
@@ -385,6 +389,25 @@ import Testing
     #expect(model.document.cards.suffix(2).map(\.title) == ["Alpha", "Beta"])
     #expect(model.document.cards.suffix(2).map(\.bodyText) == ["First body", "Second body"])
     #expect(model.selectedCardID == model.document.cards.last?.id)
+}
+
+@MainActor
+@Test func externalFileLinksUseDedicatedMediaFieldsWhenAvailable() throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.selectCard(0)
+    let initialBody = model.selectedCard?.bodyText ?? ""
+
+    model.applyExternalFileReference(URL(fileURLWithPath: "/tmp/sample-image.png"))
+    #expect(model.selectedCard?.imagePath == "/tmp/sample-image.png")
+    #expect(model.selectedCard?.bodyText == initialBody)
+
+    model.applyExternalFileReference(URL(fileURLWithPath: "/tmp/sample-video.mov"))
+    #expect(model.selectedCard?.videoPath == "/tmp/sample-video.mov")
+    #expect(model.selectedCard?.bodyText == initialBody)
+
+    model.applyExternalFileReference(URL(fileURLWithPath: "/tmp/readme.txt"))
+    #expect(model.selectedCard?.bodyText == "\(initialBody)\n/tmp/readme.txt")
 }
 
 @MainActor

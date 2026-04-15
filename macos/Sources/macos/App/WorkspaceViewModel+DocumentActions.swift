@@ -1,6 +1,13 @@
 import SwiftUI
 import AppKit
 import AVFoundation
+import UniformTypeIdentifiers
+
+enum ExternalFileReferenceKind {
+    case image
+    case video
+    case bodyText
+}
 
 enum GPTPromptAction: String, CaseIterable, Identifiable {
     case create
@@ -1644,12 +1651,36 @@ func browseFrieveSite() {
         panel.prompt = "Link"
         if panel.runModal() == .OK, let url = panel.url {
             registerUndoCheckpoint()
-            let path = url.path
+            applyExternalFileReference(url)
+            noteDocumentMutation(status: "Linked external file")
+        }
+    }
+
+    func applyExternalFileReference(_ url: URL) {
+        let path = url.path
+        switch externalFileReferenceKind(for: url) {
+        case .image:
+            updateSelectedCardImagePath(path)
+        case .video:
+            updateSelectedCardVideoPath(path)
+        case .bodyText:
             updateSelectedCardBody { body in
                 body.isEmpty ? path : body + "\n" + path
             }
-            noteDocumentMutation(status: "Linked external file")
         }
+    }
+
+    func externalFileReferenceKind(for url: URL) -> ExternalFileReferenceKind {
+        guard let type = UTType(filenameExtension: url.pathExtension) else {
+            return .bodyText
+        }
+        if type.conforms(to: .image) {
+            return .image
+        }
+        if type.conforms(to: .movie) || type.conforms(to: .video) || type.conforms(to: .audiovisualContent) {
+            return .video
+        }
+        return .bodyText
     }
 
     func assignCardLabelToSelection(labelID: Int) {
