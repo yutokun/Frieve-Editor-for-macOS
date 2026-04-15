@@ -76,6 +76,57 @@ enum GPTPromptAction: String, CaseIterable, Identifiable {
     ]
 }
 
+func browserPrintSnapshotScale(for canvasSize: CGSize, printableSize: CGSize) -> CGFloat {
+    guard canvasSize.width > 0, canvasSize.height > 0, printableSize.width > 0, printableSize.height > 0 else {
+        return 2
+    }
+    let fittedScale = max(printableSize.width / canvasSize.width, printableSize.height / canvasSize.height)
+    return min(max(fittedScale * 2, 2), 4)
+}
+
+func browserPrintImageRect(for imageSize: CGSize, in printableRect: CGRect) -> CGRect {
+    guard imageSize.width > 0, imageSize.height > 0, printableRect.width > 0, printableRect.height > 0 else {
+        return printableRect
+    }
+    let scale = min(printableRect.width / imageSize.width, printableRect.height / imageSize.height)
+    let fittedSize = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+    return CGRect(
+        x: printableRect.midX - fittedSize.width / 2,
+        y: printableRect.midY - fittedSize.height / 2,
+        width: fittedSize.width,
+        height: fittedSize.height
+    )
+}
+
+private final class BrowserPrintPageView: NSView {
+    let image: NSImage
+    let printableRect: CGRect
+
+    init(frame: CGRect, image: NSImage, printableRect: CGRect) {
+        self.image = image
+        self.printableRect = printableRect
+        super.init(frame: frame)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func knowsPageRange(_ range: NSRangePointer) -> Bool {
+        range.pointee = NSRange(location: 1, length: 1)
+        return true
+    }
+
+    override func rectForPage(_ page: Int) -> NSRect {
+        bounds
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        image.draw(in: browserPrintImageRect(for: image.size, in: printableRect))
+    }
+}
+
 extension WorkspaceViewModel {
     func browserGaussianRandom(using randomUnit: () -> Double = { Double.random(in: 0 ... 1) }) -> Double {
         var total = 0.0
@@ -415,23 +466,24 @@ extension WorkspaceViewModel {
     }
 
     func printBrowserView() {
-        guard let image = browserSnapshotProvider?() else {
+        let printInfo = NSPrintInfo.shared.copy() as? NSPrintInfo ?? NSPrintInfo.shared
+        printInfo.horizontalPagination = .fit
+        printInfo.verticalPagination = .fit
+        printInfo.isHorizontallyCentered = false
+        printInfo.isVerticallyCentered = false
+
+        let printableRect = printInfo.imageablePageBounds.insetBy(dx: 12, dy: 12)
+        let snapshotScale = browserPrintSnapshotScale(for: resolvedBrowserCanvasSize(), printableSize: printableRect.size)
+        guard let image = browserHighResolutionSnapshotProvider?(snapshotScale) ?? browserSnapshotProvider?() else {
             statusMessage = "Browser image is unavailable"
             return
         }
 
-        let imageSize = image.size
-        let printView = NSImageView(frame: NSRect(origin: .zero, size: imageSize))
-        printView.image = image
-        printView.imageAlignment = .alignCenter
-        printView.imageScaling = .scaleProportionallyUpOrDown
-
-        let printInfo = NSPrintInfo.shared.copy() as? NSPrintInfo ?? NSPrintInfo.shared
-        printInfo.horizontalPagination = .automatic
-        printInfo.verticalPagination = .automatic
-        printInfo.isHorizontallyCentered = true
-        printInfo.isVerticallyCentered = true
-
+        let printView = BrowserPrintPageView(
+            frame: CGRect(origin: .zero, size: printInfo.paperSize),
+            image: image,
+            printableRect: printableRect
+        )
         let operation = NSPrintOperation(view: printView, printInfo: printInfo)
         operation.showsPrintPanel = true
         operation.showsProgressPanel = true

@@ -455,6 +455,7 @@ final class WorkspaceViewModel: ObservableObject {
     var browserAnimationVelocityByCardID: [Int: FrievePoint] = [:]
     var browserAnimationTracePreviousCardID: Int?
     var browserSnapshotProvider: (() -> NSImage?)?
+    var browserHighResolutionSnapshotProvider: ((CGFloat) -> NSImage?)?
     var browserAutoScrollStartCenter: FrievePoint?
     var browserAutoScrollTargetCenter: FrievePoint?
     var browserAutoScrollStartedAt: CFTimeInterval?

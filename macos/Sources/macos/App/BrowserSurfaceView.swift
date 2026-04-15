@@ -104,6 +104,9 @@ struct BrowserSurfaceRepresentable: NSViewRepresentable {
         viewModel.browserSnapshotProvider = { [weak view] in
             view?.snapshotImage()
         }
+        viewModel.browserHighResolutionSnapshotProvider = { [weak view] scale in
+            view?.snapshotImage(scale: scale)
+        }
         view.onScroll = { deltaX, deltaY, location, modifiers in
             viewModel.handleScrollWheel(deltaX: deltaX, deltaY: deltaY, modifiers: modifiers, at: location, in: canvasSize)
         }
@@ -299,9 +302,25 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         )
     }
 
-    func snapshotImage() -> NSImage? {
-        guard bounds.width > 0, bounds.height > 0,
-              let representation = bitmapImageRepForCachingDisplay(in: bounds) else {
+    func snapshotImage(scale: CGFloat = 1) -> NSImage? {
+        guard bounds.width > 0, bounds.height > 0 else {
+            return nil
+        }
+        let resolvedScale = max(scale, 1)
+        let pixelWidth = max(Int((bounds.width * windowBackingScale * resolvedScale).rounded()), 1)
+        let pixelHeight = max(Int((bounds.height * windowBackingScale * resolvedScale).rounded()), 1)
+        guard let representation = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: pixelWidth,
+            pixelsHigh: pixelHeight,
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        ) else {
             return nil
         }
         representation.size = bounds.size
