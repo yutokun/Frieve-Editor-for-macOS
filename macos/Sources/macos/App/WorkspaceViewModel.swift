@@ -312,7 +312,7 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var showLinkLabelEditor: Bool = false
 @Published var statusMessage: String = "Ready"
     var zoom: Double = 1.0
-    @Published var autoScroll: Bool = false {
+    @Published var autoScroll: Bool = true {
         didSet {
             if autoScroll {
                 prepareBrowserAutoScrollForSelectionChange()

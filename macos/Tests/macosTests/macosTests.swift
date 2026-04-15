@@ -13,6 +13,13 @@ import Testing
     #expect(document.cards.first?.title == "Frieve Editor")
 }
 
+@MainActor
+@Test func browserDefaultsEnableAutoScroll() async throws {
+    let model = WorkspaceViewModel()
+
+    #expect(model.autoScroll)
+}
+
 @Test func browserAppearanceHelperMatchesSwiftUIColorScheme() throws {
     #expect(browserAppearance(for: .light).bestMatch(from: [.aqua, .darkAqua]) == .aqua)
     #expect(browserAppearance(for: .dark).bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
