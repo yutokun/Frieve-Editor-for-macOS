@@ -104,8 +104,14 @@ extension WorkspaceViewModel {
     func browserCardRasterCacheKey(for snapshot: BrowserCardLayerSnapshot) -> String {
         [
             String(snapshot.card.id),
-            snapshot.card.updated,
             snapshot.card.title,
+            snapshot.metadata.scoreText ?? "",
+            snapshot.metadata.badges.joined(separator: "|"),
+            snapshot.card.drawingEncoded,
+            snapshot.card.imagePath ?? "",
+            snapshot.card.videoPath ?? "",
+            snapshot.metadata.mediaBadgeText,
+            snapshot.metadata.hasDrawingPreview ? "1" : "0",
             "\(browserDisplaySettingsSignature)",
             "\(Int(snapshot.metadata.canvasSize.width.rounded()))x\(Int(snapshot.metadata.canvasSize.height.rounded()))"
         ].joined(separator: "::")

@@ -1472,8 +1472,8 @@ import Testing
 @Test func browserCardRasterCacheKeyStaysStableAcrossDetailLevels() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
-    let result = await MainActor.run { () -> Bool in
-        let card = FrieveCard(
+    let result = await MainActor.run { () -> (Bool, Bool) in
+        let baseCard = FrieveCard(
             id: 7,
             title: "Stable Raster",
             bodyText: "",
@@ -1487,6 +1487,26 @@ import Testing
             position: FrievePoint(x: 0.5, y: 0.5),
             created: "2026-04-13T00:00:00Z",
             updated: "2026-04-13T00:00:00Z",
+            viewed: "2026-04-13T00:00:00Z",
+            labelIDs: [],
+            score: 0,
+            imagePath: nil,
+            videoPath: nil
+        )
+        let movedCard = FrieveCard(
+            id: 7,
+            title: "Stable Raster",
+            bodyText: "",
+            drawingEncoded: "",
+            visible: true,
+            shape: 0,
+            size: 100,
+            isTop: false,
+            isFixed: false,
+            isFolded: false,
+            position: FrievePoint(x: 0.8, y: 0.2),
+            created: "2026-04-13T00:00:00Z",
+            updated: "2026-04-15T00:00:00Z",
             viewed: "2026-04-13T00:00:00Z",
             labelIDs: [],
             score: 0,
@@ -1507,26 +1527,38 @@ import Testing
             mediaBadgeText: ""
         )
         let compactSnapshot = BrowserCardLayerSnapshot(
-            card: card,
-            position: card.position,
+            card: baseCard,
+            position: baseCard.position,
             metadata: metadata,
             isSelected: false,
             isHovered: false,
             detailLevel: .compact
         )
         let fullSnapshot = BrowserCardLayerSnapshot(
-            card: card,
-            position: card.position,
+            card: baseCard,
+            position: baseCard.position,
+            metadata: metadata,
+            isSelected: false,
+            isHovered: false,
+            detailLevel: .full
+        )
+        let movedSnapshot = BrowserCardLayerSnapshot(
+            card: movedCard,
+            position: movedCard.position,
             metadata: metadata,
             isSelected: false,
             isHovered: false,
             detailLevel: .full
         )
 
-        return model.browserCardRasterCacheKey(for: compactSnapshot) == model.browserCardRasterCacheKey(for: fullSnapshot)
+        return (
+            model.browserCardRasterCacheKey(for: compactSnapshot) == model.browserCardRasterCacheKey(for: fullSnapshot),
+            model.browserCardRasterCacheKey(for: compactSnapshot) == model.browserCardRasterCacheKey(for: movedSnapshot)
+        )
     }
 
-    #expect(result)
+    #expect(result.0)
+    #expect(result.1)
 }
 
 @Test func browserArrangeModesMatchMacExpectations() async throws {
