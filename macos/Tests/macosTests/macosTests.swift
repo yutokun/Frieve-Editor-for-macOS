@@ -452,6 +452,31 @@ import Testing
     #expect(model.blendedBrowserLabelColor(for: [1, 2, 3]) == 0x008080)
 }
 
+@Test func browserVisualShapeIndexUsesStoredCardShape() {
+    let card = FrieveCard(
+        id: 1,
+        title: "",
+        bodyText: "",
+        drawingEncoded: "",
+        visible: true,
+        shape: 14,
+        size: 100,
+        isTop: false,
+        isFixed: false,
+        isFolded: false,
+        position: FrievePoint(x: 0.5, y: 0.5),
+        created: "",
+        updated: "",
+        viewed: "",
+        labelIDs: [],
+        score: 0,
+        imagePath: nil,
+        videoPath: nil
+    )
+
+    #expect(browserCardVisualShapeIndex(for: card) == 14)
+}
+
 @MainActor
 @Test func importingHierarchicalTextFile2BuildsTreeAndBodies() throws {
     let model = WorkspaceViewModel()

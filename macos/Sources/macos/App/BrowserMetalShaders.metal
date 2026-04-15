@@ -136,6 +136,42 @@ static float browserCapsuleDistance(float2 p, float halfLength, float radius) {
     return length(max(q, 0.0f)) + min(max(q.x, q.y), 0.0f) - radius;
 }
 
+static float browserSignedDistanceEllipse(float2 p, float2 halfSize) {
+    float2 safeHalfSize = max(halfSize, float2(0.001f));
+    float2 q = abs(p);
+    float k0 = length(q / safeHalfSize);
+    float k1 = length(q / (safeHalfSize * safeHalfSize));
+    return (k0 - 1.0f) * k0 / max(k1, 0.001f);
+}
+
+static float browserDistanceSquaredToSegment(float2 p, float2 a, float2 b) {
+    float2 pa = p - a;
+    float2 ba = b - a;
+    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 0.001f), 0.0f, 1.0f);
+    float2 d = pa - ba * h;
+    return dot(d, d);
+}
+
+static float browserSignedDistancePolygon(float2 p, thread const float2 *vertices, int count) {
+    float minDistanceSquared = FLT_MAX;
+    bool inside = false;
+    for (int index = 0, previous = count - 1; index < count; previous = index, index++) {
+        float2 a = vertices[previous];
+        float2 b = vertices[index];
+        minDistanceSquared = min(minDistanceSquared, browserDistanceSquaredToSegment(p, a, b));
+
+        float deltaY = b.y - a.y;
+        float safeDeltaY = abs(deltaY) < 0.0001f ? (deltaY >= 0.0f ? 0.0001f : -0.0001f) : deltaY;
+        bool intersects = ((a.y > p.y) != (b.y > p.y)) &&
+            (p.x < (b.x - a.x) * (p.y - a.y) / safeDeltaY + a.x);
+        if (intersects) {
+            inside = !inside;
+        }
+    }
+    float distance = sqrt(max(minDistanceSquared, 0.0f));
+    return inside ? -distance : distance;
+}
+
 vertex BrowserMetalLinkOut browserLinkVertex(
     constant BrowserMetalViewportUniforms &viewport [[buffer(0)]],
     const device BrowserMetalLinkInstance *links [[buffer(1)]],
@@ -320,17 +356,94 @@ static float browserSignedDistanceHexagon(float2 p, float2 halfSize) {
 }
 
 static float browserSignedDistance(float2 p, float2 halfSize, int shapeIndex, float cornerRadius) {
-    switch ((shapeIndex % 6 + 6) % 6) {
+    int normalizedShapeIndex = (shapeIndex % 16 + 16) % 16;
+    float minHalf = min(halfSize.x, halfSize.y);
+    switch (normalizedShapeIndex) {
+        case 0:
         case 1:
-            return browserSignedDistanceCircle(p, halfSize);
+            return browserSignedDistanceRect(p, halfSize, 0.0f);
         case 2:
-            return browserSignedDistanceRect(p, halfSize, min(cornerRadius * 1.5f, min(halfSize.x, halfSize.y)));
+            return browserSignedDistanceRect(p, halfSize, min(cornerRadius, minHalf));
         case 3:
-            return browserSignedDistanceDiamond(p, halfSize);
+            return browserSignedDistanceRect(p, halfSize, minHalf);
         case 4:
+            return browserSignedDistanceEllipse(p, halfSize);
+        case 5:
+            return browserSignedDistanceDiamond(p, halfSize);
+        case 6:
             return browserSignedDistanceHexagon(p, halfSize);
+        case 7: {
+            float inset = halfSize.y * 0.5f;
+            float2 vertices[4] = {
+                float2(-halfSize.x + inset, -halfSize.y),
+                float2(halfSize.x - inset, -halfSize.y),
+                float2(halfSize.x, halfSize.y),
+                float2(-halfSize.x, halfSize.y)
+            };
+            return browserSignedDistancePolygon(p, vertices, 4);
+        }
+        case 8: {
+            float inset = halfSize.y * 0.5f;
+            float2 vertices[4] = {
+                float2(-halfSize.x, -halfSize.y),
+                float2(halfSize.x, -halfSize.y),
+                float2(halfSize.x - inset, halfSize.y),
+                float2(-halfSize.x + inset, halfSize.y)
+            };
+            return browserSignedDistancePolygon(p, vertices, 4);
+        }
+        case 9: {
+            float extent = minHalf * 0.56f;
+            return browserSignedDistanceRect(p, float2(extent, extent), 0.0f);
+        }
+        case 10: {
+            float radius = minHalf * 0.56f;
+            return browserSignedDistanceEllipse(p, float2(radius, radius));
+        }
+        case 11: {
+            float radius = minHalf * 0.64f;
+            float2 vertices[3] = {
+                float2(0.0f, -radius),
+                float2(radius * 0.8660254f, radius * 0.5f),
+                float2(-radius * 0.8660254f, radius * 0.5f)
+            };
+            return browserSignedDistancePolygon(p, vertices, 3);
+        }
+        case 12: {
+            float radius = minHalf * 0.64f;
+            float2 vertices[3] = {
+                float2(0.0f, radius),
+                float2(radius * 0.8660254f, -radius * 0.5f),
+                float2(-radius * 0.8660254f, -radius * 0.5f)
+            };
+            return browserSignedDistancePolygon(p, vertices, 3);
+        }
+        case 13: {
+            float radius = minHalf * 0.64f;
+            return browserSignedDistanceDiamond(p, float2(radius, radius));
+        }
+        case 14: {
+            float radius = minHalf * 0.64f;
+            float2 vertices[6];
+            for (int step = 0; step < 6; step++) {
+                float angle = M_PI_F / 6.0f + M_PI_F / 3.0f * step;
+                vertices[step] = float2(sin(angle) * radius, -cos(angle) * radius);
+            }
+            return browserSignedDistancePolygon(p, vertices, 6);
+        }
+        case 15: {
+            float outerRadius = minHalf * 0.68f;
+            float innerRadius = outerRadius * 0.38196602f;
+            float2 vertices[10];
+            for (int step = 0; step < 10; step++) {
+                float radius = (step % 2 == 0) ? outerRadius : innerRadius;
+                float angle = -M_PI_F / 2.0f + M_PI_F / 5.0f * step;
+                vertices[step] = float2(cos(angle) * radius, sin(angle) * radius);
+            }
+            return browserSignedDistancePolygon(p, vertices, 10);
+        }
         default:
-            return browserSignedDistanceRect(p, halfSize, min(cornerRadius, min(halfSize.x, halfSize.y)));
+            return browserSignedDistanceRect(p, halfSize, min(cornerRadius, minHalf));
     }
 }
 

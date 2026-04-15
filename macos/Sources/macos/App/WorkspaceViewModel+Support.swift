@@ -56,8 +56,8 @@ func browserCardTitleNSFont(for card: FrieveCard) -> NSFont {
 }
 
 func browserCardVisualShapeIndex(for card: FrieveCard) -> Int {
-    _ = card
-    return 0
+    let count = max(frieveCardShapeOptions.count, 1)
+    return ((card.shape % count) + count) % count
 }
 
 extension WorkspaceViewModel {
