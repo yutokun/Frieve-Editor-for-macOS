@@ -448,6 +448,10 @@ private struct BrowserLayerSurfaceView: View {
                 )
                 BrowserSurfaceRepresentable(viewModel: viewModel, canvasSize: canvasSize)
 
+                if viewModel.settings.browserVideoVisible {
+                    BrowserVideoPlaybackOverlay(viewModel: viewModel, canvasSize: canvasSize)
+                }
+
                 if viewModel.settings.browserTickerVisible {
                     BrowserTickerOverlayView(viewModel: viewModel, canvasSize: canvasSize)
                 }

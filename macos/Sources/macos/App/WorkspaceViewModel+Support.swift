@@ -284,6 +284,31 @@ extension WorkspaceViewModel {
         return CGSize(width: width, height: height)
     }
 
+    func browserVideoPreviewScreenRect(for card: FrieveCard, in canvasSize: CGSize) -> CGRect? {
+        guard browserShowsVideoPreview(for: card) else { return nil }
+        let cardRect = cardFrame(for: card, in: canvasSize)
+        let padding = browserCardContentPadding(for: card)
+        let imagePreviewSize = browserImagePreviewSize(for: card)
+        let videoPreviewSize = browserVideoPreviewSize(for: card)
+        let drawingSize = browserDrawingPreviewSize(for: card)
+        let hasImagePreview = browserShowsImagePreview(for: card)
+        let hasDrawingPreview = browserShowsDrawingPreview(for: card)
+        var widths: [CGFloat] = []
+        var heights: [CGFloat] = []
+        if hasImagePreview { widths.append(imagePreviewSize.width); heights.append(imagePreviewSize.height) }
+        widths.append(videoPreviewSize.width); heights.append(videoPreviewSize.height)
+        if hasDrawingPreview { widths.append(drawingSize.width); heights.append(drawingSize.height) }
+        let spacing: CGFloat = 8
+        let totalWidth = widths.reduce(0, +) + spacing * CGFloat(max(widths.count - 1, 0))
+        let stripHeight = heights.max() ?? videoPreviewSize.height
+        let stripStartX = cardRect.midX - totalWidth / 2
+        var videoOriginX = stripStartX
+        if hasImagePreview { videoOriginX += imagePreviewSize.width + spacing }
+        let stripTopY = cardRect.minY + padding
+        let videoOriginY = stripTopY + (stripHeight - videoPreviewSize.height) / 2
+        return CGRect(origin: CGPoint(x: videoOriginX, y: videoOriginY), size: videoPreviewSize)
+    }
+
     func browserPreviewStripSize(for card: FrieveCard, hasDrawingPreview: Bool? = nil) -> CGSize {
         var itemSizes: [CGSize] = []
         if browserShowsImagePreview(for: card) {
