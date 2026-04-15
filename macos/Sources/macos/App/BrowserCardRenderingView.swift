@@ -178,7 +178,6 @@ struct BrowserCardRasterContentView: View {
                                 viewModel: viewModel,
                                 card: card,
                                 kind: .image,
-                                badgeText: "Image",
                                 previewImage: previewImage
                             )
                             .frame(width: previewSize.width, height: previewSize.height)
@@ -188,7 +187,6 @@ struct BrowserCardRasterContentView: View {
                                 viewModel: viewModel,
                                 card: card,
                                 kind: .video,
-                                badgeText: "Video",
                                 previewImage: videoPreviewImage
                             )
                             .frame(width: previewSize.width, height: previewSize.height)
@@ -375,7 +373,6 @@ private struct BrowserMediaPreviewView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
     let card: FrieveCard
     let kind: BrowserMediaPreviewKind
-    let badgeText: String
     let previewImage: NSImage?
 
     var body: some View {
@@ -386,66 +383,28 @@ private struct BrowserMediaPreviewView: View {
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
                     .clipped()
-                    .overlay(alignment: .bottomTrailing) {
-                        if !badgeText.isEmpty {
-                            Label(badgeText, systemImage: "photo")
-                                .font(.caption2)
-                                .padding(6)
-                                .background(.ultraThinMaterial, in: Capsule())
-                                .padding(6)
-                        }
-                    }
             } else if kind == .image, let image = viewModel.cachedPreviewImage(for: card) {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
                     .clipped()
-                    .overlay(alignment: .bottomTrailing) {
-                        Label(badgeText, systemImage: "photo")
-                            .font(.caption2)
-                            .padding(6)
-                            .background(.ultraThinMaterial, in: Capsule())
-                            .padding(6)
-                    }
             } else if kind == .video, let previewImage {
                 Image(nsImage: previewImage)
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
                     .clipped()
-                    .overlay(alignment: .bottomTrailing) {
-                        Label(badgeText, systemImage: "film")
-                            .font(.caption2)
-                            .padding(6)
-                            .background(.ultraThinMaterial, in: Capsule())
-                            .padding(6)
-                    }
             } else if kind == .video, let image = viewModel.cachedVideoPreviewImage(for: card) {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
                     .clipped()
-                    .overlay(alignment: .bottomTrailing) {
-                        Label(badgeText, systemImage: "film")
-                            .font(.caption2)
-                            .padding(6)
-                            .background(.ultraThinMaterial, in: Capsule())
-                            .padding(6)
-                    }
             } else if kind == .video {
-                mediaPlaceholder(
-                    systemImage: "play.rectangle.fill",
-                    title: badgeText,
-                    badgeSystemImage: "film"
-                )
+                mediaPlaceholder(systemImage: "play.rectangle.fill")
             } else if kind == .image {
-                mediaPlaceholder(
-                    systemImage: "photo",
-                    title: badgeText,
-                    badgeSystemImage: "photo"
-                )
+                mediaPlaceholder(systemImage: "photo")
             } else {
                 EmptyView()
             }
@@ -455,28 +414,12 @@ private struct BrowserMediaPreviewView: View {
     }
 
     @ViewBuilder
-    private func mediaPlaceholder(systemImage: String, title: String, badgeSystemImage: String) -> some View {
+    private func mediaPlaceholder(systemImage: String) -> some View {
         ZStack {
             LinearGradient(colors: [.black.opacity(0.18), .black.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing)
-            VStack(spacing: 6) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 26))
-                Text(title)
-                    .font(.caption2)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-            }
-            .foregroundStyle(.secondary)
-            .padding(8)
-            .overlay(alignment: .bottomTrailing) {
-                if !badgeText.isEmpty {
-                    Label(badgeText, systemImage: badgeSystemImage)
-                        .font(.caption2)
-                        .padding(6)
-                        .background(.ultraThinMaterial, in: Capsule())
-                        .padding(6)
-                }
-            }
+            Image(systemName: systemImage)
+                .font(.system(size: 26))
+                .foregroundStyle(.secondary)
         }
     }
 }
