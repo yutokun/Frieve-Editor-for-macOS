@@ -113,6 +113,13 @@ struct BrowserSnowParticle: Hashable {
     let opacity: Double
 }
 
+struct BrowserPetalParticle: Hashable {
+    let center: CGPoint
+    let size: CGSize
+    let rotation: Angle
+    let opacity: Double
+}
+
 func browserAnimationNoise(_ index: Int, salt: Double) -> Double {
     let value = sin(Double(index) * 12.9898 + salt * 78.233) * 43_758.5453
     return value - floor(value)
@@ -202,6 +209,34 @@ func browserSnowParticles(in size: CGSize, time: TimeInterval) -> [BrowserSnowPa
         let opacity = 0.12 + sizeSeed * 0.18
         return BrowserSnowParticle(
             rect: CGRect(x: x - diameter / 2, y: y - diameter / 2, width: diameter, height: diameter),
+            opacity: opacity
+        )
+    }
+}
+
+func browserPetalParticles(in size: CGSize, time: TimeInterval) -> [BrowserPetalParticle] {
+    guard size.width > 0, size.height > 0 else { return [] }
+
+    let globalDrift = sin(time * 0.21) * 22
+    return (0..<30).map { index in
+        let sizeSeed = browserAnimationNoise(index, salt: 3.13)
+        let driftSeed = browserAnimationNoise(index, salt: 3.29)
+        let phase = browserAnimationNoise(index, salt: 3.47)
+        let xSeed = browserAnimationNoise(index, salt: 3.61)
+        let width = CGFloat(12 + sizeSeed * 10)
+        let height = width * CGFloat(0.62 + driftSeed * 0.18)
+        let fallSpeed = 0.028 + sizeSeed * 0.05
+        let yProgress = CGFloat((time * fallSpeed + phase).truncatingRemainder(dividingBy: 1))
+        let y = -height + yProgress * (size.height + height * 2)
+        let sway = sin(time * (0.55 + driftSeed) + phase * .pi * 2) * CGFloat(20 + driftSeed * 28)
+        let flutter = sin(time * (1.4 + driftSeed * 1.2) + Double(index) * 0.9) * CGFloat(6 + driftSeed * 10)
+        let x = CGFloat(xSeed) * size.width + CGFloat(globalDrift) + sway + flutter
+        let rotation = Angle.radians(phase * .pi * 2 + time * (0.35 + driftSeed * 0.9))
+        let opacity = 0.14 + sizeSeed * 0.08
+        return BrowserPetalParticle(
+            center: CGPoint(x: x, y: y),
+            size: CGSize(width: width, height: height),
+            rotation: rotation,
             opacity: opacity
         )
     }
@@ -529,18 +564,31 @@ private struct BrowserAnimatedBackgroundOverlay: View {
     }
 
     private func drawPetals(context: inout GraphicsContext, size: CGSize, time: TimeInterval) {
-        let color = Color.pink.opacity(colorScheme == .dark ? 0.20 : 0.16)
-        for index in 0..<24 {
-            let normalized = Double(index) / 24
-            let x = CGFloat((normalized * 743 + time * 18).truncatingRemainder(dividingBy: 1)) * max(size.width, 1)
-            let yProgress = CGFloat(((time * 0.04) + normalized * 1.3).truncatingRemainder(dividingBy: 1))
-            let y = (size.height + 60) * yProgress - 30
-            let width = CGFloat(10 + index % 5)
-            let height = width * 0.66
-            let rect = CGRect(x: x, y: y, width: width, height: height)
-            context.rotate(by: .degrees(Double(index * 17) + time * 15))
-            context.fill(Path(ellipseIn: rect), with: .color(color))
-            context.rotate(by: .degrees(-(Double(index * 17) + time * 15)))
+        let petalColor = Color(nsColor: NSColor(red: 0.90, green: 0.72, blue: 0.92, alpha: 1))
+        for particle in browserPetalParticles(in: size, time: time) {
+            context.drawLayer { layer in
+                layer.translateBy(x: particle.center.x, y: particle.center.y)
+                layer.rotate(by: particle.rotation)
+                var path = Path()
+                path.move(to: CGPoint(x: 0, y: particle.size.height / 2))
+                path.addQuadCurve(
+                    to: CGPoint(x: particle.size.width / 2, y: 0),
+                    control: CGPoint(x: particle.size.width * 0.45, y: particle.size.height * 0.45)
+                )
+                path.addQuadCurve(
+                    to: CGPoint(x: 0, y: -particle.size.height / 2),
+                    control: CGPoint(x: particle.size.width * 0.35, y: -particle.size.height * 0.35)
+                )
+                path.addQuadCurve(
+                    to: CGPoint(x: -particle.size.width / 2, y: 0),
+                    control: CGPoint(x: -particle.size.width * 0.35, y: -particle.size.height * 0.35)
+                )
+                path.addQuadCurve(
+                    to: CGPoint(x: 0, y: particle.size.height / 2),
+                    control: CGPoint(x: -particle.size.width * 0.45, y: particle.size.height * 0.45)
+                )
+                layer.fill(path, with: .color(petalColor.opacity(particle.opacity)))
+            }
         }
     }
 }

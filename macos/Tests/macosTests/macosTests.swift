@@ -135,6 +135,17 @@ import Testing
     #expect(zip(initial, later).contains { first, second in abs(second.rect.midX - first.rect.midX) > 4 })
 }
 
+@Test func browserPetalParticlesKeepStableOpacityWhileDrifting() throws {
+    let initial = browserPetalParticles(in: CGSize(width: 1280, height: 720), time: 1.0)
+    let later = browserPetalParticles(in: CGSize(width: 1280, height: 720), time: 2.0)
+
+    #expect(initial.count == 30)
+    #expect(zip(initial, later).allSatisfy { first, second in abs(first.opacity - second.opacity) < 0.0001 })
+    #expect(zip(initial, later).contains { first, second in second.center.y > first.center.y + 6 })
+    #expect(zip(initial, later).contains { first, second in abs(second.center.x - first.center.x) > 4 })
+    #expect(zip(initial, later).contains { first, second in abs(second.rotation.radians - first.rotation.radians) > 0.1 })
+}
+
 @Test func browserLinkStrokePaletteMatchesColorScheme() throws {
     let light = browserLinkStrokeColor(for: .light, highlighted: false).usingColorSpace(.deviceRGB)
     let dark = browserLinkStrokeColor(for: .dark, highlighted: false).usingColorSpace(.deviceRGB)
