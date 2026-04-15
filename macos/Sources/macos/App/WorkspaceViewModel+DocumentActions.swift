@@ -1015,11 +1015,11 @@ extension WorkspaceViewModel {
         normalizeAndApplyBrowserAutoArrangePositions(nextPositions, targetIDs: targetIDs)
     }
 
-    func applyBrowserNormalizeArrangeStep() {
+    func applyBrowserNormalizeArrangeStep(using randomUnit: () -> Double = { Double.random(in: 0 ... 1) }) {
         let visibleCards = visibleSortedCards()
         let targetIDs = Set(visibleCards.map(\.id))
         guard !targetIDs.isEmpty else { return }
-        let positions = Dictionary(uniqueKeysWithValues: visibleCards.map { ($0.id, $0.position) })
+        let positions = preparedBrowserNormalizePositions(for: visibleCards, randomUnit: randomUnit)
         normalizeAndApplyBrowserAutoArrangePositions(positions, targetIDs: targetIDs, boundsIDs: targetIDs)
     }
 
@@ -1289,6 +1289,40 @@ extension WorkspaceViewModel {
 
         guard changed else { return }
         finalizeBrowserAutoArrangeMutation()
+    }
+
+    func preparedBrowserNormalizePositions(
+        for visibleCards: [FrieveCard],
+        randomUnit: () -> Double = { Double.random(in: 0 ... 1) }
+    ) -> [Int: FrievePoint] {
+        var positions = Dictionary(uniqueKeysWithValues: visibleCards.map { ($0.id, $0.position) })
+        guard visibleCards.count > 1 else { return positions }
+
+        let rawBounds = visibleCards.reduce(into: (minX: 0.5, maxX: 0.5, minY: 0.5, maxY: 0.5, initialized: false)) { partial, card in
+            if !partial.initialized {
+                partial.minX = card.position.x
+                partial.maxX = card.position.x
+                partial.minY = card.position.y
+                partial.maxY = card.position.y
+                partial.initialized = true
+            } else {
+                partial.minX = min(partial.minX, card.position.x)
+                partial.maxX = max(partial.maxX, card.position.x)
+                partial.minY = min(partial.minY, card.position.y)
+                partial.maxY = max(partial.maxY, card.position.y)
+            }
+        }
+        guard rawBounds.maxX == rawBounds.minX || rawBounds.maxY == rawBounds.minY else {
+            return positions
+        }
+
+        for card in visibleCards where !card.isFixed {
+            positions[card.id] = FrievePoint(
+                x: min(max((randomUnit() * 0.9999), 0), 0.9999),
+                y: min(max((randomUnit() * 0.9999), 0), 0.9999)
+            )
+        }
+        return positions
     }
 
     func browserVisibleCardsInDocumentOrder() -> [FrieveCard] {

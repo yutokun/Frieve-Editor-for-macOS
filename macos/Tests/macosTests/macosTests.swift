@@ -55,6 +55,32 @@ import Testing
 }
 
 @MainActor
+@Test func browserNormalizeScattersDegenerateLayoutsBeforeNormalizing() throws {
+    let model = WorkspaceViewModel()
+    var randomValues = [0.1, 0.2, 0.8, 0.9]
+    model.document = FrieveDocument(
+        title: "Normalize Degenerate",
+        metadata: [:],
+        focusedCardID: 1,
+        cards: [
+            FrieveCard(id: 1, title: "A", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0.5, y: 0.5), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil),
+            FrieveCard(id: 2, title: "B", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0.5, y: 0.5), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil)
+        ],
+        links: [],
+        cardLabels: [],
+        linkLabels: [],
+        sourcePath: nil
+    )
+
+    model.applyBrowserNormalizeArrangeStep(using: {
+        randomValues.removeFirst()
+    })
+
+    #expect(model.document.card(withID: 1)?.position == FrievePoint(x: 0, y: 0))
+    #expect(model.document.card(withID: 2)?.position == FrievePoint(x: 1, y: 1))
+}
+
+@MainActor
 @Test func browserCardTextPrefersHoverAndFallsBackToSelection() async throws {
     let model = WorkspaceViewModel()
     model.newDocument()
