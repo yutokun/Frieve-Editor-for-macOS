@@ -605,6 +605,12 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         applyMetalRenderingMode()
     }
 
+#if DEBUG
+    func debugVisibleAtlasKeys() -> Set<String> {
+        renderer.debugVisibleAtlasKeys
+    }
+#endif
+
     private func applyMetalRenderingMode() {
         let continuous = interactionModeEnabled || hasVisibleTickerCards
         if continuous {
@@ -1199,10 +1205,12 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             break
         case .cardsOnly:
             rebuildCardResources(for: scene)
+            applyDesiredAtlasKeys()
         case .cardsLinksAndText:
             rebuildLinkResources(for: scene)
             rebuildCardResources(for: scene)
             rebuildTextResources(for: scene)
+            applyDesiredAtlasKeys()
         }
     }
 
@@ -1955,6 +1963,12 @@ private struct BrowserMetalCardInstance {
 }
 
 private extension BrowserMetalRenderer {
+#if DEBUG
+    var debugVisibleAtlasKeys: Set<String> {
+        visibleAtlasKeys
+    }
+#endif
+
     func buildTextInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalTextInstance] {
         let hasLinkLabels = scene.links.contains(where: { ($0.labelText?.isEmpty == false) && $0.labelPoint != nil })
         let hasLabelGroupNames = scene.labelGroups.contains(where: \.showsName)

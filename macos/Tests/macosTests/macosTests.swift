@@ -2236,6 +2236,52 @@ import Testing
     }
 }
 
+@MainActor
+@Test func draggingCardKeepsMovedTitleTextureVisibleAfterPresentationRefresh() throws {
+    let model = WorkspaceViewModel()
+    let canvasSize = CGSize(width: 1200, height: 800)
+    let view = BrowserSurfaceNSView(frame: CGRect(origin: .zero, size: canvasSize))
+    view.viewModel = model
+
+    model.newDocument()
+    let draggedID = 0
+    model.selectCard(draggedID)
+    view.refreshFromViewModel()
+
+    let startPoint = CGPoint(x: 420, y: 310)
+    let currentPoint = CGPoint(x: 500, y: 360)
+    model.beginCardInteraction(cardID: draggedID, modifiers: [])
+    model.updateCardInteraction(
+        cardID: draggedID,
+        from: startPoint,
+        to: currentPoint,
+        in: canvasSize,
+        modifiers: []
+    )
+    model.endCardInteraction(at: currentPoint, in: canvasSize)
+    view.refreshFromViewModel()
+
+    guard let movedCard = model.cardByID(draggedID) else {
+        Issue.record("Expected moved card")
+        return
+    }
+    let movedSnapshot = BrowserCardLayerSnapshot(
+        card: movedCard,
+        position: model.currentPosition(for: movedCard),
+        metadata: model.metadata(for: movedCard),
+        isSelected: model.selectedCardIDs.contains(draggedID),
+        isHovered: false,
+        detailLevel: model.browserCardDetailLevel()
+    )
+    let movedRasterKey = model.browserCardRasterKey(for: movedSnapshot)
+    #expect(model.cachedBrowserCardRaster(for: movedSnapshot, cacheKey: movedRasterKey) != nil)
+
+    model.markBrowserSurfacePresentationDirty()
+    view.refreshFromViewModel()
+
+    #expect(view.debugVisibleAtlasKeys().contains(movedRasterKey))
+}
+
 @Test func browserCanvasPanningSuspendsAutoArrangeUntilGestureEnds() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
     let canvasSize = CGSize(width: 1200, height: 800)
