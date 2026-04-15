@@ -42,7 +42,7 @@ enum BrowserTextDisplayMode: Int, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .none: "None"
-        case .leftTop: "Left Top"
+        case .leftTop: "Top Left"
         case .center: "Center"
         }
     }
@@ -243,7 +243,7 @@ private struct FrieveEditorSettingsView: View {
                     Toggle("Show Label Names", isOn: $settings.browserLabelNameVisible)
                 }
 
-                Section("Body Text on Background") {
+                Section("Card Text on Background") {
                     Picker("Display", selection: browserTextDisplayModeBinding) {
                         ForEach(BrowserTextDisplayMode.allCases) { mode in
                             Text(mode.title).tag(mode)
