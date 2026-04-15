@@ -1483,67 +1483,12 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             width: 0.7,
             into: &vertices
         )
+        appendLinkVertices(for: scene, into: &vertices)
         return vertices
     }
 
     private func buildLinkInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalLinkInstance] {
-        let colorScheme: ColorScheme = appearanceSignature == 1 ? .dark : .light
-        let linkBaseScale = max(
-            max(abs(CGFloat(scene.worldToCanvasTransform.a)), abs(CGFloat(scene.worldToCanvasTransform.d))),
-            0.0001
-        )
-        return scene.links.flatMap { snapshot -> [BrowserMetalLinkInstance] in
-            let color = browserLinkStrokeColor(for: colorScheme, highlighted: snapshot.isHighlighted).rgbaVector
-            let width: Float = snapshot.isHighlighted ? 3 : 2
-            var instances: [BrowserMetalLinkInstance] = []
-            if viewModel?.settings.browserLinkHemming == true {
-                let hemmingColor = browserCanvasBackgroundColor(for: colorScheme).withAlphaComponent(0.95).rgbaVector
-                instances.append(
-                    contentsOf: makeLinkSegmentInstances(
-                        start: snapshot.startPoint,
-                        end: snapshot.endPoint,
-                        shapeIndex: snapshot.shapeIndex,
-                        lineWidth: max(width * 3, width + 3),
-                        color: hemmingColor
-                    )
-                )
-            }
-            instances.append(
-                contentsOf: makeLinkSegmentInstances(
-                    start: snapshot.startPoint,
-                    end: snapshot.endPoint,
-                    shapeIndex: snapshot.shapeIndex,
-                    lineWidth: width,
-                    color: color
-                )
-            )
-            if snapshot.directionVisible {
-                if viewModel?.settings.browserLinkHemming == true {
-                    let hemmingColor = browserCanvasBackgroundColor(for: colorScheme).withAlphaComponent(0.95).rgbaVector
-                    instances.append(
-                        contentsOf: makeArrowInstances(
-                            start: snapshot.startPoint,
-                            end: snapshot.endPoint,
-                            shapeIndex: snapshot.shapeIndex,
-                            baseScale: linkBaseScale,
-                            lineWidth: width + 3,
-                            color: hemmingColor
-                        )
-                    )
-                }
-                instances.append(
-                    contentsOf: makeArrowInstances(
-                        start: snapshot.startPoint,
-                        end: snapshot.endPoint,
-                        shapeIndex: snapshot.shapeIndex,
-                        baseScale: linkBaseScale,
-                        lineWidth: width,
-                        color: color
-                    )
-                )
-            }
-            return instances
-        }
+        []
     }
 
     private func buildCardInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalCardInstance] {
@@ -1812,6 +1757,154 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
                 vertices.append(BrowserMetalColorVertex(position: SIMD2(Float(polygon[index + 1].x), Float(polygon[index + 1].y)), color: color))
             }
         }
+    }
+
+    private func appendLinkVertices(for scene: BrowserSurfaceSceneSnapshot, into vertices: inout [BrowserMetalColorVertex]) {
+        guard let viewModel else { return }
+
+        let colorScheme: ColorScheme = appearanceSignature == 1 ? .dark : .light
+        let baseScale = max(
+            max(abs(CGFloat(scene.worldToCanvasTransform.a)), abs(CGFloat(scene.worldToCanvasTransform.d))),
+            0.0001
+        )
+
+        for snapshot in scene.links {
+            let width: CGFloat = snapshot.isHighlighted ? 3 : 2
+            let color = browserLinkStrokeColor(for: colorScheme, highlighted: snapshot.isHighlighted).rgbaVector
+            let hemmingColor = browserCanvasBackgroundColor(for: colorScheme).withAlphaComponent(0.95).rgbaVector
+
+            if viewModel.settings.browserLinkHemming {
+                appendRenderedLink(
+                    snapshot: snapshot,
+                    baseScale: baseScale,
+                    width: max(width * 3, width + 3),
+                    color: hemmingColor,
+                    into: &vertices
+                )
+            }
+
+            appendRenderedLink(
+                snapshot: snapshot,
+                baseScale: baseScale,
+                width: width,
+                color: color,
+                into: &vertices
+            )
+        }
+    }
+
+    private func appendRenderedLink(
+        snapshot: BrowserLinkLayerSnapshot,
+        baseScale: CGFloat,
+        width: CGFloat,
+        color: SIMD4<Float>,
+        into vertices: inout [BrowserMetalColorVertex]
+    ) {
+        let path = linkPath(for: snapshot, baseScale: baseScale)
+        let normalizedShape = ((snapshot.shapeIndex % frieveLinkShapeOptions.count) + frieveLinkShapeOptions.count) % frieveLinkShapeOptions.count
+
+        if normalizedShape == 5 || normalizedShape == 11 {
+            if let wedgePath = wedgeLinkPath(for: snapshot, baseScale: baseScale, width: width) {
+                appendFilledPath(wedgePath, color: color, into: &vertices)
+            }
+            return
+        }
+
+        let renderedPath = dashedLinkPath(from: path, shapeIndex: normalizedShape, lineWidth: width) ?? path
+        appendStrokedPath(renderedPath, color: color, width: width, into: &vertices)
+
+        guard snapshot.directionVisible,
+              let arrowPath = linkArrowPath(for: snapshot, baseScale: baseScale) else { return }
+        appendStrokedPath(arrowPath, color: color, width: width, into: &vertices)
+    }
+
+    private func linkPath(for snapshot: BrowserLinkLayerSnapshot, baseScale: CGFloat) -> CGPath {
+        let link = FrieveLink(
+            fromCardID: snapshot.fromCardID,
+            toCardID: snapshot.toCardID,
+            directionVisible: snapshot.directionVisible,
+            shape: snapshot.shapeIndex,
+            labelIDs: [],
+            name: snapshot.labelText ?? ""
+        )
+        return viewModel?.buildLinkPath(for: link, start: snapshot.startPoint, end: snapshot.endPoint, baseScale: baseScale) ?? CGMutablePath()
+    }
+
+    private func linkArrowPath(for snapshot: BrowserLinkLayerSnapshot, baseScale: CGFloat) -> CGPath? {
+        let link = FrieveLink(
+            fromCardID: snapshot.fromCardID,
+            toCardID: snapshot.toCardID,
+            directionVisible: snapshot.directionVisible,
+            shape: snapshot.shapeIndex,
+            labelIDs: [],
+            name: snapshot.labelText ?? ""
+        )
+        return viewModel?.buildLinkArrowHead(for: link, start: snapshot.startPoint, end: snapshot.endPoint, baseScale: baseScale)
+    }
+
+    private func dashedLinkPath(from path: CGPath, shapeIndex: Int, lineWidth: CGFloat) -> CGPath? {
+        let pattern: [CGFloat]
+        switch shapeIndex {
+        case 1, 7:
+            pattern = [3, 3]
+        case 2, 8:
+            pattern = [9, 3]
+        case 3, 9:
+            pattern = [9, 3, 3, 3]
+        case 4, 10:
+            pattern = [9, 3, 3, 3, 3, 3]
+        default:
+            return nil
+        }
+
+        return path.copy(
+            dashingWithPhase: 0,
+            lengths: pattern.map { $0 * lineWidth },
+            transform: .identity
+        )
+    }
+
+    private func wedgeLinkPath(for snapshot: BrowserLinkLayerSnapshot, baseScale: CGFloat, width: CGFloat) -> CGPath? {
+        let polylines = linkPath(for: snapshot, baseScale: baseScale).flattenedPolylines(curveSamples: 20)
+        guard let points = polylines.first, points.count >= 2 else { return nil }
+
+        let lengths = zip(points, points.dropFirst()).map { hypot($1.x - $0.x, $1.y - $0.y) }
+        let totalLength = max(lengths.reduce(0, +), 0.0001)
+
+        var accumulated: CGFloat = 0
+        var leftPoints: [CGPoint] = []
+        var rightPoints: [CGPoint] = []
+
+        for index in points.indices {
+            let point = points[index]
+            let previous = index > 0 ? points[index - 1] : point
+            let next = index + 1 < points.count ? points[index + 1] : point
+            let tangent = CGPoint(x: next.x - previous.x, y: next.y - previous.y)
+            let tangentLength = max(hypot(tangent.x, tangent.y), 0.0001)
+            let normal = CGPoint(x: -tangent.y / tangentLength, y: tangent.x / tangentLength)
+            let progress = accumulated / totalLength
+            let halfWidth = normalizedWedgeHalfWidth(for: snapshot, progress: progress, width: width)
+
+            leftPoints.append(CGPoint(x: point.x + normal.x * halfWidth, y: point.y + normal.y * halfWidth))
+            rightPoints.append(CGPoint(x: point.x - normal.x * halfWidth, y: point.y - normal.y * halfWidth))
+
+            if index < lengths.count {
+                accumulated += lengths[index]
+            }
+        }
+
+        let path = CGMutablePath()
+        path.addLines(between: leftPoints)
+        path.addLines(between: rightPoints.reversed())
+        path.closeSubpath()
+        return path
+    }
+
+    private func normalizedWedgeHalfWidth(for snapshot: BrowserLinkLayerSnapshot, progress: CGFloat, width: CGFloat) -> CGFloat {
+        if snapshot.directionVisible {
+            return max(width * 2.2 * (1 - progress), 0)
+        }
+        return width * 0.85
     }
 
     private func appendSegment(from start: CGPoint, to end: CGPoint, width: CGFloat, color: SIMD4<Float>, into vertices: inout [BrowserMetalColorVertex]) {
