@@ -240,6 +240,10 @@ extension WorkspaceViewModel {
         cardByID(browserHoverCardID)
     }
 
+    var browserCardTextCard: FrieveCard? {
+        browserHoverCard ?? selectedCard
+    }
+
     var browserInlineEditorCard: FrieveCard? {
         cardByID(browserInlineEditorCardID)
     }

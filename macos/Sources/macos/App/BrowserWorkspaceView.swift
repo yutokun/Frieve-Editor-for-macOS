@@ -247,15 +247,15 @@ private struct BrowserCanvasBackgroundView: View {
             Rectangle()
                 .fill(Color(nsColor: browserCanvasBackgroundColor(for: colorScheme)))
 
-            if let hoverCard = viewModel.browserHoverCard {
+            if let detailCard = viewModel.browserCardTextCard {
                 VStack(alignment: .leading) {
                     HStack(alignment: .top, spacing: 0) {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(hoverCard.title)
+                            Text(detailCard.title)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.primary)
-                            if !hoverCard.bodyText.isEmpty {
-                                Text(hoverCard.bodyText)
+                            if !detailCard.bodyText.isEmpty {
+                                Text(detailCard.bodyText)
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }

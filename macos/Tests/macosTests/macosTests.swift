@@ -20,6 +20,36 @@ import Testing
     #expect(model.autoScroll)
 }
 
+@MainActor
+@Test func browserCardTextPrefersHoverAndFallsBackToSelection() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.addChildCard()
+    let childID = try #require(model.selectedCardID)
+    model.document.updateCard(childID) { card in
+        card.title = "Child"
+        card.bodyText = "Selected body"
+    }
+
+    model.selectCard(0)
+    model.document.updateCard(0) { card in
+        card.title = "Root"
+        card.bodyText = "Root body"
+    }
+
+    #expect(model.browserCardTextCard?.id == 0)
+    #expect(model.browserCardTextCard?.bodyText == "Root body")
+
+    model.setBrowserHoverCard(childID)
+
+    #expect(model.browserCardTextCard?.id == childID)
+    #expect(model.browserCardTextCard?.bodyText == "Selected body")
+
+    model.setBrowserHoverCard(nil)
+
+    #expect(model.browserCardTextCard?.id == 0)
+}
+
 @Test func browserAppearanceHelperMatchesSwiftUIColorScheme() throws {
     #expect(browserAppearance(for: .light).bestMatch(from: [.aqua, .darkAqua]) == .aqua)
     #expect(browserAppearance(for: .dark).bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
