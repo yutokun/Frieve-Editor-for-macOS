@@ -223,12 +223,44 @@ struct BrowserCardRasterContentView: View {
                 Spacer(minLength: 0)
             }
 
+            if card.isFixed {
+                BrowserFixedCornerDotsOverlay()
+            }
+
             if card.isFolded {
                 BrowserFoldedMarkerOverlay()
             }
         }
         .padding(padding)
         .frame(width: metadata.canvasSize.width, height: metadata.canvasSize.height, alignment: .topLeading)
+    }
+}
+
+private struct BrowserFixedCornerDotsOverlay: View {
+    var body: some View {
+        GeometryReader { geometry in
+            let inset = max(min(geometry.size.width, geometry.size.height) * 0.045, 5)
+            let dot = max(min(geometry.size.width, geometry.size.height) * 0.055, 4)
+
+            ZStack {
+                circle(size: dot)
+                    .position(x: inset, y: inset)
+                circle(size: dot)
+                    .position(x: geometry.size.width - inset, y: inset)
+                circle(size: dot)
+                    .position(x: inset, y: geometry.size.height - inset)
+                circle(size: dot)
+                    .position(x: geometry.size.width - inset, y: geometry.size.height - inset)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    private func circle(size: CGFloat) -> some View {
+        Circle()
+            .fill(Color.blue.opacity(0.95))
+            .frame(width: size, height: size)
+            .overlay(Circle().stroke(Color.blue.opacity(0.4), lineWidth: 1))
     }
 }
 

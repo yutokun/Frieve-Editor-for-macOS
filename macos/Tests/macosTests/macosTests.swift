@@ -411,7 +411,7 @@ import Testing
 }
 
 @MainActor
-@Test func browserBadgesPreferMarkerOverFoldedText() throws {
+@Test func browserBadgesPreferMarkersOverFixedAndFoldedText() throws {
     let model = WorkspaceViewModel()
     let card = FrieveCard(
         id: 1,
@@ -435,7 +435,7 @@ import Testing
     )
 
     let badges = model.buildBrowserBadgeItems(for: card, labelNames: [], linkCount: 0, hasDrawingPreview: false)
-    #expect(badges == ["Top", "Fixed"])
+    #expect(badges == ["Top"])
 }
 
 @MainActor

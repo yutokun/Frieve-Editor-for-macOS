@@ -914,9 +914,6 @@ extension WorkspaceViewModel {
         if card.isTop {
             badges.append("Top")
         }
-        if card.isFixed {
-            badges.append("Fixed")
-        }
         if card.hasMedia {
             badges.append("Media")
         }
