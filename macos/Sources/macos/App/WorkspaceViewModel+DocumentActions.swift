@@ -965,10 +965,10 @@ extension WorkspaceViewModel {
 
     func applyBrowserNormalizeArrangeStep() {
         let visibleCards = visibleSortedCards()
-        let targetIDs = Set(visibleCards.filter { !$0.isFixed }.map(\.id))
+        let targetIDs = Set(visibleCards.map(\.id))
         guard !targetIDs.isEmpty else { return }
         let positions = Dictionary(uniqueKeysWithValues: visibleCards.map { ($0.id, $0.position) })
-        normalizeAndApplyBrowserAutoArrangePositions(positions, targetIDs: targetIDs)
+        normalizeAndApplyBrowserAutoArrangePositions(positions, targetIDs: targetIDs, boundsIDs: targetIDs)
     }
 
     func applyBrowserRepulsionAutoArrangeStep(stepScale: Double = 1.0, ratio: Double = 1.0) {
@@ -1204,12 +1204,16 @@ extension WorkspaceViewModel {
         finalizeBrowserAutoArrangeMutation()
     }
 
-    func normalizeAndApplyBrowserAutoArrangePositions(_ positions: [Int: FrievePoint], targetIDs: Set<Int>) {
-        let normalizedPoints = targetIDs.compactMap { positions[$0] }
-        guard let minX = normalizedPoints.map(\.x).min(),
-              let maxX = normalizedPoints.map(\.x).max(),
-              let minY = normalizedPoints.map(\.y).min(),
-              let maxY = normalizedPoints.map(\.y).max(),
+    func normalizeAndApplyBrowserAutoArrangePositions(
+        _ positions: [Int: FrievePoint],
+        targetIDs: Set<Int>,
+        boundsIDs: Set<Int>? = nil
+    ) {
+        let boundPoints = (boundsIDs ?? targetIDs).compactMap { positions[$0] }
+        guard let minX = boundPoints.map(\.x).min(),
+              let maxX = boundPoints.map(\.x).max(),
+              let minY = boundPoints.map(\.y).min(),
+              let maxY = boundPoints.map(\.y).max(),
               maxX != minX,
               maxY != minY else {
             return

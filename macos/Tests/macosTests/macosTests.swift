@@ -23,6 +23,31 @@ import Testing
 }
 
 @MainActor
+@Test func browserNormalizeRepositionsAllVisibleCardsIncludingFixedOnes() throws {
+    let model = WorkspaceViewModel()
+    model.document = FrieveDocument(
+        title: "Normalize",
+        metadata: [:],
+        focusedCardID: 1,
+        cards: [
+            FrieveCard(id: 1, title: "Fixed", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: true, isFolded: false, position: FrievePoint(x: 0.2, y: 0.3), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil),
+            FrieveCard(id: 2, title: "Middle", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0.4, y: 0.5), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil),
+            FrieveCard(id: 3, title: "Edge", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0.8, y: 0.9), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil)
+        ],
+        links: [],
+        cardLabels: [],
+        linkLabels: [],
+        sourcePath: nil
+    )
+
+    model.applyBrowserNormalizeArrangeStep()
+
+    #expect(model.document.card(withID: 1)?.position == FrievePoint(x: 0, y: 0))
+    #expect(model.document.card(withID: 2)?.position == FrievePoint(x: 1.0 / 3.0, y: 1.0 / 3.0))
+    #expect(model.document.card(withID: 3)?.position == FrievePoint(x: 1, y: 1))
+}
+
+@MainActor
 @Test func browserCardTextPrefersHoverAndFallsBackToSelection() async throws {
     let model = WorkspaceViewModel()
     model.newDocument()
