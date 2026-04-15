@@ -1389,7 +1389,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
                 cornerRadius = -1
             case .ellipse:
                 halfSize = SIMD2(Float(snapshot.worldRect.width / 2), Float(snapshot.worldRect.height / 2))
-                cornerRadius = -1
+                cornerRadius = -2
             case .rectangle:
                 halfSize = SIMD2(Float(snapshot.worldRect.width / 2), Float(snapshot.worldRect.height / 2))
                 cornerRadius = 14

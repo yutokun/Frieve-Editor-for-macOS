@@ -220,15 +220,15 @@ extension WorkspaceViewModel {
 
     func browserMediaPreviewSize(for card: FrieveCard) -> CGSize {
         let limit = CGFloat(settings.browserImageLimitation)
-        let width = min(max(limit * 1.6, 72), 320)
-        let height = min(max(limit, 48), 220)
+        let width = min(max(limit * 1.45, 48), 440)
+        let height = min(max(limit * 0.92, 36), 300)
         return CGSize(width: width, height: height)
     }
 
     func browserDrawingPreviewSize(for card: FrieveCard) -> CGSize {
         let limit = CGFloat(settings.browserImageLimitation)
-        let width = min(max(limit * 1.2, 72), 220)
-        let height = min(max(limit * 0.9, 54), 180)
+        let width = min(max(limit * 1.1, 40), 320)
+        let height = min(max(limit * 0.82, 32), 240)
         return CGSize(width: width, height: height)
     }
 

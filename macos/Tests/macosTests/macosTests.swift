@@ -2460,6 +2460,29 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(values.1.width > values.1.height)
 }
 
+@Test func browserPreviewSizeStepsStayDistinct() async throws {
+    let sizes = await MainActor.run { () -> ([CGSize], [CGSize]) in
+        let model = WorkspaceViewModel()
+        model.newDocument()
+        let card = model.selectedCard!
+        let options = [32, 40, 64, 80, 120, 160, 240, 320]
+        let mediaSizes = options.map { option -> CGSize in
+            model.settings.browserImageLimitation = option
+            return model.browserMediaPreviewSize(for: card)
+        }
+        let drawingSizes = options.map { option -> CGSize in
+            model.settings.browserImageLimitation = option
+            return model.browserDrawingPreviewSize(for: card)
+        }
+        return (mediaSizes, drawingSizes)
+    }
+
+    #expect(Set(sizes.0).count == sizes.0.count)
+    #expect(Set(sizes.1).count == sizes.1.count)
+    #expect(zip(sizes.0, sizes.0.dropFirst()).allSatisfy { $0.width < $1.width && $0.height < $1.height })
+    #expect(zip(sizes.1, sizes.1.dropFirst()).allSatisfy { $0.width < $1.width && $0.height < $1.height })
+}
+
 @Test func browserInlineEditorSettingsControlAlwaysShowAndPlacement() async throws {
     let suiteName = "FrieveEditorMacTests.browserInlineEditorSettings"
 
