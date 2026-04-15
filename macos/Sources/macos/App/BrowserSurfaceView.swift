@@ -223,6 +223,16 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         metalView.preferredFramesPerSecond
     }
 
+#if DEBUG
+    var debugRenderedLinkInstanceCount: Int {
+        renderer.debugLinkInstanceCount
+    }
+
+    var debugDrawPassSequence: [String] {
+        renderer.debugDrawPassSequence
+    }
+#endif
+
     override init(frame frameRect: NSRect) {
         guard let device = MTLCreateSystemDefaultDevice() else {
             fatalError("Metal is required for BrowserSurfaceNSView")
@@ -1117,6 +1127,37 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     private var appearance: NSAppearance = NSAppearance(named: .aqua) ?? NSAppearance.currentDrawing()
     private var canvasBackgroundColor: NSColor = NSColor.white
 
+#if DEBUG
+    var debugLinkInstanceCount: Int {
+        linkInstances.count
+    }
+
+    private(set) var debugDrawPassSequence: [String] = []
+
+    private func refreshDebugDrawPassSequence() {
+        var sequence: [String] = []
+        if !solidVertices.isEmpty {
+            sequence.append("solid")
+        }
+        if !labelGroupInstances.isEmpty {
+            sequence.append("labelGroup")
+        }
+        if !labelGroupTextInstances.isEmpty {
+            sequence.append("labelGroupText")
+        }
+        if !linkInstances.isEmpty {
+            sequence.append("link")
+        }
+        if !linkTextInstances.isEmpty {
+            sequence.append("linkText")
+        }
+        if !cardInstances.isEmpty {
+            sequence.append("card")
+        }
+        debugDrawPassSequence = sequence
+    }
+#endif
+
     private let maxAtlasUploadsPerFrame = 4
     private let maxAtlasUploadBytesPerFrame = 12 * 1024 * 1024
     private let maxPendingAtlasUploads = 96
@@ -1217,6 +1258,9 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             rebuildTextResources(for: scene)
             applyDesiredAtlasKeys()
         }
+#if DEBUG
+        refreshDebugDrawPassSequence()
+#endif
     }
 
     fileprivate func handleAppearanceChange(signature: Int, appearance: NSAppearance, canvasBackgroundColor: NSColor) {
@@ -1260,23 +1304,19 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             return
         }
         renderEncoder.label = "Browser Metal Encoder"
+#if DEBUG
+        debugDrawPassSequence.removeAll(keepingCapacity: true)
+#endif
 
         var viewport = BrowserMetalViewportUniforms(
             viewportSize: SIMD2(Float(scene.canvasSize.width), Float(scene.canvasSize.height)),
             worldScale: SIMD2(Float(scene.worldToCanvasTransform.a), Float(scene.worldToCanvasTransform.d)),
             worldOffset: SIMD2(Float(scene.worldToCanvasTransform.tx), Float(scene.worldToCanvasTransform.ty))
         )
-        if let cardInstanceBuffer, !cardInstances.isEmpty {
-            renderEncoder.setRenderPipelineState(cardPipeline)
-            renderEncoder.setFragmentSamplerState(samplerState, index: 0)
-            renderEncoder.setVertexBytes(&viewport, length: MemoryLayout<BrowserMetalViewportUniforms>.stride, index: 0)
-            renderEncoder.setVertexBuffer(cardInstanceBuffer, offset: 0, index: 1)
-            renderEncoder.setFragmentBuffer(cardInstanceBuffer, offset: 0, index: 0)
-            renderEncoder.setFragmentTexture(atlasTexture, index: 0)
-            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: cardInstances.count)
-        }
-
         if let solidVertexBuffer, !solidVertices.isEmpty {
+#if DEBUG
+            debugDrawPassSequence.append("solid")
+#endif
             renderEncoder.setRenderPipelineState(solidPipeline)
             renderEncoder.setVertexBuffer(solidVertexBuffer, offset: 0, index: 0)
             renderEncoder.setVertexBytes(&viewport, length: MemoryLayout<BrowserMetalViewportUniforms>.stride, index: 1)
@@ -1284,13 +1324,32 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         }
 
         if let labelGroupInstanceBuffer, !labelGroupInstances.isEmpty {
+#if DEBUG
+            debugDrawPassSequence.append("labelGroup")
+#endif
             renderEncoder.setRenderPipelineState(labelGroupPipeline)
             renderEncoder.setVertexBytes(&viewport, length: MemoryLayout<BrowserMetalViewportUniforms>.stride, index: 0)
             renderEncoder.setVertexBuffer(labelGroupInstanceBuffer, offset: 0, index: 1)
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: labelGroupInstances.count)
         }
 
+        if let labelGroupTextInstanceBuffer, !labelGroupTextInstances.isEmpty {
+#if DEBUG
+            debugDrawPassSequence.append("labelGroupText")
+#endif
+            renderEncoder.setRenderPipelineState(textPipeline)
+            renderEncoder.setFragmentSamplerState(samplerState, index: 0)
+            renderEncoder.setVertexBytes(&viewport, length: MemoryLayout<BrowserMetalViewportUniforms>.stride, index: 0)
+            renderEncoder.setVertexBuffer(labelGroupTextInstanceBuffer, offset: 0, index: 1)
+            renderEncoder.setFragmentBuffer(labelGroupTextInstanceBuffer, offset: 0, index: 0)
+            renderEncoder.setFragmentTexture(atlasTexture, index: 0)
+            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: labelGroupTextInstances.count)
+        }
+
         if let linkInstanceBuffer, !linkInstances.isEmpty {
+#if DEBUG
+            debugDrawPassSequence.append("link")
+#endif
             renderEncoder.setRenderPipelineState(linkPipeline)
             renderEncoder.setVertexBytes(&viewport, length: MemoryLayout<BrowserMetalViewportUniforms>.stride, index: 0)
             renderEncoder.setVertexBuffer(linkInstanceBuffer, offset: 0, index: 1)
@@ -1298,6 +1357,9 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         }
 
         if let linkTextInstanceBuffer, !linkTextInstances.isEmpty {
+#if DEBUG
+            debugDrawPassSequence.append("linkText")
+#endif
             renderEncoder.setRenderPipelineState(textPipeline)
             renderEncoder.setFragmentSamplerState(samplerState, index: 0)
             renderEncoder.setVertexBytes(&viewport, length: MemoryLayout<BrowserMetalViewportUniforms>.stride, index: 0)
@@ -1307,14 +1369,17 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: linkTextInstances.count)
         }
 
-        if let labelGroupTextInstanceBuffer, !labelGroupTextInstances.isEmpty {
-            renderEncoder.setRenderPipelineState(textPipeline)
+        if let cardInstanceBuffer, !cardInstances.isEmpty {
+#if DEBUG
+            debugDrawPassSequence.append("card")
+#endif
+            renderEncoder.setRenderPipelineState(cardPipeline)
             renderEncoder.setFragmentSamplerState(samplerState, index: 0)
             renderEncoder.setVertexBytes(&viewport, length: MemoryLayout<BrowserMetalViewportUniforms>.stride, index: 0)
-            renderEncoder.setVertexBuffer(labelGroupTextInstanceBuffer, offset: 0, index: 1)
-            renderEncoder.setFragmentBuffer(labelGroupTextInstanceBuffer, offset: 0, index: 0)
+            renderEncoder.setVertexBuffer(cardInstanceBuffer, offset: 0, index: 1)
+            renderEncoder.setFragmentBuffer(cardInstanceBuffer, offset: 0, index: 0)
             renderEncoder.setFragmentTexture(atlasTexture, index: 0)
-            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: labelGroupTextInstances.count)
+            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: cardInstances.count)
         }
 
         renderEncoder.endEncoding()
@@ -1492,7 +1557,39 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     }
 
     private func buildLinkInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalLinkInstance] {
-        []
+        guard let viewModel else { return [] }
+        let colorScheme: ColorScheme = appearanceSignature == 1 ? .dark : .light
+        let transform = scene.worldToCanvasTransform
+        let inverseTransform = transform.inverted()
+        var instances: [BrowserMetalLinkInstance] = []
+        instances.reserveCapacity(scene.links.count * 6)
+
+        for snapshot in scene.links {
+            let width: CGFloat = snapshot.isHighlighted ? 3 : 2
+            let color = browserLinkStrokeColor(for: colorScheme, highlighted: snapshot.isHighlighted).rgbaVector
+
+            if viewModel.settings.browserLinkHemming {
+                appendRenderedLinkInstances(
+                    snapshot: snapshot,
+                    transform: transform,
+                    inverseTransform: inverseTransform,
+                    width: max(width * 3, width + 3),
+                    color: browserCanvasBackgroundColor(for: colorScheme).withAlphaComponent(0.95).rgbaVector,
+                    into: &instances
+                )
+            }
+
+            appendRenderedLinkInstances(
+                snapshot: snapshot,
+                transform: transform,
+                inverseTransform: inverseTransform,
+                width: width,
+                color: color,
+                into: &instances
+            )
+        }
+
+        return instances
     }
 
     private func buildCardInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalCardInstance] {
@@ -1820,6 +1917,67 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         guard snapshot.directionVisible,
               let arrowPath = linkArrowPath(for: snapshot, baseScale: baseScale) else { return }
         appendStrokedPath(arrowPath, color: color, width: width, into: &vertices)
+    }
+
+    private func appendRenderedLinkInstances(
+        snapshot: BrowserLinkLayerSnapshot,
+        transform: CGAffineTransform,
+        inverseTransform: CGAffineTransform,
+        width: CGFloat,
+        color: SIMD4<Float>,
+        into instances: inout [BrowserMetalLinkInstance]
+    ) {
+        let transformedSnapshot = BrowserLinkLayerSnapshot(
+            id: snapshot.id,
+            fromCardID: snapshot.fromCardID,
+            toCardID: snapshot.toCardID,
+            startPoint: snapshot.startPoint.applying(transform),
+            endPoint: snapshot.endPoint.applying(transform),
+            shapeIndex: snapshot.shapeIndex,
+            directionVisible: snapshot.directionVisible,
+            labelPoint: snapshot.labelPoint?.applying(transform),
+            labelText: snapshot.labelText,
+            isHighlighted: snapshot.isHighlighted
+        )
+        let path = linkPath(for: transformedSnapshot, baseScale: 1)
+        let renderedPath = dashedLinkPath(from: path, shapeIndex: snapshot.shapeIndex, lineWidth: width) ?? path
+
+        for polyline in renderedPath.flattenedPolylines(curveSamples: 20) where polyline.count >= 2 {
+            for (start, end) in zip(polyline, polyline.dropFirst()) {
+                guard hypot(end.x - start.x, end.y - start.y) > 0.0001 else { continue }
+                instances.append(
+                    makeLinkBodyInstance(
+                        start: start.applying(inverseTransform),
+                        end: end.applying(inverseTransform),
+                        shapeIndex: snapshot.shapeIndex,
+                        lineWidth: Float(width),
+                        color: color
+                    )
+                )
+            }
+        }
+
+        guard snapshot.directionVisible,
+              let arrowSegments = browserLinkArrowStrokeSegments(
+                shapeIndex: snapshot.shapeIndex,
+                start: transformedSnapshot.startPoint,
+                end: transformedSnapshot.endPoint,
+                baseScale: 1
+              ) else { return }
+
+        let arrowLineWidth = Float(max(width * 1.4, width + 1))
+        for segment in [(arrowSegments.leftStart, arrowSegments.leftEnd), (arrowSegments.rightStart, arrowSegments.rightEnd)] {
+            guard hypot(segment.1.x - segment.0.x, segment.1.y - segment.0.y) > 0.0001 else { continue }
+            instances.append(
+                makeLinkBodyInstance(
+                    start: segment.0.applying(inverseTransform),
+                    end: segment.1.applying(inverseTransform),
+                    shapeIndex: 0,
+                    lineWidth: arrowLineWidth,
+                    color: color
+                )
+            )
+        }
     }
 
     private func linkPath(for snapshot: BrowserLinkLayerSnapshot, baseScale: CGFloat) -> CGPath {

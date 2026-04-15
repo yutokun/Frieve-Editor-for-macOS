@@ -228,6 +228,56 @@ import Testing
 }
 
 @MainActor
+@Test func browserRendererDrawsLabelGroupsBehindLinksAndCards() throws {
+    let suiteName = "FrieveEditorMacTests.browserRendererDrawsLabelGroupsBehindLinksAndCards"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defaults.removePersistentDomain(forName: suiteName)
+
+    let settings = AppSettings(userDefaults: defaults)
+    settings.browserLabelRectangleVisible = true
+    settings.browserLabelNameVisible = true
+    settings.browserLinkHemming = false
+
+    let model = WorkspaceViewModel(settings: settings)
+    model.document = FrieveDocument(
+        title: "Layer Order",
+        metadata: [:],
+        focusedCardID: 1,
+        cards: [
+            FrieveCard(id: 1, title: "A", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0.28, y: 0.48), created: "", updated: "", viewed: "", labelIDs: [1], score: 0, imagePath: nil, videoPath: nil),
+            FrieveCard(id: 2, title: "B", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0.72, y: 0.52), created: "", updated: "", viewed: "", labelIDs: [1], score: 0, imagePath: nil, videoPath: nil)
+        ],
+        links: [
+            FrieveLink(fromCardID: 1, toCardID: 2, directionVisible: true, shape: 0, labelIDs: [], name: "Related")
+        ],
+        cardLabels: [
+            FrieveLabel(id: 1, name: "Topic", color: 0x3366AA, enabled: true, show: true, hide: false, fold: false, size: 100)
+        ],
+        linkLabels: [],
+        sourcePath: nil
+    )
+
+    let view = BrowserSurfaceNSView(frame: CGRect(x: 0, y: 0, width: 1200, height: 800))
+    view.viewModel = model
+    view.updateColorScheme(.light)
+    model.markBrowserSurfaceContentDirty()
+    view.refreshFromViewModel()
+
+    let passes = view.debugDrawPassSequence
+    let labelGroupIndex = try #require(passes.firstIndex(of: "labelGroup"))
+    let labelGroupTextIndex = try #require(passes.firstIndex(of: "labelGroupText"))
+    let linkIndex = try #require(passes.firstIndex(of: "link"))
+    let linkTextIndex = try #require(passes.firstIndex(of: "linkText"))
+    let cardIndex = try #require(passes.firstIndex(of: "card"))
+
+    #expect(labelGroupIndex < linkIndex)
+    #expect(labelGroupTextIndex < linkIndex)
+    #expect(labelGroupTextIndex < linkTextIndex)
+    #expect(linkIndex < cardIndex)
+    #expect(linkTextIndex < cardIndex)
+}
+
+@MainActor
 @Test func browserTickerExpandsCardHeightAndUsesBodyLines() throws {
     let suiteName = "FrieveEditorMacTests.browserTickerLayout"
     let defaults = UserDefaults(suiteName: suiteName)!
@@ -3155,6 +3205,42 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(abs(results.0.y - results.2.y) > 1)
     #expect(abs(results.1.x - results.3.x) > 1)
     #expect(abs(results.1.y - results.3.y) > 1)
+}
+
+@MainActor
+@Test func browserRendererBuildsLinkInstancesForVisibleLinks() throws {
+    let suiteName = "browserRendererBuildsLinkInstancesForVisibleLinks"
+    let defaults = try #require(UserDefaults(suiteName: suiteName))
+    defaults.removePersistentDomain(forName: suiteName)
+
+    let settings = AppSettings(userDefaults: defaults)
+    settings.browserCardShadow = false
+    settings.browserLinkHemming = false
+
+    let model = WorkspaceViewModel(settings: settings)
+    let canvasSize = CGSize(width: 1280, height: 840)
+    let view = BrowserSurfaceNSView(frame: CGRect(origin: .zero, size: canvasSize))
+    view.viewModel = model
+    view.updateColorScheme(.light)
+
+    model.newDocument()
+    let rootID = model.document.sortedCards.first?.id ?? 0
+    model.addChildCard()
+    let childID = model.selectedCardID ?? rootID
+    model.document.updateCard(rootID) { card in
+        card.position = FrievePoint(x: 0.28, y: 0.34)
+    }
+    model.document.updateCard(childID) { card in
+        card.position = FrievePoint(x: 0.76, y: 0.66)
+    }
+    model.document.links = [
+        FrieveLink(fromCardID: rootID, toCardID: childID, directionVisible: false, shape: 0, labelIDs: [], name: "")
+    ]
+    model.resetCanvasToFit(in: canvasSize)
+    model.markBrowserSurfaceContentDirty()
+    view.refreshFromViewModel()
+
+    #expect(view.debugRenderedLinkInstanceCount > 0)
 }
 
 @Test func browserLabelRectanglesEncloseAllCardsForSameLabel() async throws {
