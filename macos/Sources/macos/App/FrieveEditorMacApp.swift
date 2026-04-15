@@ -203,11 +203,13 @@ private struct FrieveEditorSettingsView: View {
                 Section("Inline Editor") {
                     Toggle("Edit in Browser", isOn: $settings.browserEditInBrowser)
                     Toggle("Always Show Editor", isOn: $settings.browserEditInBrowserAlways)
+                        .disabled(!settings.browserEditInBrowser)
                     Picker("Placement", selection: $settings.browserEditInBrowserPosition) {
                         ForEach(BrowserInlineEditorPosition.allCases) { position in
                             Text(position.title).tag(position.rawValue)
                         }
                     }
+                    .disabled(!settings.browserEditInBrowser)
                 }
 
                 Section("Score") {
