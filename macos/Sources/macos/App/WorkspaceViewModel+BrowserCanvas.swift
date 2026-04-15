@@ -1108,18 +1108,21 @@ extension WorkspaceViewModel {
         if maxd > 0 { zoomMultiplier = min(zoomMultiplier, 0.4 / maxd) }
 
         let targetZoom = min(max(zoom * zoomMultiplier, 0.2), 6.0)
-        startBrowserAutoZoom(to: targetZoom)
+        startBrowserAutoZoom(to: targetZoom, delay: browserAutoScrollSelectionLagDuration)
         suspendBrowserAutoScroll()
     }
 
-    private func startBrowserAutoZoom(to targetZoom: Double) {
+    private func startBrowserAutoZoom(to targetZoom: Double, delay: CFTimeInterval = 0) {
         let now = CACurrentMediaTime()
         resetBrowserFitAnimation()
         browserAutoZoomStartZoom = zoom
         browserAutoZoomTargetZoom = targetZoom
-        browserAutoZoomStartedAt = now - (1.0 / 60.0)
+        browserAutoZoomStartedAt = delay > 0 ? nil : now - (1.0 / 60.0)
+        browserAutoScrollSuspendedUntil = max(browserAutoScrollSuspendedUntil, delay > 0 ? now + delay : 0)
         ensureBrowserAutoScrollTimer()
-        applyBrowserViewportAnimationsFrameIfNeeded(at: now)
+        if delay <= 0 {
+            applyBrowserViewportAnimationsFrameIfNeeded(at: now)
+        }
     }
 
     func resetBrowserAutoZoomAnimation() {
@@ -1137,11 +1140,20 @@ extension WorkspaceViewModel {
         refresh: Bool = true
     ) -> Bool {
         guard let startZoom = browserAutoZoomStartZoom,
-              let targetZoom = browserAutoZoomTargetZoom,
-              let startedAt = browserAutoZoomStartedAt else { return false }
+              let targetZoom = browserAutoZoomTargetZoom else { return false }
         guard !hasActiveBrowserGesture else {
             resetBrowserAutoZoomAnimation()
             return false
+        }
+        guard timestamp >= browserAutoScrollSuspendedUntil else { return false }
+        let startedAt: CFTimeInterval
+        if let existingStartedAt = browserAutoZoomStartedAt {
+            startedAt = existingStartedAt
+        } else {
+            browserAutoZoomStartZoom = zoom
+            let bootstrapped = timestamp - (1.0 / 60.0)
+            browserAutoZoomStartedAt = bootstrapped
+            startedAt = bootstrapped
         }
 
         let rawProgress = min(max((timestamp - startedAt) / browserAutoScrollDuration, 0), 1)

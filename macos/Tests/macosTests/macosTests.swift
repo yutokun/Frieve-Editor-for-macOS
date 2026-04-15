@@ -2739,7 +2739,7 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         return WorkspaceViewModel(settings: AppSettings(userDefaults: defaults))
     }
 
-    let result = await MainActor.run { () -> (FrievePoint, Bool, Bool, FrievePoint) in
+    let result = await MainActor.run { () -> (FrievePoint, Bool, Bool, Bool, Bool, FrievePoint) in
         model.newDocument()
         let rootID = model.document.sortedCards.first?.id ?? 0
         let childID = model.document.addCard(title: "Child", linkedFrom: rootID)
@@ -2758,7 +2758,9 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         let delayedCenter = model.canvasCenter
         let baselineTime = CACurrentMediaTime()
         let delayedStep = model.applyBrowserAutoScrollStepIfNeeded(at: baselineTime + 0.5)
+        let delayedZoomStep = model.applyBrowserAutoZoomStepIfNeeded(at: baselineTime + 0.5)
         let oneSecondStep = model.applyBrowserAutoScrollStepIfNeeded(at: baselineTime + 1.0)
+        let oneSecondZoomStep = model.applyBrowserAutoZoomStepIfNeeded(at: baselineTime + 1.0)
 
         model.settings.browserNoScrollLag = false
         model.canvasCenter = FrievePoint(x: 0.18, y: 0.22)
@@ -2766,14 +2768,16 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         model.selectCard(childID)
         let immediateCenter = model.canvasCenter
 
-        return (delayedCenter, delayedStep, oneSecondStep, immediateCenter)
+        return (delayedCenter, delayedStep, delayedZoomStep, oneSecondStep, oneSecondZoomStep, immediateCenter)
     }
 
     #expect(result.0 == FrievePoint(x: 0.18, y: 0.22))
     #expect(result.1 == false)
-    #expect(result.2 == true)
-    #expect(result.3.x > 0.18)
-    #expect(result.3.y > 0.22)
+    #expect(result.2 == false)
+    #expect(result.3 == true)
+    #expect(result.4 == true)
+    #expect(result.5.x > 0.18)
+    #expect(result.5.y > 0.22)
 }
 
 @Test func browserLinkSnapshotUsesWorldCoordinatesForMetalRenderer() async throws {
