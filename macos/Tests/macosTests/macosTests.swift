@@ -23,6 +23,13 @@ import Testing
 }
 
 @MainActor
+@Test func drawingDefaultsToFreeHandTool() async throws {
+    let model = WorkspaceViewModel()
+
+    #expect(model.selectedDrawingTool == "FreeHand")
+}
+
+@MainActor
 @Test func browserNormalizeRepositionsAllVisibleCardsIncludingFixedOnes() throws {
     let model = WorkspaceViewModel()
     model.document = FrieveDocument(

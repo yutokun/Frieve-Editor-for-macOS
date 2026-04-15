@@ -392,7 +392,7 @@ final class WorkspaceViewModel: ObservableObject {
     }
     @Published var statisticsSortByCount: Bool = false
     @Published var selectedStatisticsBucketID: String?
-    @Published var selectedDrawingTool: String = "Cursor"
+    @Published var selectedDrawingTool: String = "FreeHand"
     @Published var recentFiles: [URL] = []
 @Published var lastGPTPrompt: String = ""
     @Published var browserViewportRevision: Int = 0
