@@ -283,7 +283,7 @@ private struct FrieveEditorSettingsView: View {
                     }
                     .disabled(!settings.browserBackgroundAnimation)
                     Toggle("Cursor Animation", isOn: $settings.browserCursorAnimation)
-                    Toggle("No Scroll Lag", isOn: $settings.browserNoScrollLag)
+                    Toggle("Scroll Lag", isOn: $settings.browserNoScrollLag)
                 }
             }
             .tabItem {
