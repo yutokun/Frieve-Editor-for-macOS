@@ -45,6 +45,10 @@ private struct BrowserLayerSurfaceView: View {
                 )
                 BrowserSurfaceRepresentable(viewModel: viewModel, canvasSize: canvasSize)
 
+                if viewModel.settings.browserTickerVisible {
+                    BrowserTickerOverlayView(viewModel: viewModel, canvasSize: canvasSize)
+                }
+
                 if viewModel.settings.browserCursorAnimation {
                     BrowserCursorPulseOverlay(viewModel: viewModel, canvasSize: canvasSize, colorScheme: colorScheme)
                 }
@@ -96,6 +100,68 @@ private struct BrowserLayerSurfaceView: View {
                 viewModel.resetCanvasToFit(in: canvasSize)
             }
         }
+    }
+}
+
+private struct BrowserTickerOverlayView: View {
+    @ObservedObject var viewModel: WorkspaceViewModel
+    let canvasSize: CGSize
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 24.0)) { timeline in
+            let now = timeline.date.timeIntervalSinceReferenceDate
+            let cards = viewModel.visibleCardsBackToFront()
+            Canvas { context, _ in
+                for (index, card) in cards.enumerated() {
+                    guard let tickerText = viewModel.browserCardTickerText(for: card),
+                          !tickerText.isEmpty else { continue }
+
+                    let font = viewModel.browserCardTickerNSFont(for: card)
+                    let tickerHeight = viewModel.browserCardTickerHeight(for: card)
+                    let cardRect = viewModel.cardFrame(for: card, in: canvasSize)
+                    let padding = browserCardContentPadding(for: card)
+                    let stripW = max(cardRect.width - 2 * padding, 0)
+                    guard stripW > 0 else { continue }
+
+                    let stripRect = CGRect(
+                        x: cardRect.minX + padding,
+                        y: cardRect.maxY - padding - tickerHeight,
+                        width: stripW,
+                        height: tickerHeight
+                    )
+
+                    // Even-odd clip: visible only inside stripRect, minus the portions actually
+                    // covered by higher-z cards. Using full card rects here would incorrectly
+                    // create additional visible islands outside the ticker strip.
+                    var clipPath = Path()
+                    clipPath.addRect(stripRect)
+                    for higherCard in cards[(index + 1)...] {
+                        let higherCardRect = viewModel.cardFrame(for: higherCard, in: canvasSize)
+                        let occludedRect = stripRect.intersection(higherCardRect)
+                        if !occludedRect.isNull, !occludedRect.isEmpty {
+                            clipPath.addRect(occludedRect)
+                        }
+                    }
+
+                    let nsAttrs: [NSAttributedString.Key: Any] = [.font: font]
+                    let textWidth = ceil(NSAttributedString(string: tickerText, attributes: nsAttrs).size().width)
+                    let travelDistance = max(textWidth + stripW, 1)
+                    let speed = max(Double(font.pointSize) * 3.0, 40)
+                    let phase = (now * speed).truncatingRemainder(dividingBy: travelDistance)
+                    let xPos = stripRect.minX + stripW - CGFloat(phase)
+
+                    let resolved = context.resolve(
+                        Text(tickerText).font(Font(font)).foregroundStyle(Color.black)
+                    )
+                    context.drawLayer { ctx in
+                        ctx.clip(to: clipPath, style: FillStyle(eoFill: true))
+                        ctx.draw(resolved, at: CGPoint(x: xPos, y: stripRect.midY), anchor: .leading)
+                    }
+                }
+            }
+            .frame(width: canvasSize.width, height: canvasSize.height)
+        }
+        .allowsHitTesting(false)
     }
 }
 

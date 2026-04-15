@@ -572,6 +572,7 @@ final class WorkspaceViewModel: ObservableObject {
         let displaySettingsSignature = browserDisplaySettingsSignature
         if displaySettingsSignature != lastAppliedBrowserDisplaySettingsSignature {
             lastAppliedBrowserDisplaySettingsSignature = displaySettingsSignature
+            invalidateDocumentCaches()
             markBrowserSurfaceContentDirty()
         }
         updateBrowserTickerTimerState()

@@ -172,15 +172,6 @@ struct BrowserCardRasterContentView: View {
                     .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
             }
 
-            if viewModel.settings.browserTextVisible, !metadata.summaryText.isEmpty {
-                Text(metadata.summaryText)
-                    .font(bodyFont)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(titleAlignment)
-                    .lineLimit(viewModel.settings.browserTextWordWrap ? 3 : 1)
-                    .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
-            }
-
             if !metadata.badges.isEmpty {
                 Text(metadata.badges.joined(separator: "  ·  "))
                     .font(.caption2)
@@ -211,16 +202,6 @@ struct BrowserCardRasterContentView: View {
                 .frame(maxWidth: .infinity, alignment: .center)
             }
 
-            if let tickerText = viewModel.browserCardTickerText(for: card), !tickerText.isEmpty {
-                BrowserTickerMarqueeView(
-                    text: tickerText,
-                    font: viewModel.browserCardTickerNSFont(for: card),
-                    tint: .secondary
-                )
-                .padding(.top, 2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
             Spacer(minLength: 0)
         }
         .padding(padding)
@@ -228,7 +209,7 @@ struct BrowserCardRasterContentView: View {
     }
 }
 
-private struct BrowserTickerMarqueeView: View {
+struct BrowserTickerMarqueeView: View {
     let text: String
     let font: NSFont
     let tint: Color

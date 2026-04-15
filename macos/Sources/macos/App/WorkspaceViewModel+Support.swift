@@ -589,6 +589,29 @@ extension WorkspaceViewModel {
         return visibleSortedCardIDs.compactMap(cardByID)
     }
 
+    /// Returns visible cards in back-to-front rendering order (same z-order as Metal rendering).
+    /// Index 0 is the deepest (drawn first / behind everything); last index is on top.
+    func visibleCardsBackToFront() -> [FrieveCard] {
+        let cards = visibleSortedCards()
+        let cardIDs = cards.map(\.id)
+        let depthByID = browserRenderDepthByCardID(for: cardIDs)
+        let originalOrder = cardIDs.enumerated().reduce(into: [Int: Int]()) { dict, entry in
+            dict[entry.element] = entry.offset
+        }
+        return cards.sorted { lhs, rhs in
+            let lhsSelected = selectedCardIDs.contains(lhs.id)
+            let rhsSelected = selectedCardIDs.contains(rhs.id)
+            if lhsSelected != rhsSelected {
+                return !lhsSelected && rhsSelected
+            }
+
+            let lhsDepth = depthByID[lhs.id] ?? 0
+            let rhsDepth = depthByID[rhs.id] ?? 0
+            if lhsDepth != rhsDepth { return lhsDepth > rhsDepth }
+            return (originalOrder[lhs.id] ?? 0) < (originalOrder[rhs.id] ?? 0)
+        }
+    }
+
     func cardByID(_ id: Int?) -> FrieveCard? {
         guard let id else { return nil }
         ensureDocumentCaches()
