@@ -1760,12 +1760,9 @@ struct InspectorPaneView: View {
                     LabeledContent("Updated", value: card.updated)
 
                     Picker("Shape", selection: viewModel.bindingForSelectedShape()) {
-                        Text("Rect").tag(0)
-                        Text("Capsule").tag(1)
-                        Text("Round").tag(2)
-                        Text("Diamond").tag(3)
-                        Text("Hexagon").tag(4)
-                        Text("Note").tag(5)
+                        ForEach(frieveCardShapeOptions, id: \.index) { option in
+                            Text(option.name).tag(option.index)
+                        }
                     }
                     .pickerStyle(.menu)
 
