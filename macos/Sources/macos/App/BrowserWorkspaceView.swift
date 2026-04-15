@@ -887,7 +887,7 @@ private struct BrowserInlineEditorOverlay: View {
                 Spacer()
                 Text(card?.updated ?? "No selection")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
             }
         }
