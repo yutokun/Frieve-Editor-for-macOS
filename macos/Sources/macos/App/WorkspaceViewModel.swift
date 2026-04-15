@@ -551,7 +551,7 @@ final class WorkspaceViewModel: ObservableObject {
             }
     }
 
-    private func applySettingsToWorkspace() {
+    func applySettingsToWorkspace() {
         if !settings.showFileList {
             settings.showFileList = true
         }

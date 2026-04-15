@@ -27,14 +27,20 @@ struct FrieveEditorMacApp: App {
         }
 
         Settings {
-            FrieveEditorSettingsView(settings: viewModel.settings)
+            FrieveEditorSettingsView(viewModel: viewModel)
         }
     }
 }
 
 private struct FrieveEditorSettingsView: View {
+    @ObservedObject var viewModel: WorkspaceViewModel
     @ObservedObject var settings: AppSettings
     private let browserPreviewSizeOptions = [32, 40, 64, 80, 120, 160, 240, 320]
+
+    init(viewModel: WorkspaceViewModel) {
+        self._viewModel = ObservedObject(wrappedValue: viewModel)
+        self._settings = ObservedObject(wrappedValue: viewModel.settings)
+    }
 
     private var availableFontFamilies: [String] {
         NSFontManager.shared.availableFontFamilies.sorted()
@@ -56,6 +62,7 @@ private struct FrieveEditorSettingsView: View {
             set: { newValue in
                 let index = min(max(Int(newValue.rounded()), 0), browserPreviewSizeOptions.count - 1)
                 settings.browserImageLimitation = browserPreviewSizeOptions[index]
+                viewModel.applySettingsToWorkspace()
             }
         )
     }
