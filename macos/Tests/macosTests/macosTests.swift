@@ -2885,7 +2885,7 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(!browserHidesViewportSummary(placement: .browserRight, isEditorVisible: false))
 }
 
-@Test func browserUnderCardInlineEditorKeepsComfortableVerticalGap() async throws {
+@Test func browserUnderCardInlineEditorPlacementGapStaysSeparateFromContentPadding() async throws {
     let values = await MainActor.run { () -> (CGFloat, CGFloat) in
         let model = WorkspaceViewModel()
         model.newDocument()
@@ -2901,7 +2901,7 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         return (cardFrame.maxY, editorFrame.minY)
     }
 
-    #expect(values.1 - values.0 >= 24)
+    #expect(values.1 - values.0 == browserUnderCardInlineEditorPlacementGap())
 }
 
 @Test func browserInlineEditorContentPaddingAddsVerticalBreathingRoom() {

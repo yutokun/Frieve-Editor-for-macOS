@@ -74,6 +74,10 @@ func browserInlineEditorContentPadding() -> EdgeInsets {
     EdgeInsets(top: 20, leading: 14, bottom: 20, trailing: 14)
 }
 
+func browserUnderCardInlineEditorPlacementGap() -> CGFloat {
+    18
+}
+
 @MainActor
 private enum BrowserWallpaperImageCache {
     static let cache = NSCache<NSString, NSImage>()
