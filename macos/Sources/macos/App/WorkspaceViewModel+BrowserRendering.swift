@@ -211,7 +211,7 @@ extension WorkspaceViewModel {
             if let card {
                 let cardFrame = self.cardFrame(for: card, in: size)
                 let desiredX = min(max(cardFrame.midX, width / 2 + 18), size.width - width / 2 - 18)
-                let desiredY = min(max(cardFrame.maxY + height / 2 + 12, height / 2 + 18), size.height - height / 2 - 18)
+                let desiredY = min(max(cardFrame.maxY + height / 2 + 18, height / 2 + 18), size.height - height / 2 - 18)
                 return CGRect(
                     x: desiredX - width / 2,
                     y: desiredY - height / 2,

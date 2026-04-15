@@ -2574,6 +2574,25 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(!browserHidesViewportSummary(placement: .browserRight, isEditorVisible: false))
 }
 
+@Test func browserUnderCardInlineEditorKeepsComfortableVerticalGap() async throws {
+    let values = await MainActor.run { () -> (CGFloat, CGFloat) in
+        let model = WorkspaceViewModel()
+        model.newDocument()
+        model.settings.browserEditInBrowserPosition = BrowserInlineEditorPosition.underCard.rawValue
+        let cardID = try! #require(model.selectedCardID)
+        model.document.updateCard(cardID) { card in
+            card.position = FrievePoint(x: 0.5, y: 0.2)
+        }
+        model.invalidateDocumentCaches()
+        let card = try! #require(model.selectedCard)
+        let cardFrame = model.cardFrame(for: card, in: CGSize(width: 900, height: 600))
+        let editorFrame = model.browserInlineEditorFrame(for: card, in: CGSize(width: 900, height: 600))
+        return (cardFrame.maxY, editorFrame.minY)
+    }
+
+    #expect(values.1 - values.0 >= 18)
+}
+
 @Test func browserFixedWallpaperUsesViewportBelowToolbar() {
     let viewport = browserWallpaperViewportRect(in: CGSize(width: 900, height: 600), topInset: 52)
     #expect(viewport == CGRect(x: 0, y: 52, width: 900, height: 548))
