@@ -72,6 +72,13 @@ import Testing
     #expect(browserAppearance(for: .dark).bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
 }
 
+@Test func browserFixedCornerDotsSitCloserToCardCorners() throws {
+    let metrics = browserFixedCornerDotMetrics(for: CGSize(width: 160, height: 100))
+
+    #expect(metrics.dot == 5)
+    #expect(metrics.inset == 2.5)
+}
+
 @Test func browserWallpaperRectUsesFillForFixedAndFitOtherwise() throws {
     let viewport = CGRect(x: 0, y: 0, width: 300, height: 300)
     let fitRect = browserWallpaperRect(

@@ -254,9 +254,10 @@ func browserCardMarkerVisibility(isFixed: Bool, isFolded: Bool) -> (showsFixedDo
 
 func browserFixedCornerDotMetrics(for size: CGSize) -> (inset: CGFloat, dot: CGFloat) {
     let minDimension = min(size.width, size.height)
+    let dot = max(minDimension * 0.05, 4)
     return (
-        inset: max(minDimension * 0.018, 2.5),
-        dot: max(minDimension * 0.05, 4)
+        inset: max(dot * 0.5, minDimension * 0.012),
+        dot: dot
     )
 }
 
