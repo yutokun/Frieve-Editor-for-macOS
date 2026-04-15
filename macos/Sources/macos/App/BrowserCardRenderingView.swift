@@ -163,14 +163,6 @@ struct BrowserCardRasterContentView: View {
 
         ZStack(alignment: .topLeading) {
             VStack(alignment: horizontalAlignment, spacing: 8) {
-                Text(title)
-                    .font(titleFont)
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(titleAlignment)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
-
                 if hasImagePreview || hasVideoPreview || hasDrawingPreview {
                     HStack(alignment: .top, spacing: 8) {
                         if hasImagePreview {
@@ -203,6 +195,14 @@ struct BrowserCardRasterContentView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
                 }
+
+                Text(title)
+                    .font(titleFont)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(titleAlignment)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
 
                 if let scoreBarLayout {
                     BrowserCardScoreBarView(layout: scoreBarLayout)
