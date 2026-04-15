@@ -479,6 +479,7 @@ extension WorkspaceViewModel {
         hasUnsavedChanges = true
         lastMutationAt = Date()
         syncDocumentMetadataFromSettings()
+        invalidateDocumentCaches()
         markBrowserSurfaceContentDirty()
         if let status {
             statusMessage = status

@@ -1191,6 +1191,28 @@ import Testing
 }
 
 @MainActor
+@Test func browserCanvasSizeExpandsAfterAddingPreviewContentToWarmCache() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.updateSelectedCardTitle("Preview Cache")
+
+    let baseCard = try #require(model.selectedCard)
+    let baseMetadata = model.metadata(for: baseCard)
+
+    model.updateSelectedCardImagePath("/tmp/sample.png")
+    model.updateSelectedCardVideoPath("/tmp/sample.mov")
+    model.updateSelectedCardDrawing("rect 0.1 0.1 0.9 0.9 color=00FF00 fill=00FF00")
+
+    let updatedCard = try #require(model.selectedCard)
+    let updatedMetadata = model.metadata(for: updatedCard)
+    let previewStrip = model.browserPreviewStripSize(for: updatedCard, hasDrawingPreview: true)
+
+    #expect(previewStrip != .zero)
+    #expect(updatedMetadata.canvasSize.width >= previewStrip.width + browserCardContentPadding(for: updatedCard) * 2)
+    #expect(updatedMetadata.canvasSize.height > baseMetadata.canvasSize.height)
+}
+
+@MainActor
 @Test func browserImageAndVideoPlaceholdersRenderAtTopOfCard() async throws {
     let model = WorkspaceViewModel()
     model.newDocument()
