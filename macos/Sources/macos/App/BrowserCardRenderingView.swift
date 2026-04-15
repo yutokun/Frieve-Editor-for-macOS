@@ -161,6 +161,7 @@ struct BrowserCardRasterContentView: View {
         let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : card.title
         let titleFont = Font(viewModel.browserCardTitleNSFont(for: card))
         let scoreBarLayout = viewModel.browserCardScoreBarLayout(for: card)
+        let markerVisibility = browserCardMarkerVisibility(isFixed: card.isFixed, isFolded: card.isFolded)
 
         ZStack(alignment: .topLeading) {
             VStack(alignment: horizontalAlignment, spacing: 8) {
@@ -231,11 +232,11 @@ struct BrowserCardRasterContentView: View {
                 Spacer(minLength: 0)
             }
 
-            if card.isFixed {
+            if markerVisibility.showsFixedDots {
                 BrowserFixedCornerDotsOverlay()
             }
 
-            if card.isFolded {
+            if markerVisibility.showsFoldedMarker {
                 BrowserFoldedMarkerOverlay()
             }
         }
@@ -244,21 +245,35 @@ struct BrowserCardRasterContentView: View {
     }
 }
 
+func browserCardMarkerVisibility(isFixed: Bool, isFolded: Bool) -> (showsFixedDots: Bool, showsFoldedMarker: Bool) {
+    (
+        showsFixedDots: isFixed && !isFolded,
+        showsFoldedMarker: isFolded
+    )
+}
+
+func browserFixedCornerDotMetrics(for size: CGSize) -> (inset: CGFloat, dot: CGFloat) {
+    let minDimension = min(size.width, size.height)
+    return (
+        inset: max(minDimension * 0.018, 2.5),
+        dot: max(minDimension * 0.05, 4)
+    )
+}
+
 private struct BrowserFixedCornerDotsOverlay: View {
     var body: some View {
         GeometryReader { geometry in
-            let inset = max(min(geometry.size.width, geometry.size.height) * 0.045, 5)
-            let dot = max(min(geometry.size.width, geometry.size.height) * 0.055, 4)
+            let metrics = browserFixedCornerDotMetrics(for: geometry.size)
 
             ZStack {
-                circle(size: dot)
-                    .position(x: inset, y: inset)
-                circle(size: dot)
-                    .position(x: geometry.size.width - inset, y: inset)
-                circle(size: dot)
-                    .position(x: inset, y: geometry.size.height - inset)
-                circle(size: dot)
-                    .position(x: geometry.size.width - inset, y: geometry.size.height - inset)
+                circle(size: metrics.dot)
+                    .position(x: metrics.inset, y: metrics.inset)
+                circle(size: metrics.dot)
+                    .position(x: geometry.size.width - metrics.inset, y: metrics.inset)
+                circle(size: metrics.dot)
+                    .position(x: metrics.inset, y: geometry.size.height - metrics.inset)
+                circle(size: metrics.dot)
+                    .position(x: geometry.size.width - metrics.inset, y: geometry.size.height - metrics.inset)
             }
         }
         .allowsHitTesting(false)

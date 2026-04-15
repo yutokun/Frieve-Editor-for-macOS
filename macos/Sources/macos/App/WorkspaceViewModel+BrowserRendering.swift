@@ -149,12 +149,18 @@ extension WorkspaceViewModel {
     }
 
     func browserCardRasterCacheKey(for snapshot: BrowserCardLayerSnapshot) -> String {
-        [
+        let markerVisibility = browserCardMarkerVisibility(
+            isFixed: snapshot.card.isFixed,
+            isFolded: snapshot.card.isFolded
+        )
+        return [
             String(snapshot.card.id),
             snapshot.card.title,
             snapshot.metadata.detailSummary,
             snapshot.metadata.scoreText ?? "",
             snapshot.metadata.badges.joined(separator: "|"),
+            markerVisibility.showsFixedDots ? "fixed-dots" : "no-fixed-dots",
+            markerVisibility.showsFoldedMarker ? "fold-marker" : "no-fold-marker",
             snapshot.card.drawingEncoded,
             snapshot.card.imagePath ?? "",
             snapshot.card.videoPath ?? "",

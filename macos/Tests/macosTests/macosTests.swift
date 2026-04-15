@@ -495,6 +495,26 @@ import Testing
     #expect(badges == ["Top"])
 }
 
+@Test func browserFixedCornerDotsSitCloserToCorners() {
+    let metrics = browserFixedCornerDotMetrics(for: CGSize(width: 120, height: 80))
+    #expect(metrics.inset == 2.5)
+    #expect(metrics.dot == 4)
+    #expect(metrics.inset < metrics.dot + 1)
+}
+
+@Test func browserFoldedMarkerHidesFixedCornerDots() {
+    let fixedOnly = browserCardMarkerVisibility(isFixed: true, isFolded: false)
+    let foldedOnly = browserCardMarkerVisibility(isFixed: false, isFolded: true)
+    let fixedAndFolded = browserCardMarkerVisibility(isFixed: true, isFolded: true)
+
+    #expect(fixedOnly.showsFixedDots)
+    #expect(!fixedOnly.showsFoldedMarker)
+    #expect(!foldedOnly.showsFixedDots)
+    #expect(foldedOnly.showsFoldedMarker)
+    #expect(!fixedAndFolded.showsFixedDots)
+    #expect(fixedAndFolded.showsFoldedMarker)
+}
+
 @MainActor
 @Test func browserBlendsMultipleEnabledLabelColors() throws {
     let model = WorkspaceViewModel()
@@ -1316,13 +1336,17 @@ import Testing
     let plainMetadata = model.metadata(for: plainCard)
 
     model.updateSelectedCardFixed(true)
+    let fixedCard = try #require(model.selectedCard)
+    let fixedMetadata = model.metadata(for: fixedCard)
     model.updateSelectedCardFolded(true)
 
     let markedCard = try #require(model.selectedCard)
     let markedMetadata = model.metadata(for: markedCard)
 
-    #expect(markedMetadata.detailSummary == "Fixed · Folded")
-    #expect(markedMetadata.canvasSize.height > plainMetadata.canvasSize.height)
+    #expect(fixedMetadata.detailSummary.isEmpty)
+    #expect(fixedMetadata.canvasSize.height == plainMetadata.canvasSize.height)
+    #expect(markedMetadata.detailSummary == "Folded")
+    #expect(markedMetadata.canvasSize.height > fixedMetadata.canvasSize.height)
 }
 
 @MainActor
@@ -2253,7 +2277,7 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
             labelNames: [],
             labelLine: "",
             summaryText: "",
-            detailSummary: "Fixed · Folded",
+            detailSummary: "Folded",
             scoreText: nil,
             badges: [],
             canvasSize: CGSize(width: 120, height: 68),
@@ -2280,6 +2304,68 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         )
 
         return model.browserCardRasterCacheKey(for: plainSnapshot) != model.browserCardRasterCacheKey(for: markedSnapshot)
+    }
+
+    #expect(changed)
+}
+
+@Test func browserCardRasterCacheKeyChangesWhenMarkerVisibilityChanges() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let changed = await MainActor.run { () -> Bool in
+        let plainCard = FrieveCard(
+            id: 21,
+            title: "Marker Visibility",
+            bodyText: "",
+            drawingEncoded: "",
+            visible: true,
+            shape: 0,
+            size: 100,
+            isTop: false,
+            isFixed: false,
+            isFolded: false,
+            position: FrievePoint(x: 0.5, y: 0.5),
+            created: "2026-04-15T00:00:00Z",
+            updated: "2026-04-15T00:00:00Z",
+            viewed: "2026-04-15T00:00:00Z",
+            labelIDs: [],
+            score: 0,
+            imagePath: nil,
+            videoPath: nil
+        )
+        var fixedCard = plainCard
+        fixedCard.isFixed = true
+        let metadata = BrowserCardMetadata(
+            labelNames: [],
+            labelLine: "",
+            summaryText: "",
+            detailSummary: "",
+            scoreText: nil,
+            badges: [],
+            canvasSize: CGSize(width: 120, height: 52),
+            linkCount: 0,
+            hasDrawingPreview: false,
+            primaryLabelColor: nil,
+            mediaBadgeText: ""
+        )
+        let plainSnapshot = BrowserCardLayerSnapshot(
+            card: plainCard,
+            position: plainCard.position,
+            metadata: metadata,
+            isSelected: false,
+            isHovered: false,
+            detailLevel: .full
+        )
+        let fixedSnapshot = BrowserCardLayerSnapshot(
+            card: fixedCard,
+            position: fixedCard.position,
+            metadata: metadata,
+            isSelected: false,
+            isHovered: false,
+            detailLevel: .full
+        )
+
+        return model.browserCardRasterCacheKey(for: plainSnapshot) != model.browserCardRasterCacheKey(for: fixedSnapshot)
     }
 
     #expect(changed)

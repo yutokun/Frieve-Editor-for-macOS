@@ -988,9 +988,6 @@ extension WorkspaceViewModel {
     func buildBrowserDetailSummary(for card: FrieveCard, hasDrawingPreview: Bool) -> String {
         _ = hasDrawingPreview
         var segments: [String] = []
-        if card.isFixed {
-            segments.append("Fixed")
-        }
         if card.isFolded {
             segments.append("Folded")
         }
