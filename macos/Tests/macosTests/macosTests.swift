@@ -64,6 +64,7 @@ import Testing
     #expect(model.selectedCardID == childID)
     #expect(model.selectedCardIDs == [childID])
     #expect(model.selectedTab == .editor)
+    #expect(model.editorBodyFocusTrigger)
 }
 
 @Test func browserAppearanceHelperMatchesSwiftUIColorScheme() throws {

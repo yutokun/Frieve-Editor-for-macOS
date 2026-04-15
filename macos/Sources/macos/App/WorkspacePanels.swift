@@ -5,6 +5,7 @@ let drawingToolOptions = ["Cursor", "FreeHand", "Line", "Rect", "Circle"]
 
 struct EditorWorkspaceView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
+    @FocusState private var bodyEditorFocused: Bool
 
     var body: some View {
         Group {
@@ -17,6 +18,7 @@ struct EditorWorkspaceView: View {
                     }
                     TextEditor(text: viewModel.bindingForSelectedBody())
                         .font(.body.monospaced())
+                        .focused($bodyEditorFocused)
                         .padding(8)
                         .background(RoundedRectangle(cornerRadius: 10).fill(resolvedAppColor(NSColor.textBackgroundColor)))
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15)))
@@ -75,6 +77,12 @@ struct EditorWorkspaceView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(resolvedAppColor(NSColor.controlBackgroundColor))
+        .onChange(of: viewModel.editorBodyFocusTrigger) { _, triggered in
+            if triggered {
+                bodyEditorFocused = true
+                viewModel.editorBodyFocusTrigger = false
+            }
+        }
     }
 }
 

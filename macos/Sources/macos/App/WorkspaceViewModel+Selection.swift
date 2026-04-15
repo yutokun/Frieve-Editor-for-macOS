@@ -279,6 +279,7 @@ extension WorkspaceViewModel {
         guard let card = cardByID(cardID) else { return }
         selectCard(cardID)
         selectedTab = .editor
+        editorBodyFocusTrigger = true
         statusMessage = "Opened \(card.title) in the editor"
     }
 

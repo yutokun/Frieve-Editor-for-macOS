@@ -310,6 +310,7 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var searchQuery: String = ""
     @Published var cardSortOrder: CardSortOrder = .title
     @Published var cardFilterFocusTrigger: Bool = false
+    @Published var editorBodyFocusTrigger: Bool = false
     @Published var showCardLabelEditor: Bool = false
     @Published var showLinkLabelEditor: Bool = false
 @Published var statusMessage: String = "Ready"
