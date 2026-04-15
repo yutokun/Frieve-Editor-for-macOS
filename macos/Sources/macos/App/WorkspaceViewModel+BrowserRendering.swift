@@ -2,6 +2,41 @@ import SwiftUI
 import AppKit
 
 extension WorkspaceViewModel {
+    private func cachedPreviewImage(for path: String?) -> NSImage? {
+        guard let mediaURL = mediaURL(for: path) else { return nil }
+        let cacheKey = mediaURL.path
+        if let image = mediaImageCache[cacheKey] {
+            touchMediaImageCacheKey(cacheKey)
+            return image
+        }
+        if missingMediaCacheKeys.contains(cacheKey) {
+            return nil
+        }
+        if !mediaThumbnailTasks.contains(cacheKey) {
+            mediaThumbnailTasks.insert(cacheKey)
+            Task.detached(priority: .utility) { [weak self] in
+                guard let thumbnail = Self.loadThumbnail(for: mediaURL, maxPixelSize: 256) else {
+                    await MainActor.run {
+                        guard let self else { return }
+                        self.mediaThumbnailTasks.remove(cacheKey)
+                        self.missingMediaCacheKeys.insert(cacheKey)
+                        self.markBrowserSurfaceContentDirty()
+                        self.markBrowserSurfacePresentationDirty()
+                    }
+                    return
+                }
+                await MainActor.run {
+                    guard let self else { return }
+                    self.mediaThumbnailTasks.remove(cacheKey)
+                    self.cacheMediaImage(thumbnail, forKey: cacheKey)
+                    self.markBrowserSurfaceContentDirty()
+                    self.markBrowserSurfacePresentationDirty()
+                }
+            }
+        }
+        return nil
+    }
+
     func drawingPreviewItems(for card: FrieveCard) -> [DrawingPreviewItem] {
         if let cached = drawingPreviewCache[card.id], cached.encoded == card.drawingEncoded {
             return cached.items
@@ -69,36 +104,23 @@ extension WorkspaceViewModel {
     }
 
     func cachedPreviewImage(for card: FrieveCard) -> NSImage? {
-        guard let imageURL = mediaURL(for: card.imagePath) else { return nil }
-        let cacheKey = imageURL.path
-        if let image = mediaImageCache[cacheKey] {
-            touchMediaImageCacheKey(cacheKey)
-            return image
+        cachedPreviewImage(for: card.imagePath)
+    }
+
+    func cachedVideoPreviewImage(for card: FrieveCard) -> NSImage? {
+        cachedPreviewImage(for: card.videoPath)
+    }
+
+    func browserMediaPreviewCacheToken(for path: String?) -> String {
+        guard let mediaURL = mediaURL(for: path) else { return "none" }
+        let cacheKey = mediaURL.path
+        if mediaImageCache[cacheKey] != nil {
+            return "ready"
         }
         if missingMediaCacheKeys.contains(cacheKey) {
-            return nil
+            return "missing"
         }
-        if !mediaThumbnailTasks.contains(cacheKey) {
-            mediaThumbnailTasks.insert(cacheKey)
-            Task.detached(priority: .utility) { [weak self] in
-                guard let thumbnail = Self.loadThumbnail(for: imageURL, maxPixelSize: 256) else {
-                    await MainActor.run {
-                        guard let self else { return }
-                        self.mediaThumbnailTasks.remove(cacheKey)
-                        self.missingMediaCacheKeys.insert(cacheKey)
-                    }
-                    return
-                }
-                await MainActor.run {
-                    guard let self else { return }
-                    self.mediaThumbnailTasks.remove(cacheKey)
-                    self.cacheMediaImage(thumbnail, forKey: cacheKey)
-                    self.markBrowserSurfaceContentDirty()
-                    self.markBrowserSurfacePresentationDirty()
-                }
-            }
-        }
-        return nil
+        return "loading"
     }
 
     func browserCardRasterCacheKey(for snapshot: BrowserCardLayerSnapshot) -> String {
@@ -110,6 +132,8 @@ extension WorkspaceViewModel {
             snapshot.card.drawingEncoded,
             snapshot.card.imagePath ?? "",
             snapshot.card.videoPath ?? "",
+            browserMediaPreviewCacheToken(for: snapshot.card.imagePath),
+            browserMediaPreviewCacheToken(for: snapshot.card.videoPath),
             snapshot.metadata.mediaBadgeText,
             snapshot.metadata.hasDrawingPreview ? "1" : "0",
             browserCardScoreBarCacheKey(for: snapshot.card),
@@ -166,6 +190,7 @@ extension WorkspaceViewModel {
                 detailLevel: browserCardDetailLevel(),
                 fillColor: Color.clear,
                 previewImage: cachedPreviewImage(for: card),
+                videoPreviewImage: cachedVideoPreviewImage(for: card),
                 drawingPreviewImage: cachedDrawingPreviewImage(for: card, targetSize: browserDrawingPreviewSize(for: card))
             )
             .frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)

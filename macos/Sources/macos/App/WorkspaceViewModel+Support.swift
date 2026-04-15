@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import ImageIO
+import AVFoundation
 
 private let maxDocumentUndoSnapshots = 64
 private let browserCardBaseTitlePointSize: CGFloat = 13
@@ -1051,15 +1052,33 @@ extension WorkspaceViewModel {
     }
 
     nonisolated static func loadThumbnail(for url: URL, maxPixelSize: Int) -> NSImage? {
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
-        let options: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
-            kCGImageSourceShouldCacheImmediately: true
+        if let source = CGImageSourceCreateWithURL(url as CFURL, nil) {
+            let options: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+                kCGImageSourceShouldCacheImmediately: true
+            ]
+            if let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) {
+                return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+            }
+        }
+
+        let asset = AVAsset(url: url)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: maxPixelSize, height: maxPixelSize)
+        let candidateTimes = [
+            CMTime(seconds: 0, preferredTimescale: 600),
+            CMTime(seconds: 0.2, preferredTimescale: 600),
+            CMTime(seconds: 1, preferredTimescale: 600)
         ]
-        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
-        return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+        for time in candidateTimes {
+            if let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) {
+                return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+            }
+        }
+        return nil
     }
 
     func sharedISOTimestamp() -> String {

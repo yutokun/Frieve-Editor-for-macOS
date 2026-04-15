@@ -1050,6 +1050,7 @@ import Testing
             detailLevel: .full,
             fillColor: .clear,
             previewImage: nil,
+            videoPreviewImage: nil,
             drawingPreviewImage: model.cachedDrawingPreviewImage(for: card, targetSize: model.browserDrawingPreviewSize(for: card))
         )
         .frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
@@ -1111,6 +1112,7 @@ import Testing
             detailLevel: .full,
             fillColor: .clear,
             previewImage: nil,
+            videoPreviewImage: nil,
             drawingPreviewImage: nil
         )
         .frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
@@ -2481,6 +2483,25 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(Set(sizes.1).count == sizes.1.count)
     #expect(zip(sizes.0, sizes.0.dropFirst()).allSatisfy { $0.width < $1.width && $0.height < $1.height })
     #expect(zip(sizes.1, sizes.1.dropFirst()).allSatisfy { $0.width < $1.width && $0.height < $1.height })
+}
+
+@MainActor
+@Test func browserMediaThumbnailStateUpdatesRasterCacheKey() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.updateSelectedCardVideoPath("/tmp/sample.mov")
+    let card = try #require(model.selectedCard)
+    let snapshot = try #require(model.browserSurfaceScene(in: CGSize(width: 1200, height: 800)).cards.first)
+    let initialKey = model.browserCardRasterCacheKey(for: snapshot)
+
+    let dummyImage = NSImage(size: NSSize(width: 8, height: 8))
+    if let mediaURL = model.mediaURL(for: card.videoPath) {
+        model.cacheMediaImage(dummyImage, forKey: mediaURL.path)
+    }
+
+    let updatedKey = model.browserCardRasterCacheKey(for: snapshot)
+    #expect(initialKey != updatedKey)
+    #expect(model.cachedVideoPreviewImage(for: card) != nil)
 }
 
 @Test func browserInlineEditorSettingsControlAlwaysShowAndPlacement() async throws {

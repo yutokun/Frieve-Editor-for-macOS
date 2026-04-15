@@ -143,6 +143,7 @@ struct BrowserCardRasterContentView: View {
     let detailLevel: BrowserCardDetailLevel
     let fillColor: Color
     let previewImage: NSImage?
+    let videoPreviewImage: NSImage?
     let drawingPreviewImage: NSImage?
 
     var body: some View {
@@ -181,7 +182,7 @@ struct BrowserCardRasterContentView: View {
                             kind: .video,
                             path: card.videoPath,
                             badgeText: card.videoPath.flatMap { URL(fileURLWithPath: $0).lastPathComponent.nilIfEmpty } ?? "Video",
-                            previewImage: nil
+                            previewImage: videoPreviewImage
                         )
                         .frame(width: previewSize.width, height: previewSize.height)
                     }
@@ -331,6 +332,32 @@ private struct BrowserMediaPreviewView: View {
                     .clipped()
                     .overlay(alignment: .bottomTrailing) {
                         Label(badgeText, systemImage: "photo")
+                            .font(.caption2)
+                            .padding(6)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .padding(6)
+                    }
+            } else if kind == .video, let previewImage {
+                Image(nsImage: previewImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+                    .overlay(alignment: .bottomTrailing) {
+                        Label(badgeText, systemImage: "film")
+                            .font(.caption2)
+                            .padding(6)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .padding(6)
+                    }
+            } else if kind == .video, let image = viewModel.cachedVideoPreviewImage(for: card) {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+                    .overlay(alignment: .bottomTrailing) {
+                        Label(badgeText, systemImage: "film")
                             .font(.caption2)
                             .padding(6)
                             .background(.ultraThinMaterial, in: Capsule())
