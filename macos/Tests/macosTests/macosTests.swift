@@ -125,6 +125,21 @@ import Testing
     #expect(tickerHeight > baseHeight)
 }
 
+@Test func browserTickerVisibleRectsStayHiddenUnderStackedFrontCards() throws {
+    let stripRect = CGRect(x: 0, y: 0, width: 100, height: 10)
+    let occludingRects = [
+        CGRect(x: 20, y: 0, width: 50, height: 10),
+        CGRect(x: 40, y: 0, width: 50, height: 10)
+    ]
+
+    let visibleRects = browserTickerVisibleRects(in: stripRect, occludingRects: occludingRects)
+
+    #expect(visibleRects == [
+        CGRect(x: 0, y: 0, width: 20, height: 10),
+        CGRect(x: 90, y: 0, width: 10, height: 10)
+    ])
+}
+
 @MainActor
 @Test func browserScoreExpandsCardSizeAndStacksWithTicker() throws {
     let suiteName = "FrieveEditorMacTests.browserScoreLayout"

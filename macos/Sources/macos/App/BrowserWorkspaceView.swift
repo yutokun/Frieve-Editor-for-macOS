@@ -1,6 +1,82 @@
 import SwiftUI
 import AppKit
 
+func browserTickerVisibleRects(in stripRect: CGRect, occludingRects: [CGRect]) -> [CGRect] {
+    guard !stripRect.isNull, !stripRect.isEmpty else { return [] }
+
+    var visibleRects = [stripRect]
+    for occludingRect in occludingRects {
+        let clippedOcclusion = stripRect.intersection(occludingRect)
+        if clippedOcclusion.isNull || clippedOcclusion.isEmpty {
+            continue
+        }
+        visibleRects = visibleRects.flatMap { subtractTickerOcclusion(clippedOcclusion, from: $0) }
+        if visibleRects.isEmpty {
+            break
+        }
+    }
+    return visibleRects
+}
+
+private func subtractTickerOcclusion(_ occlusion: CGRect, from rect: CGRect) -> [CGRect] {
+    let intersection = rect.intersection(occlusion)
+    if intersection.isNull || intersection.isEmpty {
+        return [rect]
+    }
+
+    var result: [CGRect] = []
+
+    if intersection.minY > rect.minY {
+        result.append(
+            CGRect(
+                x: rect.minX,
+                y: rect.minY,
+                width: rect.width,
+                height: intersection.minY - rect.minY
+            )
+        )
+    }
+
+    if intersection.maxY < rect.maxY {
+        result.append(
+            CGRect(
+                x: rect.minX,
+                y: intersection.maxY,
+                width: rect.width,
+                height: rect.maxY - intersection.maxY
+            )
+        )
+    }
+
+    let middleMinY = max(rect.minY, intersection.minY)
+    let middleMaxY = min(rect.maxY, intersection.maxY)
+    if middleMaxY > middleMinY {
+        if intersection.minX > rect.minX {
+            result.append(
+                CGRect(
+                    x: rect.minX,
+                    y: middleMinY,
+                    width: intersection.minX - rect.minX,
+                    height: middleMaxY - middleMinY
+                )
+            )
+        }
+
+        if intersection.maxX < rect.maxX {
+            result.append(
+                CGRect(
+                    x: intersection.maxX,
+                    y: middleMinY,
+                    width: rect.maxX - intersection.maxX,
+                    height: middleMaxY - middleMinY
+                )
+            )
+        }
+    }
+
+    return result.filter { !$0.isNull && !$0.isEmpty && $0.width > 0 && $0.height > 0 }
+}
+
 struct BrowserWorkspaceView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
     var browserTopInset: CGFloat = 0
@@ -130,18 +206,11 @@ private struct BrowserTickerOverlayView: View {
                         height: tickerHeight
                     )
 
-                    // Even-odd clip: visible only inside stripRect, minus the portions actually
-                    // covered by higher-z cards. Using full card rects here would incorrectly
-                    // create additional visible islands outside the ticker strip.
-                    var clipPath = Path()
-                    clipPath.addRect(stripRect)
-                    for higherCard in cards[(index + 1)...] {
-                        let higherCardRect = viewModel.cardFrame(for: higherCard, in: canvasSize)
-                        let occludedRect = stripRect.intersection(higherCardRect)
-                        if !occludedRect.isNull, !occludedRect.isEmpty {
-                            clipPath.addRect(occludedRect)
-                        }
+                    let occludingRects = cards.suffix(from: index + 1).map {
+                        viewModel.cardFrame(for: $0, in: canvasSize)
                     }
+                    let visibleRects = browserTickerVisibleRects(in: stripRect, occludingRects: occludingRects)
+                    guard !visibleRects.isEmpty else { continue }
 
                     let nsAttrs: [NSAttributedString.Key: Any] = [.font: font]
                     let textWidth = ceil(NSAttributedString(string: tickerText, attributes: nsAttrs).size().width)
@@ -153,9 +222,11 @@ private struct BrowserTickerOverlayView: View {
                     let resolved = context.resolve(
                         Text(tickerText).font(Font(font)).foregroundStyle(Color.black)
                     )
-                    context.drawLayer { ctx in
-                        ctx.clip(to: clipPath, style: FillStyle(eoFill: true))
-                        ctx.draw(resolved, at: CGPoint(x: xPos, y: stripRect.midY), anchor: .leading)
+                    for visibleRect in visibleRects {
+                        context.drawLayer { ctx in
+                            ctx.clip(to: Path(visibleRect))
+                            ctx.draw(resolved, at: CGPoint(x: xPos, y: stripRect.midY), anchor: .leading)
+                        }
                     }
                 }
             }
