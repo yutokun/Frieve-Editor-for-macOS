@@ -306,28 +306,16 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         guard bounds.width > 0, bounds.height > 0 else {
             return nil
         }
-        let resolvedScale = max(scale, 1)
-        let pixelWidth = max(Int((bounds.width * windowBackingScale * resolvedScale).rounded()), 1)
-        let pixelHeight = max(Int((bounds.height * windowBackingScale * resolvedScale).rounded()), 1)
-        guard let representation = NSBitmapImageRep(
-            bitmapDataPlanes: nil,
-            pixelsWide: pixelWidth,
-            pixelsHigh: pixelHeight,
-            bitsPerSample: 8,
-            samplesPerPixel: 4,
-            hasAlpha: true,
-            isPlanar: false,
-            colorSpaceName: .deviceRGB,
-            bytesPerRow: 0,
-            bitsPerPixel: 0
-        ) else {
-            return nil
-        }
-        representation.size = bounds.size
-        cacheDisplay(in: bounds, to: representation)
-        let image = NSImage(size: bounds.size)
-        image.addRepresentation(representation)
-        return image
+        layoutSubtreeIfNeeded()
+        refreshFromViewModel(syncAppearance: true)
+
+        let resolvedScale = max(scale, 1) * windowBackingScale
+        return renderer.snapshotImage(
+            viewSize: bounds.size,
+            outputScale: resolvedScale,
+            clearColor: metalView.clearColor,
+            sampleCount: metalView.sampleCount
+        )
     }
 
     override func mouseMoved(with event: NSEvent) {
@@ -1314,23 +1302,145 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             rebuildTextResources(for: scene)
             applyDesiredAtlasKeys()
         }
-        renderPassDescriptor.colorAttachments[0].clearColor = view.clearColor
-        renderPassDescriptor.colorAttachments[0].loadAction = .clear
-        renderPassDescriptor.colorAttachments[0].storeAction = view.sampleCount > 1 ? .multisampleResolve : .store
+        guard let commandBuffer = commandQueue.makeCommandBuffer() else {
+            return
+        }
+        encodeSceneRender(
+            in: renderPassDescriptor,
+            commandBuffer: commandBuffer,
+            drawableSize: view.drawableSize,
+            sceneScale: 1,
+            clearColor: view.clearColor,
+            sampleCount: view.sampleCount
+        )
+        commandBuffer.present(drawable)
+        commandBuffer.commit()
 
-        guard let commandBuffer = commandQueue.makeCommandBuffer(),
+        if atlasChanged || !pendingAtlasUploads.isEmpty {
+            view.setNeedsDisplay(view.bounds)
+        }
+    }
+
+    func snapshotImage(viewSize: CGSize, outputScale: CGFloat, clearColor: MTLClearColor, sampleCount: Int) -> NSImage? {
+        guard let scene else { return nil }
+        let resolvedScale = max(outputScale, 1)
+        let pixelWidth = max(Int((viewSize.width * resolvedScale).rounded()), 1)
+        let pixelHeight = max(Int((viewSize.height * resolvedScale).rounded()), 1)
+
+        let outputDescriptor = MTLTextureDescriptor.texture2DDescriptor(
+            pixelFormat: .bgra8Unorm,
+            width: pixelWidth,
+            height: pixelHeight,
+            mipmapped: false
+        )
+        outputDescriptor.usage = [.renderTarget]
+        outputDescriptor.storageMode = .shared
+        guard let outputTexture = device.makeTexture(descriptor: outputDescriptor),
+              let commandBuffer = commandQueue.makeCommandBuffer() else {
+            return nil
+        }
+
+        let renderPassDescriptor = MTLRenderPassDescriptor()
+        if sampleCount > 1 {
+            let multisampleDescriptor = MTLTextureDescriptor.texture2DDescriptor(
+                pixelFormat: .bgra8Unorm,
+                width: pixelWidth,
+                height: pixelHeight,
+                mipmapped: false
+            )
+            multisampleDescriptor.textureType = .type2DMultisample
+            multisampleDescriptor.sampleCount = sampleCount
+            multisampleDescriptor.usage = [.renderTarget]
+            multisampleDescriptor.storageMode = .private
+            guard let multisampleTexture = device.makeTexture(descriptor: multisampleDescriptor) else {
+                return nil
+            }
+            renderPassDescriptor.colorAttachments[0].texture = multisampleTexture
+            renderPassDescriptor.colorAttachments[0].resolveTexture = outputTexture
+        } else {
+            renderPassDescriptor.colorAttachments[0].texture = outputTexture
+        }
+
+        let sceneScale = max(Double(pixelWidth) / max(scene.canvasSize.width, 1), Double(pixelHeight) / max(scene.canvasSize.height, 1))
+        encodeSceneRender(
+            in: renderPassDescriptor,
+            commandBuffer: commandBuffer,
+            drawableSize: CGSize(width: pixelWidth, height: pixelHeight),
+            sceneScale: sceneScale,
+            clearColor: clearColor,
+            sampleCount: sampleCount
+        )
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+
+        let bytesPerPixel = 4
+        let bytesPerRow = pixelWidth * bytesPerPixel
+        let byteCount = bytesPerRow * pixelHeight
+        let buffer = UnsafeMutableRawPointer.allocate(byteCount: byteCount, alignment: MemoryLayout<UInt8>.alignment)
+
+        outputTexture.getBytes(
+            buffer,
+            bytesPerRow: bytesPerRow,
+            from: MTLRegionMake2D(0, 0, pixelWidth, pixelHeight),
+            mipmapLevel: 0
+        )
+
+        let data = Data(bytes: buffer, count: byteCount) as CFData
+        buffer.deallocate()
+
+        guard let provider = CGDataProvider(data: data),
+              let cgImage = CGImage(
+                width: pixelWidth,
+                height: pixelHeight,
+                bitsPerComponent: 8,
+                bitsPerPixel: 32,
+                bytesPerRow: bytesPerRow,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue).union(.byteOrder32Little),
+                provider: provider,
+                decode: nil,
+                shouldInterpolate: true,
+                intent: .defaultIntent
+              ) else {
+            return nil
+        }
+
+        let image = NSImage(cgImage: cgImage, size: viewSize)
+        return image
+    }
+
+    private func encodeSceneRender(
+        in renderPassDescriptor: MTLRenderPassDescriptor,
+        commandBuffer: MTLCommandBuffer,
+        drawableSize: CGSize,
+        sceneScale: Double,
+        clearColor: MTLClearColor,
+        sampleCount: Int
+    ) {
+        renderPassDescriptor.colorAttachments[0].clearColor = clearColor
+        renderPassDescriptor.colorAttachments[0].loadAction = .clear
+        renderPassDescriptor.colorAttachments[0].storeAction = sampleCount > 1 ? .multisampleResolve : .store
+
+        guard let scene,
               let renderEncoder = commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor) else {
             return
         }
+
         renderEncoder.label = "Browser Metal Encoder"
 #if DEBUG
         debugDrawPassSequence.removeAll(keepingCapacity: true)
 #endif
 
         var viewport = BrowserMetalViewportUniforms(
-            viewportSize: SIMD2(Float(scene.canvasSize.width), Float(scene.canvasSize.height)),
-            worldScale: SIMD2(Float(scene.worldToCanvasTransform.a), Float(scene.worldToCanvasTransform.d)),
-            worldOffset: SIMD2(Float(scene.worldToCanvasTransform.tx), Float(scene.worldToCanvasTransform.ty))
+            viewportSize: SIMD2(Float(drawableSize.width), Float(drawableSize.height)),
+            worldScale: SIMD2(
+                Float(scene.worldToCanvasTransform.a * sceneScale),
+                Float(scene.worldToCanvasTransform.d * sceneScale)
+            ),
+            worldOffset: SIMD2(
+                Float(scene.worldToCanvasTransform.tx * sceneScale),
+                Float(scene.worldToCanvasTransform.ty * sceneScale)
+            )
         )
         if let solidVertexBuffer, !solidVertices.isEmpty {
 #if DEBUG
@@ -1402,12 +1512,6 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         }
 
         renderEncoder.endEncoding()
-        commandBuffer.present(drawable)
-        commandBuffer.commit()
-
-        if atlasChanged || !pendingAtlasUploads.isEmpty {
-            view.setNeedsDisplay(view.bounds)
-        }
     }
 
     private func rebuildResources() {

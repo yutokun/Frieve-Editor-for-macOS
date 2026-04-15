@@ -904,6 +904,41 @@ import Testing
     #expect(model.statusMessage == "Browser image is unavailable")
 }
 
+@MainActor
+@Test func browserSurfaceSnapshotRendersMetalContentForPrinting() throws {
+    let model = WorkspaceViewModel()
+    model.document = FrieveDocument(
+        title: "Print Snapshot",
+        metadata: [:],
+        focusedCardID: 1,
+        cards: [
+            FrieveCard(id: 1, title: "Center", bodyText: "Body", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0.5, y: 0.5), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil)
+        ],
+        links: [],
+        cardLabels: [],
+        linkLabels: []
+    )
+    model.selectedCardID = 1
+    model.selectedCardIDs = [1]
+
+    let view = BrowserSurfaceNSView(frame: CGRect(x: 0, y: 0, width: 320, height: 240))
+    view.viewModel = model
+    view.layoutSubtreeIfNeeded()
+    view.refreshFromViewModel()
+
+    guard let image = view.snapshotImage(scale: 2),
+          let tiff = image.tiffRepresentation,
+          let bitmap = NSBitmapImageRep(data: tiff),
+          let center = bitmap.colorAt(x: bitmap.pixelsWide / 2, y: bitmap.pixelsHigh / 2) else {
+        Issue.record("Expected a rendered browser snapshot image")
+        return
+    }
+
+    #expect(bitmap.pixelsWide >= 640)
+    #expect(bitmap.pixelsHigh >= 480)
+    #expect(center.alphaComponent > 0)
+}
+
 @Test func windowsShapeMenusExposeFullWindowsOptionSets() {
     #expect(frieveCardShapeOptions.count == 16)
     #expect(frieveCardShapeOptions.map(\.name).contains("No Drawing"))
