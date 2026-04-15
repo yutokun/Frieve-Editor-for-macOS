@@ -1293,16 +1293,6 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: linkTextInstances.count)
         }
 
-        if let cardInstanceBuffer, !cardInstances.isEmpty {
-            renderEncoder.setRenderPipelineState(cardPipeline)
-            renderEncoder.setFragmentSamplerState(samplerState, index: 0)
-            renderEncoder.setVertexBytes(&viewport, length: MemoryLayout<BrowserMetalViewportUniforms>.stride, index: 0)
-            renderEncoder.setVertexBuffer(cardInstanceBuffer, offset: 0, index: 1)
-            renderEncoder.setFragmentBuffer(cardInstanceBuffer, offset: 0, index: 0)
-            renderEncoder.setFragmentTexture(atlasTexture, index: 0)
-            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: cardInstances.count)
-        }
-
         if let labelGroupTextInstanceBuffer, !labelGroupTextInstances.isEmpty {
             renderEncoder.setRenderPipelineState(textPipeline)
             renderEncoder.setFragmentSamplerState(samplerState, index: 0)
@@ -1311,6 +1301,16 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             renderEncoder.setFragmentBuffer(labelGroupTextInstanceBuffer, offset: 0, index: 0)
             renderEncoder.setFragmentTexture(atlasTexture, index: 0)
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: labelGroupTextInstances.count)
+        }
+
+        if let cardInstanceBuffer, !cardInstances.isEmpty {
+            renderEncoder.setRenderPipelineState(cardPipeline)
+            renderEncoder.setFragmentSamplerState(samplerState, index: 0)
+            renderEncoder.setVertexBytes(&viewport, length: MemoryLayout<BrowserMetalViewportUniforms>.stride, index: 0)
+            renderEncoder.setVertexBuffer(cardInstanceBuffer, offset: 0, index: 1)
+            renderEncoder.setFragmentBuffer(cardInstanceBuffer, offset: 0, index: 0)
+            renderEncoder.setFragmentTexture(atlasTexture, index: 0)
+            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: cardInstances.count)
         }
 
         renderEncoder.endEncoding()
