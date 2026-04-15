@@ -179,6 +179,42 @@ extension WorkspaceViewModel {
         return max(min(canvasSize.width * 0.5, canvasSize.width - 32), 220)
     }
 
+    func browserCardTextOverlayEstimatedHeight(for card: FrieveCard, in canvasSize: CGSize) -> CGFloat {
+        let wrapWidth = browserCardTextOverlayMaxWidth(in: canvasSize)
+        let titleHeight = browserTextOverlayHeight(
+            for: card.title.nilIfEmpty ?? " ",
+            font: browserOverlayTitleNSFont(),
+            width: wrapWidth
+        )
+        let bodyHeight = card.bodyText.isEmpty
+            ? 0
+            : browserTextOverlayHeight(
+                for: card.bodyText,
+                font: browserOverlayBodyNSFont(),
+                width: wrapWidth
+            )
+        let spacing: CGFloat = bodyHeight > 0 ? 3 : 0
+        return titleHeight + bodyHeight + spacing
+    }
+
+    private func browserTextOverlayHeight(for text: String, font: NSFont, width: CGFloat?) -> CGFloat {
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = settings.browserTextCentering ? .center : .left
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .paragraphStyle: paragraphStyle
+        ]
+        if let width {
+            let boundingRect = NSAttributedString(string: text, attributes: attributes)
+                .boundingRect(
+                    with: CGSize(width: width, height: .greatestFiniteMagnitude),
+                    options: [.usesLineFragmentOrigin, .usesFontLeading]
+                )
+            return ceil(boundingRect.height)
+        }
+        return ceil(NSAttributedString(string: text, attributes: attributes).size().height)
+    }
+
     func browserWallpaperURL() -> URL? {
         let trimmed = settings.browserWallpaperPath.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }

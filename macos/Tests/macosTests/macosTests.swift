@@ -2613,6 +2613,11 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(overlayViewport == CGRect(x: 0, y: 52, width: 1200, height: 748))
 }
 
+@Test func browserCenteredTextOffsetGrowsWhenContentOverflowsViewport() {
+    #expect(browserCenteredTextVerticalOffset(contentHeight: 700, viewportHeight: 500) == 100)
+    #expect(browserCenteredTextVerticalOffset(contentHeight: 400, viewportHeight: 500) == 0)
+}
+
 @Test func browserScrollableWallpaperTracksBrowserZoomAtOriginalSize() {
     let zoomOneRect = browserScrollableWallpaperRect(
         for: CGSize(width: 320, height: 180),

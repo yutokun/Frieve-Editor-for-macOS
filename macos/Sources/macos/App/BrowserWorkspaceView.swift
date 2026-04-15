@@ -64,6 +64,10 @@ func browserTextOverlayViewportRect(in canvasSize: CGSize, topInset: CGFloat) ->
     browserWallpaperViewportRect(in: canvasSize, topInset: topInset)
 }
 
+func browserCenteredTextVerticalOffset(contentHeight: CGFloat, viewportHeight: CGFloat) -> CGFloat {
+    max((contentHeight - viewportHeight) / 2, 0)
+}
+
 @MainActor
 private enum BrowserWallpaperImageCache {
     static let cache = NSCache<NSString, NSImage>()
@@ -612,6 +616,12 @@ private struct BrowserCanvasBackgroundView: View {
                 let overlayMaxWidth = viewModel.browserCardTextOverlayMaxWidth(in: canvasSize)
                 let isCentered = viewModel.settings.browserTextCentering
                 let overlayViewportRect = browserTextOverlayViewportRect(in: canvasSize, topInset: browserTopInset)
+                let overlayVerticalOffset = isCentered
+                    ? browserCenteredTextVerticalOffset(
+                        contentHeight: viewModel.browserCardTextOverlayEstimatedHeight(for: detailCard, in: canvasSize),
+                        viewportHeight: overlayViewportRect.height
+                    )
+                    : 0
 
                 Group {
                     if let overlayMaxWidth {
@@ -654,6 +664,7 @@ private struct BrowserCanvasBackgroundView: View {
                     alignment: viewModel.browserCardTextOverlayFrameAlignment()
                 )
                 .position(x: overlayViewportRect.midX, y: overlayViewportRect.midY)
+                .offset(y: overlayVerticalOffset)
                 .clipped()
                 .allowsHitTesting(false)
             }
