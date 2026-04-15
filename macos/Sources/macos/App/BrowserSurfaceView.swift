@@ -728,7 +728,6 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
             action: .delete,
             enabled: !selectedIDs.isEmpty
         ))
-        menu.addItem(makeContextMenuItem("Undo", action: .undo, enabled: viewModel.canUndoLastDocumentChange))
         return menu
     }
 
