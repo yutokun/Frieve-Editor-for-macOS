@@ -219,6 +219,10 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         metalView.sampleCount
     }
 
+    var browserPreferredFramesPerSecond: Int {
+        metalView.preferredFramesPerSecond
+    }
+
     override init(frame frameRect: NSRect) {
         guard let device = MTLCreateSystemDefaultDevice() else {
             fatalError("Metal is required for BrowserSurfaceNSView")
@@ -549,7 +553,7 @@ final class BrowserSurfaceNSView: BrowserInteractionNSView {
         metalView.layer?.isOpaque = false
         metalView.enableSetNeedsDisplay = true
         metalView.isPaused = true
-        metalView.preferredFramesPerSecond = 120
+        metalView.preferredFramesPerSecond = 60
         metalView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(metalView)
 

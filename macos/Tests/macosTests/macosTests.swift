@@ -179,6 +179,13 @@ import Testing
 }
 
 @MainActor
+@Test func browserSurfaceDefaultsToSixtyFpsRendering() throws {
+    let view = BrowserSurfaceNSView(frame: CGRect(x: 0, y: 0, width: 1200, height: 800))
+
+    #expect(view.browserPreferredFramesPerSecond == 60)
+}
+
+@MainActor
 @Test func browserSurfaceBecomesTransparentForWallpaperAndBackgroundAnimation() throws {
     let suiteName = "FrieveEditorMacTests.browserBackgroundTransparency"
     let defaults = UserDefaults(suiteName: suiteName)!
