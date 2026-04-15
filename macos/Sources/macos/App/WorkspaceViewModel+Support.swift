@@ -131,6 +131,43 @@ extension WorkspaceViewModel {
         return font
     }
 
+    func browserOverlayTitleNSFont() -> NSFont {
+        let pointSize = CGFloat(settings.browserFontSize)
+        guard let family = browserConfiguredFontFamily,
+              let font = NSFont(name: family, size: pointSize)
+                ?? NSFontManager.shared.font(withFamily: family, traits: .boldFontMask, weight: 6, size: pointSize) else {
+            return NSFont.systemFont(ofSize: pointSize, weight: .semibold)
+        }
+        return font
+    }
+
+    func browserOverlayBodyNSFont() -> NSFont {
+        let pointSize = max(CGFloat(settings.browserFontSize) * 0.92, 11)
+        guard let family = browserConfiguredFontFamily,
+              let font = NSFont(name: family, size: pointSize)
+                ?? NSFontManager.shared.font(withFamily: family, traits: [], weight: 5, size: pointSize) else {
+            return NSFont.systemFont(ofSize: pointSize)
+        }
+        return font
+    }
+
+    var browserShowsCardTextOverlay: Bool {
+        settings.browserTextVisible && browserCardTextCard != nil
+    }
+
+    func browserCardTextOverlayFrameAlignment() -> Alignment {
+        settings.browserTextCentering ? .center : .topLeading
+    }
+
+    func browserCardTextOverlayTextAlignment() -> TextAlignment {
+        settings.browserTextCentering ? .center : .leading
+    }
+
+    func browserCardTextOverlayMaxWidth(in canvasSize: CGSize) -> CGFloat? {
+        guard settings.browserTextWordWrap else { return nil }
+        return min(max(canvasSize.width * 0.48, 280), 640)
+    }
+
     func browserWallpaperURL() -> URL? {
         let trimmed = settings.browserWallpaperPath.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }

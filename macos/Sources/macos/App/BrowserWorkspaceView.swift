@@ -247,27 +247,45 @@ private struct BrowserCanvasBackgroundView: View {
             Rectangle()
                 .fill(Color(nsColor: browserCanvasBackgroundColor(for: colorScheme)))
 
-            if let detailCard = viewModel.browserCardTextCard {
+            if let detailCard = viewModel.browserCardTextCard,
+               viewModel.browserShowsCardTextOverlay {
+                let titleFont = Font(viewModel.browserOverlayTitleNSFont())
+                let bodyFont = Font(viewModel.browserOverlayBodyNSFont())
+                let textAlignment = viewModel.browserCardTextOverlayTextAlignment()
+                let overlayMaxWidth = viewModel.browserCardTextOverlayMaxWidth(in: canvasSize)
+                let bodyText = viewModel.settings.browserTextWordWrap
+                    ? detailCard.bodyText
+                    : detailCard.bodyText.replacingOccurrences(of: "\n", with: " ")
                 VStack(alignment: .leading) {
                     HStack(alignment: .top, spacing: 0) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(detailCard.title)
-                                .font(.caption.weight(.semibold))
+                                .font(titleFont)
                                 .foregroundStyle(.primary)
+                                .multilineTextAlignment(textAlignment)
+                                .frame(maxWidth: .infinity, alignment: viewModel.settings.browserTextCentering ? .center : .leading)
                             if !detailCard.bodyText.isEmpty {
-                                Text(detailCard.bodyText)
-                                    .font(.caption2)
+                                Text(bodyText)
+                                    .font(bodyFont)
                                     .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(textAlignment)
+                                    .lineLimit(viewModel.settings.browserTextWordWrap ? nil : 1)
+                                    .fixedSize(horizontal: !viewModel.settings.browserTextWordWrap, vertical: viewModel.settings.browserTextWordWrap)
+                                    .frame(maxWidth: .infinity, alignment: viewModel.settings.browserTextCentering ? .center : .leading)
                             }
                         }
-                        .frame(maxWidth: canvasSize.width / 2, alignment: .leading)
+                        .frame(maxWidth: overlayMaxWidth, alignment: viewModel.settings.browserTextCentering ? .center : .leading)
                         Spacer(minLength: 0)
                     }
                     Spacer(minLength: 0)
                 }
-                .padding(.top, browserTopInset + 16)
-                .padding(.leading, 16)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.top, viewModel.settings.browserTextCentering ? 0 : browserTopInset + 16)
+                .padding(.leading, viewModel.settings.browserTextCentering ? 0 : 16)
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: viewModel.browserCardTextOverlayFrameAlignment()
+                )
                 .allowsHitTesting(false)
             }
 

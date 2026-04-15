@@ -2094,6 +2094,35 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(values.2 == 0)
 }
 
+@MainActor
+@Test func browserOverlayTextHelpersFollowConfiguredSettings() async throws {
+    let suiteName = "FrieveEditorMacTests.browserOverlayHelpers"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defaults.removePersistentDomain(forName: suiteName)
+    let settings = AppSettings(userDefaults: defaults)
+    settings.browserTextVisible = true
+    settings.browserTextCentering = true
+    settings.browserTextWordWrap = true
+    settings.browserFontFamily = "Helvetica"
+    settings.browserFontSize = 18
+
+    let model = WorkspaceViewModel(settings: settings)
+    model.newDocument()
+
+    #expect(model.browserShowsCardTextOverlay)
+    #expect(model.browserCardTextOverlayFrameAlignment() == .center)
+    #expect(model.browserCardTextOverlayTextAlignment() == .center)
+    #expect(model.browserCardTextOverlayMaxWidth(in: CGSize(width: 1200, height: 800)) == 576)
+    #expect(model.browserOverlayTitleNSFont().fontName.localizedCaseInsensitiveContains("helvetica"))
+    #expect(model.browserOverlayTitleNSFont().pointSize == 18)
+
+    settings.browserTextVisible = false
+    settings.browserTextWordWrap = false
+
+    #expect(!model.browserShowsCardTextOverlay)
+    #expect(model.browserCardTextOverlayMaxWidth(in: CGSize(width: 1200, height: 800)) == nil)
+}
+
 @Test func browserSurfaceAppliesConfiguredAntialiasingSampleCount() async throws {
     let sampleCount = await MainActor.run { () -> Int in
         let defaults = UserDefaults(suiteName: "FrieveEditorMacTests.browserSampleCount")!

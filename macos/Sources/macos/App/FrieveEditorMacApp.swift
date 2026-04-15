@@ -40,6 +40,14 @@ private struct FrieveEditorSettingsView: View {
         NSFontManager.shared.availableFontFamilies.sorted()
     }
 
+    private func previewFont(for family: String, size: CGFloat = 13) -> Font {
+        if let font = NSFont(name: family, size: size)
+            ?? NSFontManager.shared.font(withFamily: family, traits: [], weight: 5, size: size) {
+            return Font(font)
+        }
+        return .body
+    }
+
     private var browserPreviewSizeBinding: Binding<Double> {
         Binding(
             get: {
@@ -169,20 +177,23 @@ private struct FrieveEditorSettingsView: View {
                     Picker("Family", selection: $settings.browserFontFamily) {
                         Text("System Default").tag("")
                         ForEach(availableFontFamilies, id: \.self) { family in
-                            Text(family).tag(family)
+                            Text(family)
+                                .font(previewFont(for: family))
+                                .tag(family)
                         }
                     }
                     LabeledContent("Size") {
                         HStack(spacing: 8) {
-                            Stepper("", value: $settings.browserFontSize, in: 8 ... 36)
-                                .labelsHidden()
                             Text("\(settings.browserFontSize) pt")
                                 .font(.body.monospacedDigit())
                                 .foregroundStyle(.secondary)
                                 .frame(minWidth: 52, alignment: .leading)
+                            Stepper("", value: $settings.browserFontSize, in: 8 ... 36)
+                                .labelsHidden()
                         }
                     }
                     HStack {
+                        Spacer()
                         Button("Default Size") {
                             settings.browserFontSize = 13
                         }
