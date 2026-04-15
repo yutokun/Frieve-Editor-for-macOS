@@ -110,6 +110,7 @@ private struct FrieveEditorSettingsView: View {
                         Text("1 Line").tag(1)
                         Text("2 Lines").tag(2)
                     }
+                    .pickerStyle(.segmented)
                     Toggle("Image", isOn: $settings.browserImageVisible)
                     Toggle("Video", isOn: $settings.browserVideoVisible)
                     Toggle("Drawing", isOn: $settings.browserDrawingVisible)
