@@ -34,9 +34,22 @@ struct FrieveEditorMacApp: App {
 
 private struct FrieveEditorSettingsView: View {
     @ObservedObject var settings: AppSettings
+    private let browserPreviewSizeOptions = [32, 40, 64, 80, 120, 160, 240, 320]
 
     private var availableFontFamilies: [String] {
         NSFontManager.shared.availableFontFamilies.sorted()
+    }
+
+    private var browserPreviewSizeBinding: Binding<Double> {
+        Binding(
+            get: {
+                Double(browserPreviewSizeOptions.firstIndex(of: settings.browserImageLimitation) ?? 3)
+            },
+            set: { newValue in
+                let index = min(max(Int(newValue.rounded()), 0), browserPreviewSizeOptions.count - 1)
+                settings.browserImageLimitation = browserPreviewSizeOptions[index]
+            }
+        )
     }
 
     private var labelOutlineStyle: Binding<BrowserLabelOutlineStyle> {
@@ -114,10 +127,18 @@ private struct FrieveEditorSettingsView: View {
                     Toggle("Image", isOn: $settings.browserImageVisible)
                     Toggle("Video", isOn: $settings.browserVideoVisible)
                     Toggle("Drawing", isOn: $settings.browserDrawingVisible)
-                    Picker("Preview Size", selection: $settings.browserImageLimitation) {
-                        ForEach([32, 40, 64, 80, 120, 160, 240, 320], id: \.self) { value in
-                            Text("\(value) px").tag(value)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Preview Size")
+                            Spacer()
+                            Text("\(settings.browserImageLimitation) px")
+                                .foregroundStyle(.secondary)
                         }
+                        Slider(
+                            value: browserPreviewSizeBinding,
+                            in: 0 ... Double(browserPreviewSizeOptions.count - 1),
+                            step: 1
+                        )
                     }
                 }
 
