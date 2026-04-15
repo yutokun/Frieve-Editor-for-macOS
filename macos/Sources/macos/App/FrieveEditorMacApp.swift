@@ -155,6 +155,7 @@ private struct FrieveEditorSettingsView: View {
                         Text("Rectangle").tag(BrowserLabelOutlineStyle.rectangle)
                         Text("Circle").tag(BrowserLabelOutlineStyle.circle)
                     }
+                    .pickerStyle(.segmented)
                     Toggle("Show Label Names", isOn: $settings.browserLabelNameVisible)
                 }
 
