@@ -2239,7 +2239,7 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
 @Test func browserInlineEditorSettingsControlAlwaysShowAndPlacement() async throws {
     let suiteName = "FrieveEditorMacTests.browserInlineEditorSettings"
 
-    let values = await MainActor.run { () -> (Int?, CGRect) in
+    let values = await MainActor.run { () -> (Int?, Bool, CGRect, CGRect) in
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
 
@@ -2252,13 +2252,22 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         let rootID = model.document.sortedCards.first?.id ?? 0
         model.selectCard(rootID)
         let card = model.document.card(withID: rootID)!
-        let frame = model.browserInlineEditorFrame(for: card, in: CGSize(width: 900, height: 600))
-        return (model.browserInlineEditorCard?.id, frame)
+        let rightFrame = model.browserInlineEditorFrame(for: card, in: CGSize(width: 900, height: 600))
+        model.clearSelection()
+        let noSelectionVisible = model.browserShowsInlineEditorOverlay
+        settings.browserEditInBrowserPosition = BrowserInlineEditorPosition.browserBottom.rawValue
+        let bottomFrame = model.browserInlineEditorFrame(for: nil, in: CGSize(width: 900, height: 600))
+        return (model.browserInlineEditorCard?.id, noSelectionVisible, rightFrame, bottomFrame)
     }
 
-    #expect(values.0 != nil)
-    #expect(values.1.maxX > 860)
-    #expect(values.1.width >= 320)
+    #expect(values.0 == nil)
+    #expect(values.1)
+    #expect(values.2.maxX == 900)
+    #expect(values.2.minY == 0)
+    #expect(values.2.height == 600)
+    #expect(values.3.minX == 0)
+    #expect(values.3.maxY == 600)
+    #expect(values.3.width == 900)
 }
 
 @Test func legacyReadSpeedSettingMigratesIntoNewIntegerRange() async throws {

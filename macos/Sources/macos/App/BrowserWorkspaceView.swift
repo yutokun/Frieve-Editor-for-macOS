@@ -129,7 +129,8 @@ private struct BrowserLayerSurfaceView: View {
                     BrowserCursorPulseOverlay(viewModel: viewModel, canvasSize: canvasSize, colorScheme: colorScheme)
                 }
 
-                if let editingCard = viewModel.browserInlineEditorCard {
+                if viewModel.browserShowsInlineEditorOverlay {
+                    let editingCard = viewModel.browserInlineEditorCard
                     if let connector = viewModel.inlineEditorConnectorPoints(for: editingCard, in: canvasSize) {
                         Path { path in
                             path.move(to: connector.0)
@@ -142,8 +143,7 @@ private struct BrowserLayerSurfaceView: View {
                     BrowserInlineEditorOverlay(
                         viewModel: viewModel,
                         card: editingCard,
-                        canvasSize: canvasSize,
-                        cardFrame: viewModel.cardFrame(for: editingCard, in: canvasSize)
+                        canvasSize: canvasSize
                     )
                 }
 
@@ -451,12 +451,12 @@ private struct BrowserCursorPulseOverlay: View {
 
 private struct BrowserInlineEditorOverlay: View {
     @ObservedObject var viewModel: WorkspaceViewModel
-    let card: FrieveCard
+    let card: FrieveCard?
     let canvasSize: CGSize
-    let cardFrame: CGRect
 
     var body: some View {
         let editorFrame = viewModel.browserInlineEditorFrame(for: card, in: canvasSize)
+        let hasSelection = card != nil
 
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -469,29 +469,44 @@ private struct BrowserInlineEditorOverlay: View {
                     Label("Editor", systemImage: "sidebar.right")
                 }
                 .buttonStyle(.borderless)
-                Button {
-                    viewModel.dismissBrowserInlineEditor()
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
+                .disabled(!hasSelection)
+                if !viewModel.settings.browserEditInBrowserAlways {
+                    Button {
+                        viewModel.dismissBrowserInlineEditor()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                    }
+                    .buttonStyle(.borderless)
                 }
-                .buttonStyle(.borderless)
             }
 
             TextField("Card title", text: viewModel.bindingForSelectedTitle())
                 .textFieldStyle(.roundedBorder)
+                .disabled(!hasSelection)
 
-            TextEditor(text: viewModel.bindingForSelectedBody())
-                .font(.body)
-                .frame(minHeight: 120)
-                .padding(6)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .textBackgroundColor)))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.15)))
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: viewModel.bindingForSelectedBody())
+                    .font(.body)
+                    .disabled(!hasSelection)
+                if !hasSelection {
+                    Text("No card selected")
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 14)
+                }
+            }
+            .frame(minHeight: 120)
+            .padding(6)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .textBackgroundColor)))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.15)))
 
             HStack {
                 Button("Web Search") { viewModel.searchWebForSelection() }
+                    .disabled(!hasSelection)
                 Button("Read") { viewModel.readSelectedCardAloud() }
+                    .disabled(!hasSelection)
                 Spacer()
-                Text(card.updated)
+                Text(card?.updated ?? "No selection")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

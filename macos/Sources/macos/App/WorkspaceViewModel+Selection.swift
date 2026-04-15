@@ -248,6 +248,11 @@ extension WorkspaceViewModel {
         cardByID(browserInlineEditorCardID)
     }
 
+    var browserShowsInlineEditorOverlay: Bool {
+        guard settings.browserEditInBrowser, selectedTab == .browser else { return false }
+        return browserInlineEditorCardID != nil || settings.browserEditInBrowserAlways
+    }
+
     func focusBrowser(on cardID: Int) {
         guard let card = cardByID(cardID) else { return }
         if autoScroll {

@@ -174,34 +174,50 @@ extension WorkspaceViewModel {
         return renderer.nsImage
     }
 
-    func browserInlineEditorFrame(for card: FrieveCard, in size: CGSize) -> CGRect {
-        let cardFrame = self.cardFrame(for: card, in: size)
-        let width: CGFloat = settings.browserEditInBrowserPosition == BrowserInlineEditorPosition.browserRight.rawValue ? min(max(size.width * 0.34, 320), 460) : 360
-        let height: CGFloat = settings.browserEditInBrowserPosition == BrowserInlineEditorPosition.browserBottom.rawValue ? min(max(size.height * 0.28, 220), 320) : 230
-        let desiredX: CGFloat
-        let desiredY: CGFloat
+    func browserInlineEditorFrame(for card: FrieveCard?, in size: CGSize) -> CGRect {
+        let position = BrowserInlineEditorPosition(rawValue: settings.browserEditInBrowserPosition) ?? .underCard
+        let width: CGFloat = position == .browserRight ? min(max(size.width * 0.34, 320), 460) : 360
+        let height: CGFloat = position == .browserBottom ? min(max(size.height * 0.28, 220), 320) : 230
 
-        switch BrowserInlineEditorPosition(rawValue: settings.browserEditInBrowserPosition) ?? .underCard {
+        switch position {
         case .underCard:
-            desiredX = min(max(cardFrame.midX, width / 2 + 18), size.width - width / 2 - 18)
-            desiredY = min(max(cardFrame.maxY + height / 2 + 12, height / 2 + 18), size.height - height / 2 - 18)
+            if let card {
+                let cardFrame = self.cardFrame(for: card, in: size)
+                let desiredX = min(max(cardFrame.midX, width / 2 + 18), size.width - width / 2 - 18)
+                let desiredY = min(max(cardFrame.maxY + height / 2 + 12, height / 2 + 18), size.height - height / 2 - 18)
+                return CGRect(
+                    x: desiredX - width / 2,
+                    y: desiredY - height / 2,
+                    width: width,
+                    height: height
+                )
+            }
+            return CGRect(
+                x: (size.width - width) / 2,
+                y: max(size.height - height - 24, 24),
+                width: width,
+                height: height
+            )
         case .browserRight:
-            desiredX = size.width - width / 2 - 18
-            desiredY = min(max(size.height / 2, height / 2 + 18), size.height - height / 2 - 18)
+            return CGRect(
+                x: max(size.width - width, 0),
+                y: 0,
+                width: width,
+                height: size.height
+            )
         case .browserBottom:
-            desiredX = size.width / 2
-            desiredY = size.height - height / 2 - 18
+            return CGRect(
+                x: 0,
+                y: max(size.height - height, 0),
+                width: size.width,
+                height: height
+            )
         }
-
-        return CGRect(
-            x: desiredX - width / 2,
-            y: desiredY - height / 2,
-            width: width,
-            height: height
-        )
     }
 
-    func inlineEditorConnectorPoints(for card: FrieveCard, in size: CGSize) -> (CGPoint, CGPoint)? {
+    func inlineEditorConnectorPoints(for card: FrieveCard?, in size: CGSize) -> (CGPoint, CGPoint)? {
+        guard (BrowserInlineEditorPosition(rawValue: settings.browserEditInBrowserPosition) ?? .underCard) == .underCard,
+              let card else { return nil }
         let cardFrame = cardFrame(for: card, in: size)
         let editorFrame = browserInlineEditorFrame(for: card, in: size)
         let start = CGPoint(x: cardFrame.midX, y: cardFrame.maxY)
