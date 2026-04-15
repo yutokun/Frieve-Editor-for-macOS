@@ -298,6 +298,23 @@ extension Color {
     }
 }
 
+func blendFrieveColor(_ lhs: Int, with rhs: Int, fraction: CGFloat) -> Int {
+    let weight = max(0, min(fraction, 1))
+    let inverse = 1 - weight
+
+    let lhsRed = CGFloat(lhs & 0xFF)
+    let lhsGreen = CGFloat((lhs >> 8) & 0xFF)
+    let lhsBlue = CGFloat((lhs >> 16) & 0xFF)
+    let rhsRed = CGFloat(rhs & 0xFF)
+    let rhsGreen = CGFloat((rhs >> 8) & 0xFF)
+    let rhsBlue = CGFloat((rhs >> 16) & 0xFF)
+
+    let red = Int((lhsRed * inverse + rhsRed * weight).rounded())
+    let green = Int((lhsGreen * inverse + rhsGreen * weight).rounded())
+    let blue = Int((lhsBlue * inverse + rhsBlue * weight).rounded())
+    return red | (green << 8) | (blue << 16)
+}
+
 private func browserCardFillColor(from accent: Color, gradation: Bool) -> NSColor {
     let accentRGB = (NSColor(accent).usingColorSpace(.deviceRGB) ?? NSColor(accent))
     let referenceBackground = NSColor(

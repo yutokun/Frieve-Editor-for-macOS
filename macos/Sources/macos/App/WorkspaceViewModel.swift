@@ -488,6 +488,7 @@ final class WorkspaceViewModel: ObservableObject {
     var visibleSortedCardIDs: [Int] = []
     var labelNameByID: [Int: String] = [:]
     var labelColorByID: [Int: Int] = [:]
+    var labelEnabledByID: [Int: Bool] = [:]
     var linkCountByCardID: [Int: Int] = [:]
     var linksByCardID: [Int: [FrieveLink]] = [:]
     var cardMetadataByID: [Int: BrowserCardMetadata] = [:]

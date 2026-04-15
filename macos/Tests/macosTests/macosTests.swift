@@ -439,6 +439,20 @@ import Testing
 }
 
 @MainActor
+@Test func browserBlendsMultipleEnabledLabelColors() throws {
+    let model = WorkspaceViewModel()
+    model.document.cardLabels = [
+        FrieveLabel(id: 1, name: "Red", color: 0x0000FF, enabled: true, show: true, hide: false, fold: false, size: 100),
+        FrieveLabel(id: 2, name: "Green", color: 0x00FF00, enabled: true, show: true, hide: false, fold: false, size: 100),
+        FrieveLabel(id: 3, name: "Disabled", color: 0xFF0000, enabled: false, show: true, hide: false, fold: false, size: 100)
+    ]
+    model.invalidateDocumentCaches()
+    model.ensureDocumentCaches()
+
+    #expect(model.blendedBrowserLabelColor(for: [1, 2, 3]) == 0x008080)
+}
+
+@MainActor
 @Test func importingHierarchicalTextFile2BuildsTreeAndBodies() throws {
     let model = WorkspaceViewModel()
     model.newDocument()

@@ -707,6 +707,9 @@ extension WorkspaceViewModel {
         labelColorByID = document.cardLabels.reduce(into: [Int: Int]()) { partial, label in
             partial[label.id] = partial[label.id] ?? label.color
         }
+        labelEnabledByID = document.cardLabels.reduce(into: [Int: Bool]()) { partial, label in
+            partial[label.id] = partial[label.id] ?? label.enabled
+        }
 
         var groupedLinks: [Int: [FrieveLink]] = [:]
         for link in document.links {
@@ -721,7 +724,7 @@ extension WorkspaceViewModel {
         for card in document.cards {
             let labelNames = card.labelIDs.compactMap { labelNameByID[$0] }
             let labelLine = labelNames.joined(separator: ", ")
-            let primaryLabelColor = card.labelIDs.compactMap { labelColorByID[$0] }.first
+            let primaryLabelColor = blendedBrowserLabelColor(for: card.labelIDs)
             let linkCount = linkCountByCardID[card.id] ?? 0
             let hasDrawingPreview = !drawingPreviewItems(for: card).isEmpty
             let summaryText = buildBrowserSummaryText(for: card)
@@ -755,6 +758,7 @@ extension WorkspaceViewModel {
         visibleSortedCardIDs.removeAll(keepingCapacity: true)
         labelNameByID.removeAll(keepingCapacity: true)
         labelColorByID.removeAll(keepingCapacity: true)
+        labelEnabledByID.removeAll(keepingCapacity: true)
         linkCountByCardID.removeAll(keepingCapacity: true)
         linksByCardID.removeAll(keepingCapacity: true)
         cardMetadataByID.removeAll(keepingCapacity: true)
@@ -817,7 +821,7 @@ extension WorkspaceViewModel {
         }
         let labelNames = card.labelIDs.compactMap { labelNameByID[$0] }
         let labelLine = labelNames.joined(separator: ", ")
-        let primaryLabelColor = card.labelIDs.compactMap { labelColorByID[$0] }.first
+        let primaryLabelColor = blendedBrowserLabelColor(for: card.labelIDs)
         let linkCount = linkCountByCardID[card.id] ?? 0
         let hasDrawingPreview = !drawingPreviewItems(for: card).isEmpty
         let summaryText = buildBrowserSummaryText(for: card)
@@ -918,6 +922,21 @@ extension WorkspaceViewModel {
             badges.append("Media")
         }
         return Array(badges.prefix(6))
+    }
+
+    func blendedBrowserLabelColor(for labelIDs: [Int]) -> Int? {
+        var blendedColor: Int?
+        var count = 0
+        for labelID in labelIDs {
+            guard labelEnabledByID[labelID] ?? false, let nextColor = labelColorByID[labelID] else { continue }
+            if let current = blendedColor {
+                blendedColor = blendFrieveColor(current, with: nextColor, fraction: 1 / CGFloat(count + 1))
+            } else {
+                blendedColor = nextColor
+            }
+            count += 1
+        }
+        return blendedColor
     }
 
     func buildBrowserSummaryText(for card: FrieveCard) -> String {
