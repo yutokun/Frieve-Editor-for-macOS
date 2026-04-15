@@ -2774,7 +2774,7 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         return (cardFrame.maxY, editorFrame.minY)
     }
 
-    #expect(values.1 - values.0 >= 18)
+    #expect(values.1 - values.0 >= 24)
 }
 
 @Test func browserFixedWallpaperUsesViewportBelowToolbar() {
