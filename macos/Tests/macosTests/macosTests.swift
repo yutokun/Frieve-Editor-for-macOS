@@ -2537,6 +2537,48 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(drawRect.midY == viewport.midY)
 }
 
+@Test func browserScrollableWallpaperTracksBrowserZoomAtOriginalSize() {
+    let zoomOneRect = browserScrollableWallpaperRect(
+        for: CGSize(width: 320, height: 180),
+        anchor: CGPoint(x: 450, y: 300),
+        zoom: 1
+    )
+    #expect(zoomOneRect == CGRect(x: 290, y: 210, width: 320, height: 180))
+
+    let zoomTwoRect = browserScrollableWallpaperRect(
+        for: CGSize(width: 320, height: 180),
+        anchor: CGPoint(x: 450, y: 300),
+        zoom: 2
+    )
+    #expect(zoomTwoRect == CGRect(x: 130, y: 120, width: 640, height: 360))
+}
+
+@Test func browserWallpaperTileSizingAndOriginFollowModeWithoutFitScaling() {
+    let fixedTileSize = browserWallpaperTileSize(
+        for: CGSize(width: 120, height: 90),
+        fixed: true,
+        zoom: 3
+    )
+    #expect(fixedTileSize == CGSize(width: 120, height: 90))
+
+    let scrollingTileSize = browserWallpaperTileSize(
+        for: CGSize(width: 120, height: 90),
+        fixed: false,
+        zoom: 2
+    )
+    #expect(scrollingTileSize == CGSize(width: 240, height: 180))
+
+    let origin = browserWallpaperTileOrigin(
+        anchor: CGPoint(x: 210, y: 135),
+        tileSize: CGSize(width: 120, height: 90),
+        in: CGRect(x: 0, y: 52, width: 900, height: 548)
+    )
+    #expect(origin.x <= 0)
+    #expect(origin.y <= 52)
+    #expect(origin.x + 120 > 0)
+    #expect(origin.y + 90 > 52)
+}
+
 @Test func legacyReadSpeedSettingMigratesIntoNewIntegerRange() async throws {
     let suiteName = "FrieveEditorMacTests.legacyReadSpeedMigration"
 

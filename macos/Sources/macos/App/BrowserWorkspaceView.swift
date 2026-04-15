@@ -24,6 +24,42 @@ func browserWallpaperRect(for imageSize: CGSize, in viewportRect: CGRect, fixed:
     )
 }
 
+func browserScrollableWallpaperRect(for imageSize: CGSize, anchor: CGPoint, zoom: Double) -> CGRect {
+    guard imageSize.width > 0, imageSize.height > 0 else { return .zero }
+    let clampedZoom = max(zoom, 0.001)
+    let drawSize = CGSize(width: imageSize.width * clampedZoom, height: imageSize.height * clampedZoom)
+    return CGRect(
+        x: anchor.x - drawSize.width / 2,
+        y: anchor.y - drawSize.height / 2,
+        width: drawSize.width,
+        height: drawSize.height
+    )
+}
+
+func browserWallpaperTileSize(for imageSize: CGSize, fixed: Bool, zoom: Double) -> CGSize {
+    guard imageSize.width > 0, imageSize.height > 0 else { return .zero }
+    let clampedZoom = max(zoom, 0.001)
+    if fixed {
+        return imageSize
+    }
+    return CGSize(width: imageSize.width * clampedZoom, height: imageSize.height * clampedZoom)
+}
+
+func browserWallpaperTileOrigin(anchor: CGPoint, tileSize: CGSize, in viewportRect: CGRect) -> CGPoint {
+    guard tileSize.width > 0, tileSize.height > 0 else { return viewportRect.origin }
+
+    func wrappedStart(minEdge: CGFloat, anchor: CGFloat, step: CGFloat) -> CGFloat {
+        let offset = (anchor - minEdge).truncatingRemainder(dividingBy: step)
+        let positiveOffset = offset >= 0 ? offset : offset + step
+        return minEdge + positiveOffset - step
+    }
+
+    return CGPoint(
+        x: wrappedStart(minEdge: viewportRect.minX, anchor: anchor.x, step: tileSize.width),
+        y: wrappedStart(minEdge: viewportRect.minY, anchor: anchor.y, step: tileSize.height)
+    )
+}
+
 func browserTickerVisibleRects(in stripRect: CGRect, occludingRects: [CGRect]) -> [CGRect] {
     guard !stripRect.isNull, !stripRect.isEmpty else { return [] }
 
@@ -518,20 +554,39 @@ private struct BrowserCanvasBackgroundView: View {
             }
 
             if let image = wallpaperImage {
+                let viewportRect = browserWallpaperViewportRect(in: canvasSize, topInset: browserTopInset)
                 if viewModel.settings.browserWallpaperTiled {
                     GeometryReader { proxy in
                         Canvas { context, size in
-                            let tileSize = image.size
+                            let tileSize = browserWallpaperTileSize(
+                                for: image.size,
+                                fixed: viewModel.settings.browserWallpaperFixed,
+                                zoom: viewModel.zoom
+                            )
                             guard tileSize.width > 0, tileSize.height > 0 else { return }
-                            let columns = Int(ceil(size.width / tileSize.width)) + 1
-                            let rows = Int(ceil(size.height / tileSize.height)) + 1
+                            let anchor = if viewModel.settings.browserWallpaperFixed {
+                                viewportRect.origin
+                            } else {
+                                browserScrollableWallpaperRect(
+                                    for: image.size,
+                                    anchor: viewModel.canvasPoint(for: FrievePoint(x: 0, y: 0), in: size),
+                                    zoom: viewModel.zoom
+                                ).origin
+                            }
+                            let startOrigin = browserWallpaperTileOrigin(anchor: anchor, tileSize: tileSize, in: viewportRect)
+                            let columns = Int(ceil((viewportRect.maxX - startOrigin.x) / tileSize.width)) + 1
+                            let rows = Int(ceil((viewportRect.maxY - startOrigin.y) / tileSize.height)) + 1
+                            context.clip(to: Path(viewportRect))
                             for row in 0..<rows {
                                 for column in 0..<columns {
                                     let origin = CGPoint(
-                                        x: CGFloat(column) * tileSize.width,
-                                        y: CGFloat(row) * tileSize.height
+                                        x: startOrigin.x + CGFloat(column) * tileSize.width,
+                                        y: startOrigin.y + CGFloat(row) * tileSize.height
                                     )
-                                    context.draw(Image(nsImage: image), at: origin, anchor: .topLeading)
+                                    context.draw(
+                                        Image(nsImage: image),
+                                        in: CGRect(origin: origin, size: tileSize)
+                                    )
                                 }
                             }
                         }
@@ -540,12 +595,15 @@ private struct BrowserCanvasBackgroundView: View {
                 } else {
                     GeometryReader { proxy in
                         Canvas { context, size in
-                            let viewportRect = browserWallpaperViewportRect(in: size, topInset: browserTopInset)
-                            let drawRect = browserWallpaperRect(
-                                for: image.size,
-                                in: viewportRect,
-                                fixed: viewModel.settings.browserWallpaperFixed
-                            )
+                            let drawRect = if viewModel.settings.browserWallpaperFixed {
+                                browserWallpaperRect(for: image.size, in: viewportRect, fixed: true)
+                            } else {
+                                browserScrollableWallpaperRect(
+                                    for: image.size,
+                                    anchor: viewModel.canvasPoint(for: FrievePoint(x: 0, y: 0), in: size),
+                                    zoom: viewModel.zoom
+                                )
+                            }
                             guard drawRect.width > 0, drawRect.height > 0 else { return }
                             context.clip(to: Path(viewportRect))
                             context.draw(Image(nsImage: image), in: drawRect)
