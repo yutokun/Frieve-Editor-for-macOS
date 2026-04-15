@@ -212,6 +212,15 @@ struct BrowserCardRasterContentView: View {
                         .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
                 }
 
+                if !metadata.detailSummary.isEmpty {
+                    Text(metadata.detailSummary)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(titleAlignment)
+                        .lineLimit(viewModel.settings.browserTextWordWrap ? 2 : 1)
+                        .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
+                }
+
                 if !metadata.badges.isEmpty {
                     Text(metadata.badges.joined(separator: "  ·  "))
                         .font(.caption2)
@@ -258,34 +267,34 @@ private struct BrowserFixedCornerDotsOverlay: View {
 
     private func circle(size: CGFloat) -> some View {
         Circle()
-            .fill(Color.blue.opacity(0.95))
+            .fill(Color.accentColor.opacity(0.98))
             .frame(width: size, height: size)
-            .overlay(Circle().stroke(Color.blue.opacity(0.4), lineWidth: 1))
+            .overlay(Circle().stroke(Color.white.opacity(0.9), lineWidth: 1))
     }
 }
 
 private struct BrowserFoldedMarkerOverlay: View {
     var body: some View {
         GeometryReader { geometry in
-            let size = max(min(geometry.size.width, geometry.size.height) * 0.12, 12)
+            let inset = max(min(geometry.size.width, geometry.size.height) * 0.055, 6)
+            let fontSize = max(min(geometry.size.width, geometry.size.height) * 0.095, 9)
 
-            ZStack {
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(Color(NSColor.windowBackgroundColor).opacity(0.92))
-                RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .stroke(Color.primary.opacity(0.7), lineWidth: 1)
-                Rectangle()
-                    .fill(Color.primary.opacity(0.82))
-                    .frame(width: size * 0.48, height: 1.2)
-                Rectangle()
-                    .fill(Color.primary.opacity(0.82))
-                    .frame(width: 1.2, height: size * 0.48)
-            }
-            .frame(width: size, height: size)
-            .position(
-                x: geometry.size.width - size * 0.9,
-                y: geometry.size.height - size * 1.1
-            )
+            Text("Fold")
+                .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.primary.opacity(0.88))
+                .padding(.horizontal, max(fontSize * 0.45, 5))
+                .padding(.vertical, max(fontSize * 0.22, 3))
+                .background(
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(Color(NSColor.windowBackgroundColor).opacity(0.94))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .stroke(Color.primary.opacity(0.34), lineWidth: 0.8)
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .padding(.trailing, inset)
+                .padding(.bottom, inset)
         }
         .allowsHitTesting(false)
     }

@@ -1226,6 +1226,76 @@ import Testing
 }
 
 @MainActor
+@Test func browserDetailSummaryAddsDedicatedRasterSpace() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.updateSelectedCardTitle("Summary Title")
+
+    let plainCard = try #require(model.selectedCard)
+    let plainMetadata = model.metadata(for: plainCard)
+
+    model.updateSelectedCardFixed(true)
+    model.updateSelectedCardFolded(true)
+
+    let markedCard = try #require(model.selectedCard)
+    let markedMetadata = model.metadata(for: markedCard)
+
+    #expect(markedMetadata.detailSummary == "Fixed · Folded")
+    #expect(markedMetadata.canvasSize.height > plainMetadata.canvasSize.height)
+}
+
+@MainActor
+@Test func browserFoldedCardsRenderDetailSummaryAwayFromTrailingBadge() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.updateSelectedCardTitle("Folded Summary")
+    model.updateSelectedCardFolded(true)
+
+    let card = try #require(model.selectedCard)
+    let metadata = model.metadata(for: card)
+    let canvasSize = metadata.canvasSize
+    let renderer = ImageRenderer(
+        content: BrowserCardRasterContentView(
+            viewModel: model,
+            card: card,
+            metadata: metadata,
+            detailLevel: .full,
+            fillColor: .clear,
+            previewImage: nil,
+            videoPreviewImage: nil,
+            drawingPreviewImage: nil
+        )
+        .frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
+    )
+    renderer.scale = 2
+
+    let image = try #require(renderer.nsImage)
+    let tiffData = try #require(image.tiffRepresentation)
+    let bitmap = try #require(NSBitmapImageRep(data: tiffData))
+    let searchWidth = Int(Double(bitmap.pixelsWide) * 0.65)
+    let startingRow = Int(Double(bitmap.pixelsHigh) * 0.35)
+    var foundCentralSummaryRow: Int?
+
+    for row in startingRow..<bitmap.pixelsHigh {
+        for x in 0..<searchWidth {
+            guard let color = bitmap.colorAt(x: x, y: row)?.usingColorSpace(.deviceRGB) else { continue }
+            if color.alphaComponent > 0.2 &&
+                color.redComponent < 0.4 &&
+                color.greenComponent < 0.4 &&
+                color.blueComponent < 0.4 {
+                foundCentralSummaryRow = row
+                break
+            }
+        }
+        if foundCentralSummaryRow != nil {
+            break
+        }
+    }
+
+    #expect(foundCentralSummaryRow != nil)
+}
+
+@MainActor
 @Test func browserSurfaceSceneRecomputesHitRegionsWhenZoomUsesCachedContent() async throws {
     let suiteName = "FrieveEditorMacTests.browserSurfaceHitRegions"
     let model = WorkspaceViewModel(settings: AppSettings(userDefaults: {

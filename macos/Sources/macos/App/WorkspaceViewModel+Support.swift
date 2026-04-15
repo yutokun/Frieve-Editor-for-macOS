@@ -965,6 +965,8 @@ extension WorkspaceViewModel {
     func buildCardCanvasSize(for card: FrieveCard, summaryText: String, labelLine: String, badges: [String], detailSummary: String) -> CGSize {
         let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : card.title
         let font = self.browserCardTitleNSFont(for: card)
+        let detailFont = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize, weight: .semibold)
+        let badgeFont = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         let maxTextWidth = browserCardMaximumTextWidth(for: card)
         let padding = browserCardContentPadding(for: card)
         let maxTextHeight = ceil((font.ascender - font.descender + font.leading) * 3)
@@ -994,6 +996,30 @@ extension WorkspaceViewModel {
         if browserCardScoreBarLayout(for: card) != nil {
             width = max(width, browserCardScoreBarMinimumWidth(for: card) + padding * 2)
             height += browserCardScoreBarTrackHeight(for: card) + 10
+        }
+
+        if !detailSummary.isEmpty {
+            let detailBounds = NSAttributedString(
+                string: detailSummary,
+                attributes: [.font: detailFont]
+            ).boundingRect(
+                with: CGSize(width: maxTextWidth, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading]
+            )
+            width = max(width, min(ceil(detailBounds.width), maxTextWidth) + padding * 2)
+            height += ceil(detailBounds.height) + 8
+        }
+
+        if !badges.isEmpty {
+            let badgesBounds = NSAttributedString(
+                string: badges.joined(separator: "  ·  "),
+                attributes: [.font: badgeFont]
+            ).boundingRect(
+                with: CGSize(width: maxTextWidth, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading]
+            )
+            width = max(width, min(ceil(badgesBounds.width), maxTextWidth) + padding * 2)
+            height += ceil(badgesBounds.height) + 8
         }
 
         return CGSize(width: width, height: height)
