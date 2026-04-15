@@ -1093,8 +1093,10 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     private var labelGroupInstanceBuffer: MTLBuffer?
     private var linkInstances: [BrowserMetalLinkInstance] = []
     private var linkInstanceBuffer: MTLBuffer?
-    private var textInstances: [BrowserMetalTextInstance] = []
-    private var textInstanceBuffer: MTLBuffer?
+    private var linkTextInstances: [BrowserMetalTextInstance] = []
+    private var linkTextInstanceBuffer: MTLBuffer?
+    private var labelGroupTextInstances: [BrowserMetalTextInstance] = []
+    private var labelGroupTextInstanceBuffer: MTLBuffer?
     private var cardInstances: [BrowserMetalCardInstance] = []
     private var cardInstanceBuffer: MTLBuffer?
     private var atlasEntries: [String: BrowserMetalAtlasEntry] = [:]
@@ -1282,6 +1284,16 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: linkInstances.count)
         }
 
+        if let linkTextInstanceBuffer, !linkTextInstances.isEmpty {
+            renderEncoder.setRenderPipelineState(textPipeline)
+            renderEncoder.setFragmentSamplerState(samplerState, index: 0)
+            renderEncoder.setVertexBytes(&viewport, length: MemoryLayout<BrowserMetalViewportUniforms>.stride, index: 0)
+            renderEncoder.setVertexBuffer(linkTextInstanceBuffer, offset: 0, index: 1)
+            renderEncoder.setFragmentBuffer(linkTextInstanceBuffer, offset: 0, index: 0)
+            renderEncoder.setFragmentTexture(atlasTexture, index: 0)
+            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: linkTextInstances.count)
+        }
+
         if let cardInstanceBuffer, !cardInstances.isEmpty {
             renderEncoder.setRenderPipelineState(cardPipeline)
             renderEncoder.setFragmentSamplerState(samplerState, index: 0)
@@ -1292,14 +1304,14 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: cardInstances.count)
         }
 
-        if let textInstanceBuffer, !textInstances.isEmpty {
+        if let labelGroupTextInstanceBuffer, !labelGroupTextInstances.isEmpty {
             renderEncoder.setRenderPipelineState(textPipeline)
             renderEncoder.setFragmentSamplerState(samplerState, index: 0)
             renderEncoder.setVertexBytes(&viewport, length: MemoryLayout<BrowserMetalViewportUniforms>.stride, index: 0)
-            renderEncoder.setVertexBuffer(textInstanceBuffer, offset: 0, index: 1)
-            renderEncoder.setFragmentBuffer(textInstanceBuffer, offset: 0, index: 0)
+            renderEncoder.setVertexBuffer(labelGroupTextInstanceBuffer, offset: 0, index: 1)
+            renderEncoder.setFragmentBuffer(labelGroupTextInstanceBuffer, offset: 0, index: 0)
             renderEncoder.setFragmentTexture(atlasTexture, index: 0)
-            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: textInstances.count)
+            renderEncoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: labelGroupTextInstances.count)
         }
 
         renderEncoder.endEncoding()
@@ -1319,8 +1331,10 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
             labelGroupInstanceBuffer = nil
             linkInstances.removeAll(keepingCapacity: true)
             linkInstanceBuffer = nil
-            textInstances.removeAll(keepingCapacity: true)
-            textInstanceBuffer = nil
+            linkTextInstances.removeAll(keepingCapacity: true)
+            linkTextInstanceBuffer = nil
+            labelGroupTextInstances.removeAll(keepingCapacity: true)
+            labelGroupTextInstanceBuffer = nil
             cardInstances.removeAll(keepingCapacity: true)
             cardInstanceBuffer = nil
             visibleAtlasKeys.removeAll(keepingCapacity: true)
@@ -1421,14 +1435,25 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     }
 
     private func rebuildTextResources(for scene: BrowserSurfaceSceneSnapshot) {
-        textInstances = buildTextInstances(for: scene)
-        if textInstances.isEmpty {
-            textInstanceBuffer = nil
+        linkTextInstances = buildLinkTextInstances(for: scene)
+        if linkTextInstances.isEmpty {
+            linkTextInstanceBuffer = nil
         } else {
             updateBuffer(
-                &textInstanceBuffer,
-                with: textInstances,
-                minimumLength: MemoryLayout<BrowserMetalTextInstance>.stride * textInstances.count
+                &linkTextInstanceBuffer,
+                with: linkTextInstances,
+                minimumLength: MemoryLayout<BrowserMetalTextInstance>.stride * linkTextInstances.count
+            )
+        }
+
+        labelGroupTextInstances = buildLabelGroupTextInstances(for: scene)
+        if labelGroupTextInstances.isEmpty {
+            labelGroupTextInstanceBuffer = nil
+        } else {
+            updateBuffer(
+                &labelGroupTextInstanceBuffer,
+                with: labelGroupTextInstances,
+                minimumLength: MemoryLayout<BrowserMetalTextInstance>.stride * labelGroupTextInstances.count
             )
         }
     }
@@ -1972,19 +1997,12 @@ private extension BrowserMetalRenderer {
     }
 #endif
 
-    func buildTextInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalTextInstance] {
-        let hasLinkLabels = scene.links.contains(where: { ($0.labelText?.isEmpty == false) && $0.labelPoint != nil })
-        let hasLabelGroupNames = scene.labelGroups.contains(where: \.showsName)
-        guard hasLinkLabels || hasLabelGroupNames else {
-            return []
-        }
-
+    func buildLinkTextInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalTextInstance] {
         let transform = scene.worldToCanvasTransform
         let canvasCenter = CGPoint(x: scene.canvasSize.width * 0.5, y: scene.canvasSize.height * 0.5)
         var instances: [BrowserMetalTextInstance] = []
-        instances.reserveCapacity(scene.links.count + scene.labelGroups.count)
+        instances.reserveCapacity(scene.links.count)
 
-        // Link labels
         for snapshot in scene.links {
             guard let text = snapshot.labelText?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !text.isEmpty,
@@ -2015,7 +2033,21 @@ private extension BrowserMetalRenderer {
             )
         }
 
-        // Label group names
+        trimLabelImageCache(activeKeys: activeLabelKeys(for: scene))
+        return instances
+    }
+
+    func buildLabelGroupTextInstances(for scene: BrowserSurfaceSceneSnapshot) -> [BrowserMetalTextInstance] {
+        guard scene.labelGroups.contains(where: \.showsName) else {
+            trimLabelImageCache(activeKeys: activeLabelKeys(for: scene))
+            return []
+        }
+
+        let transform = scene.worldToCanvasTransform
+        let canvasCenter = CGPoint(x: scene.canvasSize.width * 0.5, y: scene.canvasSize.height * 0.5)
+        var instances: [BrowserMetalTextInstance] = []
+        instances.reserveCapacity(scene.labelGroups.count)
+
         for snapshot in scene.labelGroups {
             guard snapshot.showsName else { continue }
             let pointSize = max(10, min(CGFloat(snapshot.labelSize) * 0.12, 22))
@@ -2055,6 +2087,11 @@ private extension BrowserMetalRenderer {
             )
         }
 
+        trimLabelImageCache(activeKeys: activeLabelKeys(for: scene))
+        return instances
+    }
+
+    func activeLabelKeys(for scene: BrowserSurfaceSceneSnapshot) -> [String] {
         var activeLabelKeys = scene.links.compactMap { snapshot -> String? in
             guard let text = snapshot.labelText?.trimmingCharacters(in: .whitespacesAndNewlines),
                   !text.isEmpty,
@@ -2067,8 +2104,7 @@ private extension BrowserMetalRenderer {
             let pointSize = max(10, min(CGFloat(snapshot.labelSize) * 0.12, 22))
             return "label-group-name|\(snapshot.id)|\(snapshot.name)|\(snapshot.color)|\(Int(pointSize))"
         }
-        trimLabelImageCache(activeKeys: activeLabelKeys)
-        return instances
+        return activeLabelKeys
     }
 
     func makeLinkBodyInstance(
