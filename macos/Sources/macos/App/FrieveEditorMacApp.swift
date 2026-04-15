@@ -209,6 +209,7 @@ private struct FrieveEditorSettingsView: View {
                             Text(position.title).tag(position.rawValue)
                         }
                     }
+                    .pickerStyle(.segmented)
                     .disabled(!settings.browserEditInBrowser)
                 }
 
