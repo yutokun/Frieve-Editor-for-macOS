@@ -316,7 +316,7 @@ final class WorkspaceViewModel: ObservableObject {
     @Published var showLinkLabelEditor: Bool = false
 @Published var statusMessage: String = "Ready"
     var zoom: Double = 1.0
-    @Published var autoScroll: Bool = true {
+    @Published var autoScroll: Bool = false {
         didSet {
             if autoScroll {
                 prepareBrowserAutoScrollForSelectionChange()
@@ -325,7 +325,7 @@ final class WorkspaceViewModel: ObservableObject {
             }
         }
     }
-    @Published var autoZoom: Bool = true {
+    @Published var autoZoom: Bool = false {
         didSet {
             guard autoZoom, selectedTab == .browser else { return }
             zoomToSelection(in: resolvedBrowserCanvasSize())

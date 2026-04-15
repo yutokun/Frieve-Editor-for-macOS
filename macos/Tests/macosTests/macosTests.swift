@@ -15,10 +15,11 @@ import Testing
 }
 
 @MainActor
-@Test func browserDefaultsEnableAutoScroll() async throws {
+@Test func browserDefaultsDisableAutoScrollAndAutoZoom() async throws {
     let model = WorkspaceViewModel()
 
-    #expect(model.autoScroll)
+    #expect(model.autoScroll == false)
+    #expect(model.autoZoom == false)
 }
 
 @MainActor
