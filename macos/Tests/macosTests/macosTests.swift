@@ -2335,7 +2335,7 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         return WorkspaceViewModel(settings: AppSettings(userDefaults: defaults))
     }
 
-    let result = await MainActor.run { () -> (FrievePoint, Bool, FrievePoint) in
+    let result = await MainActor.run { () -> (FrievePoint, Bool, Bool, FrievePoint) in
         model.newDocument()
         let rootID = model.document.sortedCards.first?.id ?? 0
         let childID = model.document.addCard(title: "Child", linkedFrom: rootID)
@@ -2352,7 +2352,9 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         model.autoScroll = true
         model.selectCard(childID)
         let delayedCenter = model.canvasCenter
-        let delayedStep = model.applyBrowserAutoScrollStepIfNeeded(at: CACurrentMediaTime())
+        let baselineTime = CACurrentMediaTime()
+        let delayedStep = model.applyBrowserAutoScrollStepIfNeeded(at: baselineTime + 0.5)
+        let oneSecondStep = model.applyBrowserAutoScrollStepIfNeeded(at: baselineTime + 1.0)
 
         model.settings.browserNoScrollLag = true
         model.canvasCenter = FrievePoint(x: 0.18, y: 0.22)
@@ -2360,13 +2362,14 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         model.selectCard(childID)
         let immediateCenter = model.canvasCenter
 
-        return (delayedCenter, delayedStep, immediateCenter)
+        return (delayedCenter, delayedStep, oneSecondStep, immediateCenter)
     }
 
     #expect(result.0 == FrievePoint(x: 0.18, y: 0.22))
     #expect(result.1 == false)
-    #expect(result.2.x > 0.18)
-    #expect(result.2.y > 0.22)
+    #expect(result.2 == true)
+    #expect(result.3.x > 0.18)
+    #expect(result.3.y > 0.22)
 }
 
 @Test func browserLinkSnapshotUsesWorldCoordinatesForMetalRenderer() async throws {
