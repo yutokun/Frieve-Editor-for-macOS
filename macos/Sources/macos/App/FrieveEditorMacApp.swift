@@ -60,6 +60,21 @@ private struct FrieveEditorSettingsView: View {
         )
     }
 
+    private var browserTickerModeBinding: Binding<Int> {
+        Binding(
+            get: {
+                settings.browserTickerVisible ? settings.browserTickerLines : 0
+            },
+            set: { mode in
+                let normalized = min(max(mode, 0), 2)
+                settings.browserTickerVisible = normalized != 0
+                if normalized != 0 {
+                    settings.browserTickerLines = normalized
+                }
+            }
+        )
+    }
+
     private var labelOutlineStyle: Binding<BrowserLabelOutlineStyle> {
         Binding(
             get: {
@@ -129,8 +144,8 @@ private struct FrieveEditorSettingsView: View {
                 Section("Card") {
                     Toggle("Shadow", isOn: $settings.browserCardShadow)
                     Toggle("Gradient", isOn: $settings.browserCardGradation)
-                    Toggle("Ticker", isOn: $settings.browserTickerVisible)
-                    Picker("Ticker Lines", selection: $settings.browserTickerLines) {
+                    Picker("Ticker", selection: browserTickerModeBinding) {
+                        Text("None").tag(0)
                         Text("1 Line").tag(1)
                         Text("2 Lines").tag(2)
                     }
