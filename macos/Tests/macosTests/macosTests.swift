@@ -73,14 +73,15 @@ import Testing
 }
 
 @Test func browserWallpaperRectUsesFillForFixedAndFitOtherwise() throws {
+    let viewport = CGRect(x: 0, y: 0, width: 300, height: 300)
     let fitRect = browserWallpaperRect(
         for: CGSize(width: 400, height: 200),
-        in: CGSize(width: 300, height: 300),
+        in: viewport,
         fixed: false
     )
     let fillRect = browserWallpaperRect(
         for: CGSize(width: 400, height: 200),
-        in: CGSize(width: 300, height: 300),
+        in: viewport,
         fixed: true
     )
 
@@ -2519,6 +2520,21 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         isEditorVisible: false
     )
     #expect(hiddenInsets == BrowserHUDAvoidanceInsets(bottom: 0, trailing: 0))
+}
+
+@Test func browserFixedWallpaperUsesViewportBelowToolbar() {
+    let viewport = browserWallpaperViewportRect(in: CGSize(width: 900, height: 600), topInset: 52)
+    #expect(viewport == CGRect(x: 0, y: 52, width: 900, height: 548))
+
+    let drawRect = browserWallpaperRect(
+        for: CGSize(width: 400, height: 200),
+        in: viewport,
+        fixed: true
+    )
+    #expect(drawRect.minY <= viewport.minY)
+    #expect(drawRect.maxY >= viewport.maxY)
+    #expect(drawRect.midX == viewport.midX)
+    #expect(drawRect.midY == viewport.midY)
 }
 
 @Test func legacyReadSpeedSettingMigratesIntoNewIntegerRange() async throws {

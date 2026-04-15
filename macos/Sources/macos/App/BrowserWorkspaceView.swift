@@ -6,15 +6,19 @@ struct BrowserHUDAvoidanceInsets: Equatable {
     let trailing: CGFloat
 }
 
-func browserWallpaperRect(for imageSize: CGSize, in canvasSize: CGSize, fixed: Bool) -> CGRect {
-    guard imageSize.width > 0, imageSize.height > 0, canvasSize.width > 0, canvasSize.height > 0 else { return .zero }
-    let widthRatio = canvasSize.width / imageSize.width
-    let heightRatio = canvasSize.height / imageSize.height
+func browserWallpaperViewportRect(in canvasSize: CGSize, topInset: CGFloat) -> CGRect {
+    CGRect(x: 0, y: min(max(topInset, 0), canvasSize.height), width: canvasSize.width, height: max(canvasSize.height - topInset, 0))
+}
+
+func browserWallpaperRect(for imageSize: CGSize, in viewportRect: CGRect, fixed: Bool) -> CGRect {
+    guard imageSize.width > 0, imageSize.height > 0, viewportRect.width > 0, viewportRect.height > 0 else { return .zero }
+    let widthRatio = viewportRect.width / imageSize.width
+    let heightRatio = viewportRect.height / imageSize.height
     let scale = fixed ? max(widthRatio, heightRatio) : min(widthRatio, heightRatio)
     let drawSize = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
     return CGRect(
-        x: (canvasSize.width - drawSize.width) / 2,
-        y: (canvasSize.height - drawSize.height) / 2,
+        x: viewportRect.midX - drawSize.width / 2,
+        y: viewportRect.midY - drawSize.height / 2,
         width: drawSize.width,
         height: drawSize.height
     )
@@ -536,12 +540,14 @@ private struct BrowserCanvasBackgroundView: View {
                 } else {
                     GeometryReader { proxy in
                         Canvas { context, size in
+                            let viewportRect = browserWallpaperViewportRect(in: size, topInset: browserTopInset)
                             let drawRect = browserWallpaperRect(
                                 for: image.size,
-                                in: size,
+                                in: viewportRect,
                                 fixed: viewModel.settings.browserWallpaperFixed
                             )
                             guard drawRect.width > 0, drawRect.height > 0 else { return }
+                            context.clip(to: Path(viewportRect))
                             context.draw(Image(nsImage: image), in: drawRect)
                         }
                         .frame(width: proxy.size.width, height: proxy.size.height)
