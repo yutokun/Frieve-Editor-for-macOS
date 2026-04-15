@@ -2581,6 +2581,29 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(model.browserCardTextOverlayMaxWidth(in: CGSize(width: 1200, height: 800)) == nil)
 }
 
+@MainActor
+@Test func browserTextDisplayModeMapsBetweenSettingsAndTabs() {
+    let defaults = UserDefaults(suiteName: "FrieveEditorMacTests.browserTextDisplayMode")!
+    defaults.removePersistentDomain(forName: "FrieveEditorMacTests.browserTextDisplayMode")
+    let settings = AppSettings(userDefaults: defaults)
+
+    #expect(browserTextDisplayMode(textVisible: false, centered: false) == .none)
+    #expect(browserTextDisplayMode(textVisible: true, centered: false) == .leftTop)
+    #expect(browserTextDisplayMode(textVisible: true, centered: true) == .center)
+
+    applyBrowserTextDisplayMode(.none, to: settings)
+    #expect(settings.browserTextVisible == false)
+    #expect(settings.browserTextCentering == false)
+
+    applyBrowserTextDisplayMode(.leftTop, to: settings)
+    #expect(settings.browserTextVisible == true)
+    #expect(settings.browserTextCentering == false)
+
+    applyBrowserTextDisplayMode(.center, to: settings)
+    #expect(settings.browserTextVisible == true)
+    #expect(settings.browserTextCentering == true)
+}
+
 @Test func browserSurfaceAppliesConfiguredAntialiasingSampleCount() async throws {
     let sampleCount = await MainActor.run { () -> Int in
         let defaults = UserDefaults(suiteName: "FrieveEditorMacTests.browserSampleCount")!

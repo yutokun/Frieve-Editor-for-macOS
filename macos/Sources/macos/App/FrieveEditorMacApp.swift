@@ -32,6 +32,42 @@ struct FrieveEditorMacApp: App {
     }
 }
 
+enum BrowserTextDisplayMode: Int, CaseIterable, Identifiable {
+    case none
+    case leftTop
+    case center
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .none: "None"
+        case .leftTop: "Left Top"
+        case .center: "Center"
+        }
+    }
+}
+
+func browserTextDisplayMode(textVisible: Bool, centered: Bool) -> BrowserTextDisplayMode {
+    guard textVisible else { return .none }
+    return centered ? .center : .leftTop
+}
+
+@MainActor
+func applyBrowserTextDisplayMode(_ mode: BrowserTextDisplayMode, to settings: AppSettings) {
+    switch mode {
+    case .none:
+        settings.browserTextVisible = false
+        settings.browserTextCentering = false
+    case .leftTop:
+        settings.browserTextVisible = true
+        settings.browserTextCentering = false
+    case .center:
+        settings.browserTextVisible = true
+        settings.browserTextCentering = true
+    }
+}
+
 private struct FrieveEditorSettingsView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
     @ObservedObject var settings: AppSettings
@@ -99,6 +135,20 @@ private struct FrieveEditorSettingsView: View {
             set: { style in
                 settings.browserLabelCircleVisible = style == .circle || style == .ellipse
                 settings.browserLabelRectangleVisible = style == .rectangle || style == .ellipse
+            }
+        )
+    }
+
+    private var browserTextDisplayModeBinding: Binding<BrowserTextDisplayMode> {
+        Binding(
+            get: {
+                browserTextDisplayMode(
+                    textVisible: settings.browserTextVisible,
+                    centered: settings.browserTextCentering
+                )
+            },
+            set: { mode in
+                applyBrowserTextDisplayMode(mode, to: settings)
             }
         )
     }
@@ -194,8 +244,12 @@ private struct FrieveEditorSettingsView: View {
                 }
 
                 Section("Body Text on Background") {
-                    Toggle("Show Card Text", isOn: $settings.browserTextVisible)
-                    Toggle("Centering", isOn: $settings.browserTextCentering)
+                    Picker("Display", selection: browserTextDisplayModeBinding) {
+                        ForEach(BrowserTextDisplayMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                     Toggle("Word Wrap", isOn: $settings.browserTextWordWrap)
                 }
 
