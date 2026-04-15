@@ -247,7 +247,7 @@ struct BrowserCardRasterContentView: View {
 
 func browserCardMarkerVisibility(isFixed: Bool, isFolded: Bool) -> (showsFixedDots: Bool, showsFoldedMarker: Bool) {
     (
-        showsFixedDots: isFixed && !isFolded,
+        showsFixedDots: isFixed,
         showsFoldedMarker: isFolded
     )
 }

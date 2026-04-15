@@ -79,6 +79,13 @@ import Testing
     #expect(metrics.inset == 2.5)
 }
 
+@Test func browserCardMarkersShowFixedDotsAndFoldBadgeTogether() throws {
+    let visibility = browserCardMarkerVisibility(isFixed: true, isFolded: true)
+
+    #expect(visibility.showsFixedDots)
+    #expect(visibility.showsFoldedMarker)
+}
+
 @Test func browserWallpaperRectUsesFillForFixedAndFitOtherwise() throws {
     let viewport = CGRect(x: 0, y: 0, width: 300, height: 300)
     let fitRect = browserWallpaperRect(
