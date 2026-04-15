@@ -918,9 +918,6 @@ extension WorkspaceViewModel {
         if card.isTop {
             badges.append("Top")
         }
-        if card.hasMedia {
-            badges.append("Media")
-        }
         return Array(badges.prefix(6))
     }
 
@@ -950,9 +947,6 @@ extension WorkspaceViewModel {
     func buildBrowserDetailSummary(for card: FrieveCard, hasDrawingPreview: Bool) -> String {
         _ = hasDrawingPreview
         var segments: [String] = []
-        if browserShowsMediaPreview(for: card) {
-            segments.append("Media")
-        }
         if card.isFixed {
             segments.append("Fixed")
         }

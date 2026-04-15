@@ -1200,6 +1200,8 @@ import Testing
 
     let card = try #require(model.selectedCard)
     let metadata = model.metadata(for: card)
+    #expect(!metadata.badges.contains("Media"))
+    #expect(!metadata.detailSummary.contains("Media"))
     let canvasSize = metadata.canvasSize
     let renderer = ImageRenderer(
         content: BrowserCardRasterContentView(
