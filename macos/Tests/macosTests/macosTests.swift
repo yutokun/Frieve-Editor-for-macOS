@@ -2138,6 +2138,79 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(result.1)
 }
 
+@Test func browserCardRasterCacheKeyChangesWhenDetailSummaryChanges() async throws {
+    let model = await MainActor.run { WorkspaceViewModel() }
+
+    let changed = await MainActor.run { () -> Bool in
+        let card = FrieveCard(
+            id: 11,
+            title: "Marker Cache",
+            bodyText: "",
+            drawingEncoded: "",
+            visible: true,
+            shape: 0,
+            size: 100,
+            isTop: false,
+            isFixed: false,
+            isFolded: false,
+            position: FrievePoint(x: 0.5, y: 0.5),
+            created: "2026-04-15T00:00:00Z",
+            updated: "2026-04-15T00:00:00Z",
+            viewed: "2026-04-15T00:00:00Z",
+            labelIDs: [],
+            score: 0,
+            imagePath: nil,
+            videoPath: nil
+        )
+        let plainMetadata = BrowserCardMetadata(
+            labelNames: [],
+            labelLine: "",
+            summaryText: "",
+            detailSummary: "",
+            scoreText: nil,
+            badges: [],
+            canvasSize: CGSize(width: 120, height: 52),
+            linkCount: 0,
+            hasDrawingPreview: false,
+            primaryLabelColor: nil,
+            mediaBadgeText: ""
+        )
+        let markedMetadata = BrowserCardMetadata(
+            labelNames: [],
+            labelLine: "",
+            summaryText: "",
+            detailSummary: "Fixed · Folded",
+            scoreText: nil,
+            badges: [],
+            canvasSize: CGSize(width: 120, height: 68),
+            linkCount: 0,
+            hasDrawingPreview: false,
+            primaryLabelColor: nil,
+            mediaBadgeText: ""
+        )
+        let plainSnapshot = BrowserCardLayerSnapshot(
+            card: card,
+            position: card.position,
+            metadata: plainMetadata,
+            isSelected: false,
+            isHovered: false,
+            detailLevel: .full
+        )
+        let markedSnapshot = BrowserCardLayerSnapshot(
+            card: card,
+            position: card.position,
+            metadata: markedMetadata,
+            isSelected: false,
+            isHovered: false,
+            detailLevel: .full
+        )
+
+        return model.browserCardRasterCacheKey(for: plainSnapshot) != model.browserCardRasterCacheKey(for: markedSnapshot)
+    }
+
+    #expect(changed)
+}
+
 @Test func browserArrangeModesMatchMacExpectations() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 

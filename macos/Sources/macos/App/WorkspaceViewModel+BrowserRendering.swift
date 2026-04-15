@@ -127,6 +127,7 @@ extension WorkspaceViewModel {
         [
             String(snapshot.card.id),
             snapshot.card.title,
+            snapshot.metadata.detailSummary,
             snapshot.metadata.scoreText ?? "",
             snapshot.metadata.badges.joined(separator: "|"),
             snapshot.card.drawingEncoded,
