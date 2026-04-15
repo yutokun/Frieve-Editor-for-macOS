@@ -1,6 +1,11 @@
 import SwiftUI
 import AppKit
 
+struct BrowserHUDAvoidanceInsets: Equatable {
+    let bottom: CGFloat
+    let trailing: CGFloat
+}
+
 func browserWallpaperRect(for imageSize: CGSize, in canvasSize: CGSize, fixed: Bool) -> CGRect {
     guard imageSize.width > 0, imageSize.height > 0, canvasSize.width > 0, canvasSize.height > 0 else { return .zero }
     let widthRatio = canvasSize.width / imageSize.width
@@ -89,6 +94,32 @@ private func subtractTickerOcclusion(_ occlusion: CGRect, from rect: CGRect) -> 
     }
 
     return result.filter { !$0.isNull && !$0.isEmpty && $0.width > 0 && $0.height > 0 }
+}
+
+func browserHUDAvoidanceInsets(
+    placement: BrowserInlineEditorPosition,
+    editorFrame: CGRect,
+    canvasSize: CGSize,
+    isEditorVisible: Bool
+) -> BrowserHUDAvoidanceInsets {
+    guard isEditorVisible else {
+        return BrowserHUDAvoidanceInsets(bottom: 0, trailing: 0)
+    }
+
+    switch placement {
+    case .browserRight:
+        return BrowserHUDAvoidanceInsets(
+            bottom: 0,
+            trailing: max(canvasSize.width - editorFrame.minX, 0)
+        )
+    case .browserBottom:
+        return BrowserHUDAvoidanceInsets(
+            bottom: max(canvasSize.height - editorFrame.minY, 0),
+            trailing: 0
+        )
+    case .underCard:
+        return BrowserHUDAvoidanceInsets(bottom: 0, trailing: 0)
+    }
 }
 
 struct BrowserFlowingLineParticle: Hashable {
@@ -250,6 +281,7 @@ struct BrowserWorkspaceView: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let hudAvoidance = currentBrowserHUDAvoidanceInsets(in: geometry.size)
             ZStack(alignment: .bottomTrailing) {
                 BrowserLayerSurfaceView(viewModel: viewModel, browserTopInset: browserTopInset)
 
@@ -263,9 +295,27 @@ struct BrowserWorkspaceView: View {
                     }
                     BrowserCanvasHUD(viewModel: viewModel, canvasSize: geometry.size)
                 }
-                .padding(16)
+                .padding(.top, 16)
+                .padding(.leading, 16)
+                .padding(.bottom, 16 + hudAvoidance.bottom)
+                .padding(.trailing, 16 + hudAvoidance.trailing)
             }
         }
+    }
+
+    private func currentBrowserHUDAvoidanceInsets(in canvasSize: CGSize) -> BrowserHUDAvoidanceInsets {
+        let placement = BrowserInlineEditorPosition(rawValue: viewModel.settings.browserEditInBrowserPosition) ?? .underCard
+        let editorFrame = viewModel.browserInlineEditorFrame(
+            for: viewModel.browserInlineEditorCard,
+            in: canvasSize,
+            topInset: browserTopInset
+        )
+        return browserHUDAvoidanceInsets(
+            placement: placement,
+            editorFrame: editorFrame,
+            canvasSize: canvasSize,
+            isEditorVisible: viewModel.browserShowsInlineEditorOverlay
+        )
     }
 }
 

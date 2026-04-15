@@ -2493,6 +2493,34 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(values.3.width == 900)
 }
 
+@Test func browserHUDAvoidanceInsetsFollowDockedInlineEditor() {
+    let rightInsets = browserHUDAvoidanceInsets(
+        placement: .browserRight,
+        editorFrame: CGRect(x: 580, y: 52, width: 320, height: 548),
+        canvasSize: CGSize(width: 900, height: 600),
+        isEditorVisible: true
+    )
+    #expect(rightInsets.trailing == 320)
+    #expect(rightInsets.bottom == 0)
+
+    let bottomInsets = browserHUDAvoidanceInsets(
+        placement: .browserBottom,
+        editorFrame: CGRect(x: 0, y: 380, width: 900, height: 220),
+        canvasSize: CGSize(width: 900, height: 600),
+        isEditorVisible: true
+    )
+    #expect(bottomInsets.trailing == 0)
+    #expect(bottomInsets.bottom == 220)
+
+    let hiddenInsets = browserHUDAvoidanceInsets(
+        placement: .browserRight,
+        editorFrame: CGRect(x: 580, y: 52, width: 320, height: 548),
+        canvasSize: CGSize(width: 900, height: 600),
+        isEditorVisible: false
+    )
+    #expect(hiddenInsets == BrowserHUDAvoidanceInsets(bottom: 0, trailing: 0))
+}
+
 @Test func legacyReadSpeedSettingMigratesIntoNewIntegerRange() async throws {
     let suiteName = "FrieveEditorMacTests.legacyReadSpeedMigration"
 
