@@ -193,7 +193,7 @@ private struct FrieveEditorSettingsView: View {
                     Toggle("Show Label Names", isOn: $settings.browserLabelNameVisible)
                 }
 
-                Section("Text") {
+                Section("Body Text on Background") {
                     Toggle("Show Card Text", isOn: $settings.browserTextVisible)
                     Toggle("Centering", isOn: $settings.browserTextCentering)
                     Toggle("Word Wrap", isOn: $settings.browserTextWordWrap)
