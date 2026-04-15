@@ -75,7 +75,7 @@ func browserInlineEditorContentPadding() -> EdgeInsets {
 }
 
 func browserUnderCardInlineEditorPlacementGap() -> CGFloat {
-    18
+    0
 }
 
 @MainActor
