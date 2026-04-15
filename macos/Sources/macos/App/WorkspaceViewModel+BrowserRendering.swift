@@ -20,6 +20,7 @@ extension WorkspaceViewModel {
                         guard let self else { return }
                         self.mediaThumbnailTasks.remove(cacheKey)
                         self.missingMediaCacheKeys.insert(cacheKey)
+                        self.invalidateCardMetadataForMedia(cachePath: cacheKey)
                         self.markBrowserSurfaceContentDirty()
                         self.markBrowserSurfacePresentationDirty()
                     }
@@ -29,6 +30,7 @@ extension WorkspaceViewModel {
                     guard let self else { return }
                     self.mediaThumbnailTasks.remove(cacheKey)
                     self.cacheMediaImage(thumbnail, forKey: cacheKey)
+                    self.invalidateCardMetadataForMedia(cachePath: cacheKey)
                     self.markBrowserSurfaceContentDirty()
                     self.markBrowserSurfacePresentationDirty()
                 }
@@ -109,6 +111,29 @@ extension WorkspaceViewModel {
 
     func cachedVideoPreviewImage(for card: FrieveCard) -> NSImage? {
         cachedPreviewImage(for: card.videoPath)
+    }
+
+    func cachedMediaAspectRatio(for path: String?) -> CGFloat? {
+        guard let url = mediaURL(for: path) else { return nil }
+        guard let image = mediaImageCache[url.path] else { return nil }
+        let size = image.size
+        guard size.width > 0, size.height > 0 else { return nil }
+        return size.width / size.height
+    }
+
+    func invalidateCardMetadataForMedia(cachePath: String) {
+        var affectedCardIDs: [Int] = []
+        for card in document.cards {
+            let imageMatches = mediaURL(for: card.imagePath)?.path == cachePath
+            let videoMatches = mediaURL(for: card.videoPath)?.path == cachePath
+            if imageMatches || videoMatches {
+                affectedCardIDs.append(card.id)
+            }
+        }
+        guard !affectedCardIDs.isEmpty else { return }
+        for id in affectedCardIDs {
+            cardMetadataByID.removeValue(forKey: id)
+        }
     }
 
     func browserMediaPreviewCacheToken(for path: String?) -> String {

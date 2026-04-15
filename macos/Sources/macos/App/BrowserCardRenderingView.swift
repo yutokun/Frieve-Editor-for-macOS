@@ -152,7 +152,8 @@ struct BrowserCardRasterContentView: View {
         let horizontalAlignment: HorizontalAlignment = isCentered ? .center : .leading
         let titleAlignment: TextAlignment = isCentered ? .center : .leading
         let padding = browserCardContentPadding(for: card)
-        let previewSize = viewModel.browserMediaPreviewSize(for: card)
+        let imagePreviewSize = viewModel.browserImagePreviewSize(for: card)
+        let videoPreviewSize = viewModel.browserVideoPreviewSize(for: card)
         let drawingSize = viewModel.browserDrawingPreviewSize(for: card)
         let hasImagePreview = viewModel.browserShowsImagePreview(for: card)
         let hasVideoPreview = viewModel.browserShowsVideoPreview(for: card)
@@ -164,7 +165,7 @@ struct BrowserCardRasterContentView: View {
         ZStack(alignment: .topLeading) {
             VStack(alignment: horizontalAlignment, spacing: 8) {
                 if hasImagePreview || hasVideoPreview || hasDrawingPreview {
-                    HStack(alignment: .top, spacing: 8) {
+                    HStack(alignment: .center, spacing: 8) {
                         if hasImagePreview {
                             BrowserMediaPreviewView(
                                 viewModel: viewModel,
@@ -172,7 +173,7 @@ struct BrowserCardRasterContentView: View {
                                 kind: .image,
                                 previewImage: previewImage
                             )
-                            .frame(width: previewSize.width, height: previewSize.height)
+                            .frame(width: imagePreviewSize.width, height: imagePreviewSize.height)
                         }
                         if hasVideoPreview {
                             BrowserMediaPreviewView(
@@ -181,7 +182,7 @@ struct BrowserCardRasterContentView: View {
                                 kind: .video,
                                 previewImage: videoPreviewImage
                             )
-                            .frame(width: previewSize.width, height: previewSize.height)
+                            .frame(width: videoPreviewSize.width, height: videoPreviewSize.height)
                         }
                         if hasDrawingPreview {
                             BrowserDrawingOverlay(
@@ -380,27 +381,23 @@ private struct BrowserMediaPreviewView: View {
             if kind == .image, let previewImage {
                 Image(nsImage: previewImage)
                     .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .clipped()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if kind == .image, let image = viewModel.cachedPreviewImage(for: card) {
                 Image(nsImage: image)
                     .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .clipped()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if kind == .video, let previewImage {
                 Image(nsImage: previewImage)
                     .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .clipped()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if kind == .video, let image = viewModel.cachedVideoPreviewImage(for: card) {
                 Image(nsImage: image)
                     .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    .clipped()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if kind == .video {
                 mediaPlaceholder(systemImage: "play.rectangle.fill")
             } else if kind == .image {

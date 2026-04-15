@@ -256,9 +256,24 @@ extension WorkspaceViewModel {
     }
 
     func browserMediaPreviewSize(for card: FrieveCard) -> CGSize {
+        browserMediaPreviewSize(aspectRatio: nil)
+    }
+
+    func browserImagePreviewSize(for card: FrieveCard) -> CGSize {
+        browserMediaPreviewSize(aspectRatio: cachedMediaAspectRatio(for: card.imagePath))
+    }
+
+    func browserVideoPreviewSize(for card: FrieveCard) -> CGSize {
+        browserMediaPreviewSize(aspectRatio: cachedMediaAspectRatio(for: card.videoPath))
+    }
+
+    private func browserMediaPreviewSize(aspectRatio: CGFloat?) -> CGSize {
         let limit = CGFloat(settings.browserImageLimitation)
-        let width = min(max(limit * 1.45, 48), 440)
+        let defaultAspect: CGFloat = 1.45 / 0.92
+        let aspect = max(aspectRatio ?? defaultAspect, 0.05)
         let height = min(max(limit * 0.92, 36), 300)
+        let rawWidth = height * aspect
+        let width = min(max(rawWidth, 48), 440)
         return CGSize(width: width, height: height)
     }
 
@@ -272,10 +287,10 @@ extension WorkspaceViewModel {
     func browserPreviewStripSize(for card: FrieveCard, hasDrawingPreview: Bool? = nil) -> CGSize {
         var itemSizes: [CGSize] = []
         if browserShowsImagePreview(for: card) {
-            itemSizes.append(browserMediaPreviewSize(for: card))
+            itemSizes.append(browserImagePreviewSize(for: card))
         }
         if browserShowsVideoPreview(for: card) {
-            itemSizes.append(browserMediaPreviewSize(for: card))
+            itemSizes.append(browserVideoPreviewSize(for: card))
         }
         if browserShowsDrawingPreview(for: card, hasDrawingPreview: hasDrawingPreview) {
             itemSizes.append(browserDrawingPreviewSize(for: card))
