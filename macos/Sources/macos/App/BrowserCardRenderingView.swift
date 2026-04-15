@@ -336,34 +336,50 @@ private struct BrowserMediaPreviewView: View {
                             .background(.ultraThinMaterial, in: Capsule())
                             .padding(6)
                     }
-            } else if kind == .video, let url = viewModel.mediaURL(for: path) {
-                ZStack {
-                    LinearGradient(colors: [.black.opacity(0.18), .black.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    VStack(spacing: 6) {
-                        Image(systemName: "play.rectangle.fill")
-                            .font(.system(size: 26))
-                        Text(url.lastPathComponent)
-                            .font(.caption2)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.center)
-                    }
-                    .foregroundStyle(.secondary)
-                    .overlay(alignment: .bottomTrailing) {
-                        if !badgeText.isEmpty {
-                            Label(badgeText, systemImage: "film")
-                                .font(.caption2)
-                                .padding(6)
-                                .background(.ultraThinMaterial, in: Capsule())
-                                .padding(6)
-                        }
-                    }
-                }
+            } else if kind == .video {
+                mediaPlaceholder(
+                    systemImage: "play.rectangle.fill",
+                    title: viewModel.mediaURL(for: path)?.lastPathComponent ?? badgeText,
+                    badgeSystemImage: "film"
+                )
+            } else if kind == .image {
+                mediaPlaceholder(
+                    systemImage: "photo",
+                    title: (path.flatMap { URL(fileURLWithPath: $0).lastPathComponent.nilIfEmpty }) ?? badgeText,
+                    badgeSystemImage: "photo"
+                )
             } else {
                 EmptyView()
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Color.white.opacity(0.15)))
+    }
+
+    @ViewBuilder
+    private func mediaPlaceholder(systemImage: String, title: String, badgeSystemImage: String) -> some View {
+        ZStack {
+            LinearGradient(colors: [.black.opacity(0.18), .black.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            VStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 26))
+                Text(title)
+                    .font(.caption2)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+            }
+            .foregroundStyle(.secondary)
+            .padding(8)
+            .overlay(alignment: .bottomTrailing) {
+                if !badgeText.isEmpty {
+                    Label(badgeText, systemImage: badgeSystemImage)
+                        .font(.caption2)
+                        .padding(6)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .padding(6)
+                }
+            }
+        }
     }
 }
 

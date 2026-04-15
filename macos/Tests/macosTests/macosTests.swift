@@ -1092,6 +1092,47 @@ import Testing
 }
 
 @MainActor
+@Test func browserImageAndVideoPlaceholdersRenderAtTopOfCard() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.updateSelectedCardTitle("Preview Title")
+    model.updateSelectedCardImagePath("/tmp/missing-image.png")
+    model.updateSelectedCardVideoPath("/tmp/missing-video.mov")
+
+    let card = try #require(model.selectedCard)
+    let metadata = model.metadata(for: card)
+    let canvasSize = metadata.canvasSize
+    let renderer = ImageRenderer(
+        content: BrowserCardRasterContentView(
+            viewModel: model,
+            card: card,
+            metadata: metadata,
+            detailLevel: .full,
+            fillColor: .clear,
+            previewImage: nil,
+            drawingPreviewImage: nil
+        )
+        .frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
+    )
+    renderer.scale = 2
+
+    let image = try #require(renderer.nsImage)
+    let tiffData = try #require(image.tiffRepresentation)
+    let bitmap = try #require(NSBitmapImageRep(data: tiffData))
+    let firstOpaqueRow = try #require(firstMatchingRowFromTop(in: bitmap) { color in
+        color.alphaComponent > 0.05
+    })
+    let firstDarkRow = try #require(firstMatchingRowFromTop(in: bitmap) { color in
+        color.alphaComponent > 0.2 &&
+        color.redComponent < 0.35 &&
+        color.greenComponent < 0.35 &&
+        color.blueComponent < 0.35
+    })
+
+    #expect(firstOpaqueRow < firstDarkRow)
+}
+
+@MainActor
 @Test func browserSurfaceSceneRecomputesHitRegionsWhenZoomUsesCachedContent() async throws {
     let suiteName = "FrieveEditorMacTests.browserSurfaceHitRegions"
     let model = WorkspaceViewModel(settings: AppSettings(userDefaults: {
