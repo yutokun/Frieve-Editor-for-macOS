@@ -217,12 +217,13 @@ func browserSnowParticles(in size: CGSize, time: TimeInterval) -> [BrowserSnowPa
 func browserPetalParticles(in size: CGSize, time: TimeInterval) -> [BrowserPetalParticle] {
     guard size.width > 0, size.height > 0 else { return [] }
 
-    let globalDrift = sin(time * 0.21) * 22
+    let globalDrift = sin(time * 0.19) * 18 + sin(time * 0.07) * 26
     return (0..<30).map { index in
         let sizeSeed = browserAnimationNoise(index, salt: 3.13)
         let driftSeed = browserAnimationNoise(index, salt: 3.29)
         let phase = browserAnimationNoise(index, salt: 3.47)
         let xSeed = browserAnimationNoise(index, salt: 3.61)
+        let gustSeed = browserAnimationNoise(index, salt: 3.79)
         let width = CGFloat(12 + sizeSeed * 10)
         let height = width * CGFloat(0.62 + driftSeed * 0.18)
         let fallSpeed = 0.028 + sizeSeed * 0.05
@@ -230,7 +231,8 @@ func browserPetalParticles(in size: CGSize, time: TimeInterval) -> [BrowserPetal
         let y = -height + yProgress * (size.height + height * 2)
         let sway = sin(time * (0.55 + driftSeed) + phase * .pi * 2) * CGFloat(20 + driftSeed * 28)
         let flutter = sin(time * (1.4 + driftSeed * 1.2) + Double(index) * 0.9) * CGFloat(6 + driftSeed * 10)
-        let x = CGFloat(xSeed) * size.width + CGFloat(globalDrift) + sway + flutter
+        let gust = sin(time * (0.24 + gustSeed * 0.6) + phase * .pi * 4) * CGFloat(14 + gustSeed * 34)
+        let x = CGFloat(xSeed) * size.width + CGFloat(globalDrift) + sway + flutter + gust
         let rotation = Angle.radians(phase * .pi * 2 + time * (0.35 + driftSeed * 0.9))
         let opacity = 0.14 + sizeSeed * 0.08
         return BrowserPetalParticle(

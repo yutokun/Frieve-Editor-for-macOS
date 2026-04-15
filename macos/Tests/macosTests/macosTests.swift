@@ -144,6 +144,7 @@ import Testing
     #expect(zip(initial, later).allSatisfy { first, second in abs(first.opacity - second.opacity) < 0.0001 })
     #expect(zip(initial, later).contains { first, second in second.center.y > first.center.y + 6 })
     #expect(zip(initial, later).contains { first, second in abs(second.center.x - first.center.x) > 4 })
+    #expect(zip(initial, later).contains { first, second in abs(second.center.x - first.center.x) > 20 })
     #expect(zip(initial, later).contains { first, second in abs(second.rotation.radians - first.rotation.radians) > 0.1 })
 }
 
