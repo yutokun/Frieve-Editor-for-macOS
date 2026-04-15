@@ -545,9 +545,10 @@ private struct BrowserCanvasBackgroundView: View {
 
             if let image = wallpaperImage {
                 let viewportRect = browserWallpaperViewportRect(in: canvasSize, topInset: browserTopInset)
+                let wallpaperAsset = Image(nsImage: image)
                 if viewModel.settings.browserWallpaperTiled {
                     GeometryReader { proxy in
-                        Canvas { context, size in
+                        Canvas(opaque: false, colorMode: .nonLinear, rendersAsynchronously: true) { context, size in
                             let tileSize = browserWallpaperTileSize(
                                 for: image.size,
                                 fixed: viewModel.settings.browserWallpaperFixed,
@@ -574,7 +575,7 @@ private struct BrowserCanvasBackgroundView: View {
                                         y: startOrigin.y + CGFloat(row) * tileSize.height
                                     )
                                     context.draw(
-                                        Image(nsImage: image),
+                                        wallpaperAsset,
                                         in: CGRect(origin: origin, size: tileSize)
                                     )
                                 }
@@ -584,7 +585,7 @@ private struct BrowserCanvasBackgroundView: View {
                     }
                 } else {
                     GeometryReader { proxy in
-                        Canvas { context, size in
+                        Canvas(opaque: false, colorMode: .nonLinear, rendersAsynchronously: true) { context, size in
                             let drawRect = if viewModel.settings.browserWallpaperFixed {
                                 browserWallpaperRect(for: image.size, in: viewportRect, fixed: true)
                             } else {
@@ -596,7 +597,7 @@ private struct BrowserCanvasBackgroundView: View {
                             }
                             guard drawRect.width > 0, drawRect.height > 0 else { return }
                             context.clip(to: Path(viewportRect))
-                            context.draw(Image(nsImage: image), in: drawRect)
+                            context.draw(wallpaperAsset, in: drawRect)
                         }
                         .frame(width: proxy.size.width, height: proxy.size.height)
                     }
