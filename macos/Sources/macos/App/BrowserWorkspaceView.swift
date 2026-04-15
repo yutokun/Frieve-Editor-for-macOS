@@ -70,6 +70,10 @@ func browserCenteredTextVerticalOffset(contentHeight: CGFloat, viewportHeight: C
     return overflow / 2 + 16
 }
 
+func browserInlineEditorContentPadding() -> EdgeInsets {
+    EdgeInsets(top: 20, leading: 14, bottom: 20, trailing: 14)
+}
+
 @MainActor
 private enum BrowserWallpaperImageCache {
     static let cache = NSCache<NSString, NSImage>()
@@ -883,7 +887,7 @@ private struct BrowserInlineEditorOverlay: View {
                     .lineLimit(1)
             }
         }
-        .padding(14)
+        .padding(browserInlineEditorContentPadding())
         .frame(width: editorFrame.width, height: editorFrame.height)
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.accentColor.opacity(0.22)))

@@ -2859,6 +2859,15 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(values.1 - values.0 >= 24)
 }
 
+@Test func browserInlineEditorContentPaddingAddsVerticalBreathingRoom() {
+    let padding = browserInlineEditorContentPadding()
+
+    #expect(padding.top == 20)
+    #expect(padding.bottom == 20)
+    #expect(padding.leading == 14)
+    #expect(padding.trailing == 14)
+}
+
 @Test func browserFixedWallpaperUsesViewportBelowToolbar() {
     let viewport = browserWallpaperViewportRect(in: CGSize(width: 900, height: 600), topInset: 52)
     #expect(viewport == CGRect(x: 0, y: 52, width: 900, height: 548))
