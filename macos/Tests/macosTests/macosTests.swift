@@ -2486,40 +2486,48 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
 
     #expect(values.0 == nil)
     #expect(values.1)
-    #expect(values.2.maxX == 900)
-    #expect(values.2.minY == 52)
-    #expect(values.2.height == 548)
-    #expect(values.3.minX == 0)
-    #expect(values.3.maxY == 600)
-    #expect(values.3.width == 900)
+    #expect(values.2.maxX == 884)
+    #expect(values.2.minX == 564)
+    #expect(values.2.minY == 68)
+    #expect(values.2.height == 516)
+    #expect(values.3.minX == 16)
+    #expect(values.3.maxY == 584)
+    #expect(values.3.width == 868)
 }
 
 @Test func browserHUDAvoidanceInsetsFollowDockedInlineEditor() {
     let rightInsets = browserHUDAvoidanceInsets(
         placement: .browserRight,
-        editorFrame: CGRect(x: 580, y: 52, width: 320, height: 548),
+        editorFrame: CGRect(x: 564, y: 68, width: 320, height: 516),
         canvasSize: CGSize(width: 900, height: 600),
         isEditorVisible: true
     )
-    #expect(rightInsets.trailing == 320)
+    #expect(rightInsets.trailing == 336)
     #expect(rightInsets.bottom == 0)
 
     let bottomInsets = browserHUDAvoidanceInsets(
         placement: .browserBottom,
-        editorFrame: CGRect(x: 0, y: 380, width: 900, height: 220),
+        editorFrame: CGRect(x: 16, y: 364, width: 868, height: 220),
         canvasSize: CGSize(width: 900, height: 600),
         isEditorVisible: true
     )
     #expect(bottomInsets.trailing == 0)
-    #expect(bottomInsets.bottom == 220)
+    #expect(bottomInsets.bottom == 236)
 
     let hiddenInsets = browserHUDAvoidanceInsets(
         placement: .browserRight,
-        editorFrame: CGRect(x: 580, y: 52, width: 320, height: 548),
+        editorFrame: CGRect(x: 564, y: 68, width: 320, height: 516),
         canvasSize: CGSize(width: 900, height: 600),
         isEditorVisible: false
     )
     #expect(hiddenInsets == BrowserHUDAvoidanceInsets(bottom: 0, trailing: 0))
+}
+
+@Test func browserViewportSummaryHidesOnlyForDockedInlineEditor() {
+    #expect(browserHidesViewportSummary(placement: .browserRight, isEditorVisible: true))
+    #expect(browserHidesViewportSummary(placement: .browserBottom, isEditorVisible: true))
+    #expect(!browserHidesViewportSummary(placement: .underCard, isEditorVisible: true))
+    #expect(!browserHidesViewportSummary(placement: .browserRight, isEditorVisible: false))
 }
 
 @Test func browserFixedWallpaperUsesViewportBelowToolbar() {

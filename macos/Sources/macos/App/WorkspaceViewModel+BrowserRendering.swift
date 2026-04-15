@@ -177,6 +177,7 @@ extension WorkspaceViewModel {
 
     func browserInlineEditorFrame(for card: FrieveCard?, in size: CGSize, topInset: CGFloat = 0) -> CGRect {
         let position = BrowserInlineEditorPosition(rawValue: settings.browserEditInBrowserPosition) ?? .underCard
+        let outerPadding: CGFloat = 16
         let width: CGFloat = position == .browserRight ? min(max(size.width * 0.34, 320), 460) : 360
         let height: CGFloat = position == .browserBottom ? min(max(size.height * 0.28, 220), 320) : 230
 
@@ -200,17 +201,19 @@ extension WorkspaceViewModel {
                 height: height
             )
         case .browserRight:
+            let topMargin = min(max(topInset + outerPadding, 0), size.height)
             return CGRect(
-                x: max(size.width - width, 0),
-                y: min(max(topInset, 0), size.height),
+                x: max(size.width - width - outerPadding, outerPadding),
+                y: topMargin,
                 width: width,
-                height: max(size.height - topInset, 0)
+                height: max(size.height - topMargin - outerPadding, 0)
             )
         case .browserBottom:
+            let availableWidth = max(size.width - outerPadding * 2, 0)
             return CGRect(
-                x: 0,
-                y: max(size.height - height, 0),
-                width: size.width,
+                x: outerPadding,
+                y: max(size.height - height - outerPadding, topInset + outerPadding),
+                width: availableWidth,
                 height: height
             )
         }

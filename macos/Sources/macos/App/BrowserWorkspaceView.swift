@@ -162,6 +162,13 @@ func browserHUDAvoidanceInsets(
     }
 }
 
+func browserHidesViewportSummary(
+    placement: BrowserInlineEditorPosition,
+    isEditorVisible: Bool
+) -> Bool {
+    isEditorVisible && (placement == .browserRight || placement == .browserBottom)
+}
+
 struct BrowserFlowingLineParticle: Hashable {
     let start: CGPoint
     let end: CGPoint
@@ -369,6 +376,7 @@ private struct BrowserLayerSurfaceView: View {
         GeometryReader { proxy in
             let canvasSize = proxy.size
             let _ = viewModel.browserChromeRevision
+            let inlineEditorPlacement = BrowserInlineEditorPosition(rawValue: viewModel.settings.browserEditInBrowserPosition) ?? .underCard
             ZStack {
                 BrowserCanvasBackgroundView(
                     viewModel: viewModel,
@@ -405,19 +413,24 @@ private struct BrowserLayerSurfaceView: View {
                     )
                 }
 
-                VStack {
-                    Spacer()
-                    HStack(alignment: .bottom) {
+                if !browserHidesViewportSummary(
+                    placement: inlineEditorPlacement,
+                    isEditorVisible: viewModel.browserShowsInlineEditorOverlay
+                ) {
+                    VStack {
                         Spacer()
-                        Text(viewModel.browserViewportSummary(in: canvasSize))
-                            .font(.caption2)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(.ultraThinMaterial, in: Capsule())
+                        HStack(alignment: .bottom) {
+                            Spacer()
+                            Text(viewModel.browserViewportSummary(in: canvasSize))
+                                .font(.caption2)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(.ultraThinMaterial, in: Capsule())
+                        }
                     }
+                    .padding(16)
+                    .allowsHitTesting(false)
                 }
-                .padding(16)
-                .allowsHitTesting(false)
             }
             .contentShape(Rectangle())
             .clipped()
@@ -759,16 +772,9 @@ private struct BrowserInlineEditorOverlay: View {
 
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Inline Browser Editor")
+                Text("Inline Editor")
                     .font(.headline)
                 Spacer()
-                Button {
-                    viewModel.selectedTab = .editor
-                } label: {
-                    Label("Editor", systemImage: "sidebar.right")
-                }
-                .buttonStyle(.borderless)
-                .disabled(!hasSelection)
                 if !viewModel.settings.browserEditInBrowserAlways {
                     Button {
                         viewModel.dismissBrowserInlineEditor()
