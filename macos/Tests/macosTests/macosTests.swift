@@ -2907,8 +2907,8 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
 @Test func browserInlineEditorContentPaddingAddsVerticalBreathingRoom() {
     let padding = browserInlineEditorContentPadding()
 
-    #expect(padding.top == 20)
-    #expect(padding.bottom == 20)
+    #expect(padding.top == 14)
+    #expect(padding.bottom == 14)
     #expect(padding.leading == 14)
     #expect(padding.trailing == 14)
 }

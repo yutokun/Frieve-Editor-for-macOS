@@ -71,7 +71,7 @@ func browserCenteredTextVerticalOffset(contentHeight: CGFloat, viewportHeight: C
 }
 
 func browserInlineEditorContentPadding() -> EdgeInsets {
-    EdgeInsets(top: 20, leading: 14, bottom: 20, trailing: 14)
+    EdgeInsets(top: 14, leading: 14, bottom: 14, trailing: 14)
 }
 
 func browserUnderCardInlineEditorPlacementGap() -> CGFloat {

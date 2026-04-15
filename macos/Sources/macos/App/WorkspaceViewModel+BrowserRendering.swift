@@ -206,7 +206,7 @@ extension WorkspaceViewModel {
         let outerPadding: CGFloat = 16
         let underCardGap = browserUnderCardInlineEditorPlacementGap()
         let width: CGFloat = position == .browserRight ? min(max(size.width * 0.34, 320), 460) : 360
-        let height: CGFloat = position == .browserBottom ? min(max(size.height * 0.28, 220), 320) : 230
+        let height: CGFloat = position == .browserBottom ? min(max(size.height * 0.28, 220), 320) : 270
 
         switch position {
         case .underCard:
