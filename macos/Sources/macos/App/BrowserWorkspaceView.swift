@@ -91,6 +91,62 @@ private func subtractTickerOcclusion(_ occlusion: CGRect, from rect: CGRect) -> 
     return result.filter { !$0.isNull && !$0.isEmpty && $0.width > 0 && $0.height > 0 }
 }
 
+struct BrowserFlowingLineParticle: Hashable {
+    let start: CGPoint
+    let end: CGPoint
+    let lineWidth: CGFloat
+    let opacity: Double
+
+    var isMostlyHorizontal: Bool {
+        abs(end.x - start.x) >= abs(end.y - start.y)
+    }
+}
+
+func browserAnimationNoise(_ index: Int, salt: Double) -> Double {
+    let value = sin(Double(index) * 12.9898 + salt * 78.233) * 43_758.5453
+    return value - floor(value)
+}
+
+func browserFlowingLineParticles(in size: CGSize, time: TimeInterval) -> [BrowserFlowingLineParticle] {
+    guard size.width > 0, size.height > 0 else { return [] }
+
+    return (0..<28).map { index in
+        let orientationSeed = browserAnimationNoise(index, salt: 0.11)
+        let isHorizontal = orientationSeed < 0.5
+        let thickness = CGFloat(1.0 + browserAnimationNoise(index, salt: 0.23) * 2.4)
+        let opacity = 0.10 + browserAnimationNoise(index, salt: 0.31) * 0.16
+        let speed = 0.04 + browserAnimationNoise(index, salt: 0.47) * 0.12
+        let phase = browserAnimationNoise(index, salt: 0.59)
+        let swayPhase = browserAnimationNoise(index, salt: 0.71) * .pi * 2
+        let swaySpeed = 0.7 + browserAnimationNoise(index, salt: 0.83) * 1.4
+        let swayAmplitude = CGFloat(10 + browserAnimationNoise(index, salt: 0.97) * 34)
+
+        if isHorizontal {
+            let travel = CGFloat((time * speed + phase).truncatingRemainder(dividingBy: 1))
+            let yBase = CGFloat(browserAnimationNoise(index, salt: 1.11)) * size.height
+            let y = yBase + sin(time * swaySpeed + swayPhase) * swayAmplitude
+            let x = -size.width + travel * size.width * 2
+            return BrowserFlowingLineParticle(
+                start: CGPoint(x: x, y: y),
+                end: CGPoint(x: x + size.width, y: y),
+                lineWidth: thickness,
+                opacity: opacity
+            )
+        } else {
+            let travel = CGFloat((time * speed + phase).truncatingRemainder(dividingBy: 1))
+            let xBase = CGFloat(browserAnimationNoise(index, salt: 1.27)) * size.width
+            let x = xBase + sin(time * swaySpeed + swayPhase) * swayAmplitude
+            let y = -size.height + travel * size.height * 2
+            return BrowserFlowingLineParticle(
+                start: CGPoint(x: x, y: y),
+                end: CGPoint(x: x, y: y + size.height),
+                lineWidth: thickness,
+                opacity: opacity
+            )
+        }
+    }
+}
+
 struct BrowserWorkspaceView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
     var browserTopInset: CGFloat = 0
@@ -380,13 +436,16 @@ private struct BrowserAnimatedBackgroundOverlay: View {
     }
 
     private func drawFlowingLines(context: inout GraphicsContext, size: CGSize, time: TimeInterval) {
-        let base = browserLinkStrokeColor(for: colorScheme, highlighted: false).withAlphaComponent(0.22)
-        for index in 0..<18 {
-            let progress = CGFloat(((time * 36) + Double(index * 41)).truncatingRemainder(dividingBy: 900)) - 120
+        let baseColor = browserLinkStrokeColor(for: colorScheme, highlighted: false)
+        for particle in browserFlowingLineParticles(in: size, time: time) {
             var path = Path()
-            path.move(to: CGPoint(x: progress, y: CGFloat(index) * 44))
-            path.addLine(to: CGPoint(x: progress + 220, y: CGFloat(index) * 44 + 70))
-            context.stroke(path, with: .color(Color(nsColor: base)), lineWidth: index.isMultiple(of: 3) ? 2.5 : 1.2)
+            path.move(to: particle.start)
+            path.addLine(to: particle.end)
+            context.stroke(
+                path,
+                with: .color(Color(nsColor: baseColor).opacity(particle.opacity)),
+                lineWidth: particle.lineWidth
+            )
         }
     }
 

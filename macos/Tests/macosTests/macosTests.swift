@@ -96,6 +96,25 @@ import Testing
     #expect(dark?.redComponent != light?.redComponent || dark?.greenComponent != light?.greenComponent || dark?.blueComponent != light?.blueComponent)
 }
 
+@Test func browserFlowingLineParticlesMixHorizontalAndVerticalMotion() throws {
+    let particles = browserFlowingLineParticles(in: CGSize(width: 1280, height: 720), time: 2.0)
+
+    #expect(particles.count == 28)
+    #expect(particles.contains(where: { $0.isMostlyHorizontal }))
+    #expect(particles.contains(where: { !$0.isMostlyHorizontal }))
+
+    let advanced = browserFlowingLineParticles(in: CGSize(width: 1280, height: 720), time: 3.0)
+    let movedHorizontally = zip(particles, advanced).contains { initial, next in
+        initial.isMostlyHorizontal && abs(next.start.x - initial.start.x) > 20
+    }
+    let movedVertically = zip(particles, advanced).contains { initial, next in
+        !initial.isMostlyHorizontal && abs(next.start.y - initial.start.y) > 20
+    }
+
+    #expect(movedHorizontally)
+    #expect(movedVertically)
+}
+
 @Test func browserLinkStrokePaletteMatchesColorScheme() throws {
     let light = browserLinkStrokeColor(for: .light, highlighted: false).usingColorSpace(.deviceRGB)
     let dark = browserLinkStrokeColor(for: .dark, highlighted: false).usingColorSpace(.deviceRGB)
