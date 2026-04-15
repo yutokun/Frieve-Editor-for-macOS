@@ -2475,7 +2475,7 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         let rootID = model.document.sortedCards.first?.id ?? 0
         model.selectCard(rootID)
         let card = model.document.card(withID: rootID)!
-        let rightFrame = model.browserInlineEditorFrame(for: card, in: CGSize(width: 900, height: 600))
+        let rightFrame = model.browserInlineEditorFrame(for: card, in: CGSize(width: 900, height: 600), topInset: 52)
         model.clearSelection()
         let noSelectionVisible = model.browserShowsInlineEditorOverlay
         settings.browserEditInBrowserPosition = BrowserInlineEditorPosition.browserBottom.rawValue
@@ -2486,8 +2486,8 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(values.0 == nil)
     #expect(values.1)
     #expect(values.2.maxX == 900)
-    #expect(values.2.minY == 0)
-    #expect(values.2.height == 600)
+    #expect(values.2.minY == 52)
+    #expect(values.2.height == 548)
     #expect(values.3.minX == 0)
     #expect(values.3.maxY == 600)
     #expect(values.3.width == 900)

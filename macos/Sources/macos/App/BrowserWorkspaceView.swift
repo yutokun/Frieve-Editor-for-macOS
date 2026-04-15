@@ -310,7 +310,8 @@ private struct BrowserLayerSurfaceView: View {
                     BrowserInlineEditorOverlay(
                         viewModel: viewModel,
                         card: editingCard,
-                        canvasSize: canvasSize
+                        canvasSize: canvasSize,
+                        browserTopInset: browserTopInset
                     )
                 }
 
@@ -636,9 +637,10 @@ private struct BrowserInlineEditorOverlay: View {
     @ObservedObject var viewModel: WorkspaceViewModel
     let card: FrieveCard?
     let canvasSize: CGSize
+    let browserTopInset: CGFloat
 
     var body: some View {
-        let editorFrame = viewModel.browserInlineEditorFrame(for: card, in: canvasSize)
+        let editorFrame = viewModel.browserInlineEditorFrame(for: card, in: canvasSize, topInset: browserTopInset)
         let hasSelection = card != nil
 
         VStack(alignment: .leading, spacing: 10) {
