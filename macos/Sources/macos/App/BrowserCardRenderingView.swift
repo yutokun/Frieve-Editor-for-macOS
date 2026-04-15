@@ -169,8 +169,7 @@ struct BrowserCardRasterContentView: View {
                             viewModel: viewModel,
                             card: card,
                             kind: .image,
-                            path: card.imagePath,
-                            badgeText: card.imagePath.flatMap { URL(fileURLWithPath: $0).lastPathComponent.nilIfEmpty } ?? "Image",
+                            badgeText: "Image",
                             previewImage: previewImage
                         )
                         .frame(width: previewSize.width, height: previewSize.height)
@@ -180,8 +179,7 @@ struct BrowserCardRasterContentView: View {
                             viewModel: viewModel,
                             card: card,
                             kind: .video,
-                            path: card.videoPath,
-                            badgeText: card.videoPath.flatMap { URL(fileURLWithPath: $0).lastPathComponent.nilIfEmpty } ?? "Video",
+                            badgeText: "Video",
                             previewImage: videoPreviewImage
                         )
                         .frame(width: previewSize.width, height: previewSize.height)
@@ -303,7 +301,6 @@ private struct BrowserMediaPreviewView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
     let card: FrieveCard
     let kind: BrowserMediaPreviewKind
-    let path: String?
     let badgeText: String
     let previewImage: NSImage?
 
@@ -366,13 +363,13 @@ private struct BrowserMediaPreviewView: View {
             } else if kind == .video {
                 mediaPlaceholder(
                     systemImage: "play.rectangle.fill",
-                    title: viewModel.mediaURL(for: path)?.lastPathComponent ?? badgeText,
+                    title: badgeText,
                     badgeSystemImage: "film"
                 )
             } else if kind == .image {
                 mediaPlaceholder(
                     systemImage: "photo",
-                    title: (path.flatMap { URL(fileURLWithPath: $0).lastPathComponent.nilIfEmpty }) ?? badgeText,
+                    title: badgeText,
                     badgeSystemImage: "photo"
                 )
             } else {
