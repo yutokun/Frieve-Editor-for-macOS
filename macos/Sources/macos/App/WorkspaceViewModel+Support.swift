@@ -724,6 +724,7 @@ extension WorkspaceViewModel {
     }
 
     func buildBrowserBadgeItems(for card: FrieveCard, labelNames: [String], linkCount: Int, hasDrawingPreview: Bool) -> [String] {
+        _ = (labelNames, linkCount, hasDrawingPreview)
         var badges: [String] = []
         if card.isTop {
             badges.append("Top")
@@ -733,9 +734,6 @@ extension WorkspaceViewModel {
         }
         if card.hasMedia {
             badges.append("Media")
-        }
-        if hasDrawingPreview {
-            badges.append("Drawing")
         }
         if card.isFolded {
             badges.append("Folded")
@@ -752,12 +750,10 @@ extension WorkspaceViewModel {
     }
 
     func buildBrowserDetailSummary(for card: FrieveCard, hasDrawingPreview: Bool) -> String {
+        _ = hasDrawingPreview
         var segments: [String] = []
         if browserShowsMediaPreview(for: card) {
             segments.append("Media")
-        }
-        if browserShowsDrawingPreview(for: card, hasDrawingPreview: hasDrawingPreview) {
-            segments.append("Drawing")
         }
         if card.isFixed {
             segments.append("Fixed")

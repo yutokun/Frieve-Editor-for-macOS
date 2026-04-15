@@ -858,6 +858,58 @@ import Testing
 }
 
 @MainActor
+@Test func browserDrawingPreviewRendersAboveTitleAndOmitsDrawingLabel() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    model.updateSelectedCardTitle(
+        """
+        Drawing Title
+        Second Line
+        Third Line
+        """
+    )
+    model.updateSelectedCardDrawing("rect 0.1 0.1 0.9 0.9 color=00FF00 fill=00FF00")
+
+    let card = try #require(model.selectedCard)
+    let metadata = model.metadata(for: card)
+    #expect(!metadata.badges.contains("Drawing"))
+    #expect(!metadata.detailSummary.contains("Drawing"))
+
+    let canvasSize = metadata.canvasSize
+    let renderer = ImageRenderer(
+        content: BrowserCardRasterContentView(
+            viewModel: model,
+            card: card,
+            metadata: metadata,
+            detailLevel: .full,
+            fillColor: .clear,
+            previewImage: nil,
+            drawingPreviewImage: model.cachedDrawingPreviewImage(for: card, targetSize: model.browserDrawingPreviewSize(for: card))
+        )
+        .frame(width: canvasSize.width, height: canvasSize.height, alignment: .topLeading)
+    )
+    renderer.scale = 2
+
+    let image = try #require(renderer.nsImage)
+    let tiffData = try #require(image.tiffRepresentation)
+    let bitmap = try #require(NSBitmapImageRep(data: tiffData))
+    let topGreenRow = try #require(firstMatchingRowFromTop(in: bitmap) { color in
+        color.alphaComponent > 0.05 &&
+        color.greenComponent > 0.35 &&
+        color.greenComponent > color.redComponent * 1.4 &&
+        color.greenComponent > color.blueComponent * 1.4
+    })
+    let topDarkRow = try #require(firstMatchingRowFromTop(in: bitmap) { color in
+        color.alphaComponent > 0.2 &&
+        color.redComponent < 0.35 &&
+        color.greenComponent < 0.35 &&
+        color.blueComponent < 0.35
+    })
+
+    #expect(topGreenRow < topDarkRow)
+}
+
+@MainActor
 @Test func browserSurfaceSceneRecomputesHitRegionsWhenZoomUsesCachedContent() async throws {
     let suiteName = "FrieveEditorMacTests.browserSurfaceHitRegions"
     let model = WorkspaceViewModel(settings: AppSettings(userDefaults: {
@@ -1095,6 +1147,104 @@ import Testing
     #expect(!automaticDrawing.contains("stroke="))
     #expect(automaticDrawing.contains("fill=00FF00"))
     #expect(model.selectedDrawingStrokeColorRawValue() == nil)
+}
+
+@Test func windowsEncodedDrawingPayloadBuildsPreviewItems() async throws {
+    func hex(_ value: UInt32) -> String {
+        String(format: "%08X", value)
+    }
+
+    func floatHex(_ value: Float) -> String {
+        hex(value.bitPattern)
+    }
+
+    func colorHex(_ value: Int32) -> String {
+        hex(UInt32(bitPattern: value))
+    }
+
+    func makeItem(type: UInt32, penColor: Int32, brushColor: Int32, count: UInt32, rect: [Float], points: [Float]) -> String {
+        hex(type) +
+        colorHex(penColor) +
+        colorHex(brushColor) +
+        hex(count) +
+        rect.map(floatHex).joined() +
+        points.map(floatHex).joined()
+    }
+
+    let lineItem = makeItem(
+        type: 2,
+        penColor: 0x0000FF,
+        brushColor: -1,
+        count: 0,
+        rect: [0.1, 0.2, 0.8, 0.9],
+        points: []
+    )
+    let rectItem = makeItem(
+        type: 3,
+        penColor: Int32.max,
+        brushColor: 0x00FF00,
+        count: 0,
+        rect: [0.25, 0.3, 0.6, 0.55],
+        points: []
+    )
+    let encoded = hex(2) + hex(UInt32(lineItem.count)) + lineItem + hex(UInt32(rectItem.count)) + rectItem
+
+    let card = FrieveCard(
+        id: 100,
+        title: "Windows Drawing",
+        bodyText: "",
+        drawingEncoded: encoded,
+        visible: true,
+        shape: 2,
+        size: 100,
+        isTop: false,
+        isFixed: false,
+        isFolded: false,
+        position: FrievePoint(x: 0.5, y: 0.5),
+        created: "",
+        updated: "",
+        viewed: "",
+        labelIDs: [],
+        score: 0,
+        imagePath: nil,
+        videoPath: nil
+    )
+
+    let previewItems = card.drawingPreviewItems()
+    #expect(previewItems.count == 2)
+
+    if case let .line(start, end) = try #require(previewItems.first?.kind) {
+        #expect(abs(start.x - 0.1) < 0.0001)
+        #expect(abs(start.y - 0.2) < 0.0001)
+        #expect(abs(end.x - 0.8) < 0.0001)
+        #expect(abs(end.y - 0.9) < 0.0001)
+    } else {
+        Issue.record("Expected a Windows line preview item")
+    }
+    #expect(previewItems.first?.strokeColor == 0x0000FF)
+
+    if case let .rect(bounds) = try #require(previewItems.last?.kind) {
+        #expect(abs(bounds.minX - 0.25) < 0.0001)
+        #expect(abs(bounds.minY - 0.3) < 0.0001)
+        #expect(abs(bounds.maxX - 0.6) < 0.0001)
+        #expect(abs(bounds.maxY - 0.55) < 0.0001)
+    } else {
+        Issue.record("Expected a Windows rect preview item")
+    }
+    #expect(previewItems.last?.strokeColor == nil)
+    #expect(previewItems.last?.fillColor == 0x00FF00)
+}
+
+private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NSColor) -> Bool) -> Int? {
+    for rowFromTop in 0..<bitmap.pixelsHigh {
+        for x in 0..<bitmap.pixelsWide {
+            guard let color = bitmap.colorAt(x: x, y: rowFromTop)?.usingColorSpace(.deviceRGB) else { continue }
+            if predicate(color) {
+                return rowFromTop
+            }
+        }
+    }
+    return nil
 }
 
 @Test func browserShiftEnterCreatesChildCardAndStartsInlineEditing() async throws {

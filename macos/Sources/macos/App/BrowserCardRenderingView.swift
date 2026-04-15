@@ -150,10 +150,19 @@ struct BrowserCardRasterContentView: View {
         let drawingSize = viewModel.browserDrawingPreviewSize(for: card)
         let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : card.title
         let titleFont = Font(viewModel.browserCardTitleNSFont(for: card))
-        let bodyFont = Font(viewModel.browserCardBodyNSFont(for: card))
         let scoreFont = Font(viewModel.browserCardScoreNSFont(for: card))
 
         VStack(alignment: horizontalAlignment, spacing: 8) {
+            if viewModel.browserShowsDrawingPreview(for: card, hasDrawingPreview: metadata.hasDrawingPreview) {
+                BrowserDrawingOverlay(
+                    viewModel: viewModel,
+                    card: card,
+                    targetSize: drawingSize,
+                    drawingPreviewImage: drawingPreviewImage
+                )
+                .frame(maxWidth: .infinity, alignment: .center)
+            }
+
             Text(title)
                 .font(titleFont)
                 .foregroundStyle(.primary)
@@ -189,16 +198,6 @@ struct BrowserCardRasterContentView: View {
                     previewImage: previewImage
                 )
                 .frame(width: previewSize.width, height: previewSize.height)
-                .frame(maxWidth: .infinity, alignment: .center)
-            }
-
-            if viewModel.browserShowsDrawingPreview(for: card, hasDrawingPreview: metadata.hasDrawingPreview) {
-                BrowserDrawingOverlay(
-                    viewModel: viewModel,
-                    card: card,
-                    targetSize: drawingSize,
-                    drawingPreviewImage: drawingPreviewImage
-                )
                 .frame(maxWidth: .infinity, alignment: .center)
             }
 

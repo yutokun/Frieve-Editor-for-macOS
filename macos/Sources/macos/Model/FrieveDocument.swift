@@ -179,6 +179,10 @@ struct FrieveCard: Identifiable, Codable, Hashable {
     }
 
     func drawingPreviewItems() -> [DrawingPreviewItem] {
+        if let windowsItems = Self.previewItemsFromWindowsEncodedDrawing(drawingEncoded) {
+            return windowsItems
+        }
+
         let chunks = drawingEncoded
             .replacingOccurrences(of: "\r\n", with: "\n")
             .replacingOccurrences(of: "\r", with: "\n")
@@ -238,6 +242,161 @@ struct FrieveCard: Identifiable, Codable, Hashable {
 
             return nil
         }
+    }
+
+    private static func previewItemsFromWindowsEncodedDrawing(_ text: String) -> [DrawingPreviewItem]? {
+        let encoded = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !encoded.isEmpty,
+              encoded.count >= 8,
+              encoded.count.isMultiple(of: 8),
+              encoded.range(of: "^[0-9A-Fa-f]+$", options: .regularExpression) != nil
+        else {
+            return nil
+        }
+
+        var cursor = encoded.startIndex
+        guard let itemCount = parseHexUInt32(encoded, from: &cursor) else { return nil }
+        var items: [DrawingPreviewItem] = []
+        items.reserveCapacity(itemCount)
+
+        for _ in 0..<itemCount {
+            guard let itemLength = parseHexUInt32(encoded, from: &cursor),
+                  itemLength > 0,
+                  encoded.distance(from: cursor, to: encoded.endIndex) >= itemLength
+            else {
+                return nil
+            }
+
+            let itemEnd = encoded.index(cursor, offsetBy: itemLength)
+            let itemEncoded = String(encoded[cursor..<itemEnd])
+            guard let item = decodeWindowsDrawingPreviewItem(itemEncoded) else {
+                return nil
+            }
+            if let item {
+                items.append(item)
+            }
+            cursor = itemEnd
+        }
+
+        return cursor == encoded.endIndex ? items : nil
+    }
+
+    private static func decodeWindowsDrawingPreviewItem(_ encoded: String) -> DrawingPreviewItem?? {
+        guard encoded.count >= 64 else { return nil }
+
+        var cursor = encoded.startIndex
+        guard let type = parseHexInt32(encoded, from: &cursor),
+              let penColor = parseHexInt32(encoded, from: &cursor),
+              let brushColor = parseHexInt32(encoded, from: &cursor),
+              let coordinateCount = parseHexUInt32(encoded, from: &cursor)
+        else {
+            return nil
+        }
+
+        var rectValues: [Double] = []
+        rectValues.reserveCapacity(4)
+        for _ in 0..<4 {
+            guard let value = parseHexFloat32(encoded, from: &cursor) else { return nil }
+            rectValues.append(Double(value))
+        }
+
+        var coordinates: [Double] = []
+        coordinates.reserveCapacity(coordinateCount)
+        for _ in 0..<coordinateCount {
+            guard let value = parseHexFloat32(encoded, from: &cursor) else { return nil }
+            coordinates.append(Double(value))
+        }
+
+        guard cursor == encoded.endIndex else { return nil }
+
+        let strokeColor = previewWindowsColor(penColor)
+        let fillColor = previewWindowsColor(brushColor)
+        let rect = CGRect(
+            x: min(rectValues[0], rectValues[2]),
+            y: min(rectValues[1], rectValues[3]),
+            width: abs(rectValues[2] - rectValues[0]),
+            height: abs(rectValues[3] - rectValues[1])
+        )
+
+        switch type {
+        case 1:
+            guard coordinates.count >= 4 else { return .some(nil) }
+            let width = rectValues[2] - rectValues[0] == 0 ? 0.1 : rectValues[2] - rectValues[0]
+            let height = rectValues[3] - rectValues[1] == 0 ? 0.1 : rectValues[3] - rectValues[1]
+            let points = stride(from: 0, to: coordinates.count - 1, by: 2).map {
+                FrievePoint(
+                    x: rectValues[0] + coordinates[$0] * width,
+                    y: rectValues[1] + coordinates[$0 + 1] * height
+                )
+            }
+            guard points.count >= 2 else { return .some(nil) }
+            return .some(DrawingPreviewItem(kind: .polyline(points, closed: false), strokeColor: strokeColor, fillColor: fillColor))
+        case 2:
+            return .some(
+                DrawingPreviewItem(
+                    kind: .line(
+                        FrievePoint(x: rectValues[0], y: rectValues[1]),
+                        FrievePoint(x: rectValues[2], y: rectValues[3])
+                    ),
+                    strokeColor: strokeColor,
+                    fillColor: fillColor
+                )
+            )
+        case 3:
+            return .some(DrawingPreviewItem(kind: .rect(rect), strokeColor: strokeColor, fillColor: fillColor))
+        case 4:
+            return .some(DrawingPreviewItem(kind: .ellipse(rect), strokeColor: strokeColor, fillColor: fillColor))
+        case 5:
+            return .some(
+                DrawingPreviewItem(
+                    kind: .text(FrievePoint(x: rectValues[0], y: rectValues[1]), "Text"),
+                    strokeColor: strokeColor,
+                    fillColor: fillColor
+                )
+            )
+        default:
+            return .some(nil)
+        }
+    }
+
+    private static func parseHexUInt32(_ text: String, from cursor: inout String.Index) -> Int? {
+        guard let chunk = nextHexChunk(in: text, from: &cursor),
+              let value = UInt32(chunk, radix: 16)
+        else {
+            return nil
+        }
+        return Int(value)
+    }
+
+    private static func parseHexInt32(_ text: String, from cursor: inout String.Index) -> Int32? {
+        guard let chunk = nextHexChunk(in: text, from: &cursor),
+              let value = UInt32(chunk, radix: 16)
+        else {
+            return nil
+        }
+        return Int32(bitPattern: value)
+    }
+
+    private static func parseHexFloat32(_ text: String, from cursor: inout String.Index) -> Float? {
+        guard let chunk = nextHexChunk(in: text, from: &cursor),
+              let value = UInt32(chunk, radix: 16)
+        else {
+            return nil
+        }
+        return Float(bitPattern: value)
+    }
+
+    private static func nextHexChunk(in text: String, from cursor: inout String.Index) -> Substring? {
+        guard text.distance(from: cursor, to: text.endIndex) >= 8 else { return nil }
+        let end = text.index(cursor, offsetBy: 8)
+        let chunk = text[cursor..<end]
+        cursor = end
+        return chunk
+    }
+
+    private static func previewWindowsColor(_ color: Int32) -> Int? {
+        guard color >= 0, color != Int32.max else { return nil }
+        return Int(color)
     }
 
     private static func previewNumbers(in text: String) -> [Double] {
