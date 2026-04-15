@@ -112,6 +112,7 @@ extension WorkspaceViewModel {
             snapshot.card.videoPath ?? "",
             snapshot.metadata.mediaBadgeText,
             snapshot.metadata.hasDrawingPreview ? "1" : "0",
+            browserCardScoreBarCacheKey(for: snapshot.card),
             "\(browserDisplaySettingsSignature)",
             "\(Int(snapshot.metadata.canvasSize.width.rounded()))x\(Int(snapshot.metadata.canvasSize.height.rounded()))"
         ].joined(separator: "::")

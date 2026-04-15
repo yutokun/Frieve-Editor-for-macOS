@@ -158,7 +158,7 @@ struct BrowserCardRasterContentView: View {
         let hasDrawingPreview = viewModel.browserShowsDrawingPreview(for: card, hasDrawingPreview: metadata.hasDrawingPreview)
         let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? " " : card.title
         let titleFont = Font(viewModel.browserCardTitleNSFont(for: card))
-        let scoreFont = Font(viewModel.browserCardScoreNSFont(for: card))
+        let scoreBarLayout = viewModel.browserCardScoreBarLayout(for: card)
 
         VStack(alignment: horizontalAlignment, spacing: 8) {
             if hasImagePreview || hasVideoPreview || hasDrawingPreview {
@@ -206,13 +206,9 @@ struct BrowserCardRasterContentView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
 
-            if let scoreText = metadata.scoreText, !scoreText.isEmpty {
-                Text(scoreText)
-                    .font(scoreFont)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.thinMaterial, in: Capsule())
+            if let scoreBarLayout {
+                BrowserCardScoreBarView(layout: scoreBarLayout)
+                    .frame(height: viewModel.browserCardScoreBarTrackHeight(for: card))
                     .frame(maxWidth: .infinity, alignment: isCentered ? .center : .leading)
             }
 
@@ -228,6 +224,42 @@ struct BrowserCardRasterContentView: View {
         }
         .padding(padding)
         .frame(width: metadata.canvasSize.width, height: metadata.canvasSize.height, alignment: .topLeading)
+    }
+}
+
+private struct BrowserCardScoreBarView: View {
+    let layout: BrowserCardScoreBarLayout
+
+    var body: some View {
+        GeometryReader { geometry in
+            let width = max(geometry.size.width, 1)
+            let height = max(geometry.size.height, 1)
+            let startX = width * layout.fillStartFraction
+            let endX = width * layout.fillEndFraction
+            let baselineX = width * layout.baselineFraction
+            let fillWidth = max(endX - startX, 0)
+            let fillColor = layout.isNegative ? Color.red.opacity(0.72) : Color.accentColor.opacity(0.88)
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.primary.opacity(0.10))
+
+                if fillWidth > 0 {
+                    Capsule()
+                        .fill(fillColor)
+                        .frame(width: fillWidth)
+                        .offset(x: startX)
+                }
+
+                if layout.baselineFraction > 0 && layout.baselineFraction < 1 {
+                    Capsule()
+                        .fill(Color.primary.opacity(0.28))
+                        .frame(width: 2, height: height)
+                        .offset(x: baselineX - 1)
+                }
+            }
+        }
+        .accessibilityHidden(true)
     }
 }
 

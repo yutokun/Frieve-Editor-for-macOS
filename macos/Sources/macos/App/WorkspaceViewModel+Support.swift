@@ -7,6 +7,13 @@ private let browserCardBaseTitlePointSize: CGFloat = 13
 private let browserCardBaseContentPadding: CGFloat = 8
 private let browserCardBaseMaximumTextWidth: CGFloat = 200
 
+struct BrowserCardScoreBarLayout: Hashable {
+    let baselineFraction: CGFloat
+    let fillStartFraction: CGFloat
+    let fillEndFraction: CGFloat
+    let isNegative: Bool
+}
+
 struct WorkspaceDocumentUndoSnapshot {
     let document: FrieveDocument
     let selectedCardID: Int?
@@ -267,31 +274,106 @@ extension WorkspaceViewModel {
         return NSFont.systemFont(ofSize: pointSize, weight: .bold)
     }
 
-    func browserCardScoreText(for card: FrieveCard) -> String? {
+    func browserCardScoreMetricValue(for card: FrieveCard) -> Double? {
         guard settings.browserScoreVisible else { return nil }
 
-        let outgoing = document.links.filter { $0.fromCardID == card.id }.count
-        let incoming = document.links.filter { $0.toCardID == card.id }.count
+        let connected = linksByCardID[card.id] ?? document.links.filter { $0.fromCardID == card.id || $0.toCardID == card.id }
+        let outgoing = connected.filter { $0.fromCardID == card.id }.count
+        let incoming = connected.filter { $0.toCardID == card.id }.count
         let type = BrowserScoreDisplayType(rawValue: settings.browserScoreType) ?? .authenticity
 
         switch type {
         case .authenticity:
-            return String(format: "Score %.2f", card.score)
+            return card.score
         case .startingPoint:
-            return "Starting \(outgoing)"
+            return Double(outgoing)
         case .destination:
-            return "Destination \(incoming)"
+            return Double(incoming)
         case .linksOut:
-            return "Out \(outgoing)"
+            return Double(outgoing)
         case .linksIn:
-            return "In \(incoming)"
+            return Double(incoming)
         case .linksTotal:
-            return "Links \(incoming + outgoing)"
+            return Double(incoming + outgoing)
         case .linksInOut:
-            return "In-Out \(incoming - outgoing)"
+            return Double(incoming - outgoing)
         case .textLength:
-            return "Text \(card.bodyText.count)"
+            return Double(card.bodyText.count)
         }
+    }
+
+    func browserCardScoreText(for card: FrieveCard) -> String? {
+        guard let metricValue = browserCardScoreMetricValue(for: card) else { return nil }
+        let type = BrowserScoreDisplayType(rawValue: settings.browserScoreType) ?? .authenticity
+
+        switch type {
+        case .authenticity:
+            return String(format: "Score %.2f", metricValue)
+        case .startingPoint:
+            return "Starting \(Int(metricValue))"
+        case .destination:
+            return "Destination \(Int(metricValue))"
+        case .linksOut:
+            return "Out \(Int(metricValue))"
+        case .linksIn:
+            return "In \(Int(metricValue))"
+        case .linksTotal:
+            return "Links \(Int(metricValue))"
+        case .linksInOut:
+            return "In-Out \(Int(metricValue))"
+        case .textLength:
+            return "Text \(Int(metricValue))"
+        }
+    }
+
+    func browserCardScoreBarLayout(for card: FrieveCard) -> BrowserCardScoreBarLayout? {
+        guard let metricValue = browserCardScoreMetricValue(for: card) else { return nil }
+
+        let metricValues = document.cards.compactMap(browserCardScoreMetricValue(for:))
+        guard !metricValues.isEmpty else { return nil }
+
+        var minimum = metricValues.min() ?? 0
+        var maximum = metricValues.max() ?? 0
+        if minimum == maximum {
+            minimum = min(minimum, 0)
+            maximum = max(maximum, 0)
+        }
+        if minimum == maximum {
+            maximum = minimum + 1
+        }
+
+        let denominator = maximum - minimum
+        let normalize: (Double) -> CGFloat = { value in
+            CGFloat((value - minimum) / denominator)
+        }
+
+        let baseline = minimum < 0 && maximum > 0 ? normalize(0) : (maximum <= 0 ? 1 : 0)
+        let valuePosition = normalize(metricValue)
+        return BrowserCardScoreBarLayout(
+            baselineFraction: min(max(baseline, 0), 1),
+            fillStartFraction: min(max(min(baseline, valuePosition), 0), 1),
+            fillEndFraction: min(max(max(baseline, valuePosition), 0), 1),
+            isNegative: metricValue < 0
+        )
+    }
+
+    func browserCardScoreBarTrackHeight(for card: FrieveCard) -> CGFloat {
+        max(8, ceil(browserCardTitlePointSize(for: card) * 0.5))
+    }
+
+    func browserCardScoreBarMinimumWidth(for card: FrieveCard) -> CGFloat {
+        max(96, ceil(browserCardMaximumTextWidth(for: card) * 0.55))
+    }
+
+    func browserCardScoreBarCacheKey(for card: FrieveCard) -> String {
+        guard let layout = browserCardScoreBarLayout(for: card) else { return "" }
+        return String(
+            format: "%.4f:%.4f:%.4f:%d",
+            layout.baselineFraction,
+            layout.fillStartFraction,
+            layout.fillEndFraction,
+            layout.isNegative ? 1 : 0
+        )
     }
 
     func persistDocument(to url: URL, isAutomatic: Bool) {
@@ -856,21 +938,9 @@ extension WorkspaceViewModel {
             height += tickerHeight + 6
         }
 
-        if let scoreText = browserCardScoreText(for: card), !scoreText.isEmpty {
-            let scoreFont = browserCardScoreNSFont(for: card)
-            let scoreBounds = NSAttributedString(
-                string: scoreText,
-                attributes: [.font: scoreFont]
-            ).boundingRect(
-                with: CGSize(width: maxTextWidth, height: .greatestFiniteMagnitude),
-                options: [.usesLineFragmentOrigin, .usesFontLeading]
-            )
-            let scoreSize = CGSize(
-                width: ceil(scoreBounds.width) + 16,
-                height: ceil(scoreBounds.height) + 8
-            )
-            width = max(width, scoreSize.width + padding * 2)
-            height += scoreSize.height + 8
+        if browserCardScoreBarLayout(for: card) != nil {
+            width = max(width, browserCardScoreBarMinimumWidth(for: card) + padding * 2)
+            height += browserCardScoreBarTrackHeight(for: card) + 10
         }
 
         return CGSize(width: width, height: height)

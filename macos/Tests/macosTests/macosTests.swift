@@ -237,12 +237,56 @@ import Testing
     model.settings.browserTickerVisible = true
     model.invalidateDocumentCaches()
     let stackedMetadata = model.metadata(for: card)
+    let scoreBarLayout = try #require(model.browserCardScoreBarLayout(for: card))
 
     #expect(baseMetadata.scoreText == nil)
     #expect(scoreMetadata.scoreText == "Score 2.75")
     #expect(scoreMetadata.canvasSize.width > baseMetadata.canvasSize.width)
     #expect(scoreMetadata.canvasSize.height > baseMetadata.canvasSize.height)
     #expect(stackedMetadata.canvasSize.height > scoreMetadata.canvasSize.height)
+    #expect(scoreBarLayout.baselineFraction == 0)
+    #expect(scoreBarLayout.fillStartFraction == 0)
+    #expect(scoreBarLayout.fillEndFraction == 1)
+}
+
+@MainActor
+@Test func browserScoreBarCentersSignedInOutValues() throws {
+    let suiteName = "FrieveEditorMacTests.browserScoreSignedBars"
+    let defaults = UserDefaults(suiteName: suiteName)!
+    defaults.removePersistentDomain(forName: suiteName)
+    let model = WorkspaceViewModel(settings: AppSettings(userDefaults: defaults))
+    model.document = FrieveDocument(
+        title: "Score Bars",
+        metadata: [:],
+        cards: [
+            FrieveCard(id: 1, title: "A", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0, y: 0), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil),
+            FrieveCard(id: 2, title: "B", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0, y: 0), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil),
+            FrieveCard(id: 3, title: "C", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0, y: 0), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil)
+        ],
+        links: [
+            FrieveLink(fromCardID: 1, toCardID: 2, directionVisible: true, shape: 0, labelIDs: [], name: ""),
+            FrieveLink(fromCardID: 3, toCardID: 2, directionVisible: true, shape: 0, labelIDs: [], name: ""),
+            FrieveLink(fromCardID: 3, toCardID: 1, directionVisible: true, shape: 0, labelIDs: [], name: "")
+        ],
+        cardLabels: [],
+        linkLabels: [],
+        sourcePath: nil
+    )
+    model.settings.browserScoreVisible = true
+    model.settings.browserScoreType = BrowserScoreDisplayType.linksInOut.rawValue
+    model.invalidateDocumentCaches()
+
+    let negativeLayout = try #require(model.browserCardScoreBarLayout(for: model.document.cards[2]))
+    let positiveLayout = try #require(model.browserCardScoreBarLayout(for: model.document.cards[1]))
+
+    #expect(negativeLayout.isNegative)
+    #expect(negativeLayout.baselineFraction == 0.5)
+    #expect(negativeLayout.fillStartFraction == 0)
+    #expect(negativeLayout.fillEndFraction == 0.5)
+    #expect(positiveLayout.isNegative == false)
+    #expect(positiveLayout.baselineFraction == 0.5)
+    #expect(positiveLayout.fillStartFraction == 0.5)
+    #expect(positiveLayout.fillEndFraction == 1)
 }
 
 @Test func fip2RoundTripPreservesCardAndLinkData() async throws {
