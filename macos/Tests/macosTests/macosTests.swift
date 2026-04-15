@@ -1122,6 +1122,25 @@ import Testing
     #expect(lines.count == 2)
     #expect(lines.map(\.text).contains("子：[Topic] Child：Child body next line"))
     #expect(lines.map(\.text).contains("親：Parent：Parent body"))
+    #expect(lines.map(\.linkName).contains("Related"))
+    #expect(lines.map(\.linkName).contains(""))
+}
+
+@MainActor
+@Test func updatingLinkNameChangesRenderedEditorRelatedLineData() async throws {
+    let model = WorkspaceViewModel()
+    model.newDocument()
+    let rootID = try #require(model.selectedCardID)
+    let childID = model.document.addCard(title: "Child", linkedFrom: rootID)
+    let linkID = try #require(model.document.links.first(where: { $0.toCardID == childID })?.id)
+
+    model.updateLinkName(linkID, name: "Route A")
+
+    let lines = model.editorRelatedCardLines()
+
+    #expect(lines.first?.linkID == linkID)
+    #expect(lines.first?.linkName == "Route A")
+    #expect(model.document.links.first(where: { $0.id == linkID })?.name == "Route A")
 }
 
 @Test func drawingToolsNoLongerIncludeTextTool() async throws {

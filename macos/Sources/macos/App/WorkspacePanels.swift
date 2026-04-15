@@ -30,9 +30,14 @@ struct EditorWorkspaceView: View {
                             ScrollView {
                                 LazyVStack(alignment: .leading, spacing: 6) {
                                     ForEach(viewModel.editorRelatedCardLines()) { line in
-                                        Text(line.text)
-                                            .font(.body.monospaced())
-                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            TextField("Link name", text: viewModel.bindingForLinkName(line.linkID), prompt: Text("No link name"))
+                                                .textFieldStyle(.roundedBorder)
+                                            Text(line.text)
+                                                .font(.body.monospaced())
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                        .padding(.vertical, 2)
                                     }
                                 }
                             }

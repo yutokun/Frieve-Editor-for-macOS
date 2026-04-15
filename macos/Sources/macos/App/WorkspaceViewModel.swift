@@ -280,11 +280,13 @@ struct BrowserSurfaceContentCacheEntry {
 }
 
 struct EditorRelatedCardLine: Identifiable, Hashable {
+    let linkID: UUID
     let cardID: Int
     let relation: String
+    let linkName: String
     let text: String
 
-    var id: Int { cardID }
+    var id: UUID { linkID }
 }
 
 @MainActor

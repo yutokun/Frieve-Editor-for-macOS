@@ -1738,6 +1738,14 @@ func browseFrieveSite() {
         }
     }
 
+    func updateLinkName(_ linkID: UUID, name: String) {
+        guard let index = document.links.firstIndex(where: { $0.id == linkID }) else { return }
+        guard document.links[index].name != name else { return }
+        registerUndoCheckpoint()
+        document.links[index].name = name
+        noteDocumentMutation(status: "Updated link name")
+    }
+
     // MARK: - Batch Conversion
 
     func batchChangeAllCardsShape(to shape: Int) {

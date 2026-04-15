@@ -16,6 +16,17 @@ extension WorkspaceViewModel {
         )
     }
 
+    func bindingForLinkName(_ linkID: UUID) -> Binding<String> {
+        Binding(
+            get: { [weak self] in
+                self?.document.links.first(where: { $0.id == linkID })?.name ?? ""
+            },
+            set: { [weak self] newValue in
+                self?.updateLinkName(linkID, name: newValue)
+            }
+        )
+    }
+
     func bindingForSelectedLabels() -> Binding<String> {
         Binding(
             get: { [weak self] in
