@@ -65,7 +65,9 @@ func browserTextOverlayViewportRect(in canvasSize: CGSize, topInset: CGFloat) ->
 }
 
 func browserCenteredTextVerticalOffset(contentHeight: CGFloat, viewportHeight: CGFloat) -> CGFloat {
-    max((contentHeight - viewportHeight) / 2, 0)
+    let overflow = contentHeight - viewportHeight
+    guard overflow > 0 else { return 0 }
+    return overflow / 2 + 16
 }
 
 @MainActor

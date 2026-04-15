@@ -2798,7 +2798,7 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
 }
 
 @Test func browserCenteredTextOffsetGrowsWhenContentOverflowsViewport() {
-    #expect(browserCenteredTextVerticalOffset(contentHeight: 700, viewportHeight: 500) == 100)
+    #expect(browserCenteredTextVerticalOffset(contentHeight: 700, viewportHeight: 500) == 116)
     #expect(browserCenteredTextVerticalOffset(contentHeight: 400, viewportHeight: 500) == 0)
 }
 
