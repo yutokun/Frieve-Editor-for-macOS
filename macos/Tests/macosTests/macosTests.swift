@@ -125,6 +125,16 @@ import Testing
     #expect(zip(initial, later).contains { first, second in abs(second.rect.midX - first.rect.midX) > 6 })
 }
 
+@Test func browserSnowParticlesFallWithSideDrift() throws {
+    let initial = browserSnowParticles(in: CGSize(width: 1280, height: 720), time: 1.0)
+    let later = browserSnowParticles(in: CGSize(width: 1280, height: 720), time: 2.0)
+
+    #expect(initial.count == 64)
+    #expect(Set(initial.map { Int($0.rect.width.rounded()) }).count >= 4)
+    #expect(zip(initial, later).contains { first, second in second.rect.midY > first.rect.midY + 8 })
+    #expect(zip(initial, later).contains { first, second in abs(second.rect.midX - first.rect.midX) > 4 })
+}
+
 @Test func browserLinkStrokePaletteMatchesColorScheme() throws {
     let light = browserLinkStrokeColor(for: .light, highlighted: false).usingColorSpace(.deviceRGB)
     let dark = browserLinkStrokeColor(for: .dark, highlighted: false).usingColorSpace(.deviceRGB)

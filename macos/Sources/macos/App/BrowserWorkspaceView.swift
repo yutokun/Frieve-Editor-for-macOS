@@ -108,6 +108,11 @@ struct BrowserBubbleParticle: Hashable {
     let lineWidth: CGFloat
 }
 
+struct BrowserSnowParticle: Hashable {
+    let rect: CGRect
+    let opacity: Double
+}
+
 func browserAnimationNoise(_ index: Int, salt: Double) -> Double {
     let value = sin(Double(index) * 12.9898 + salt * 78.233) * 43_758.5453
     return value - floor(value)
@@ -174,6 +179,30 @@ func browserBubbleParticles(in size: CGSize, time: TimeInterval) -> [BrowserBubb
             rect: CGRect(x: x - diameter / 2, y: y - diameter / 2, width: diameter, height: diameter),
             opacity: opacity,
             lineWidth: 1 + CGFloat(driftSeed * 1.8)
+        )
+    }
+}
+
+func browserSnowParticles(in size: CGSize, time: TimeInterval) -> [BrowserSnowParticle] {
+    guard size.width > 0, size.height > 0 else { return [] }
+
+    let globalDrift = sin(time * 0.32) * 18
+    return (0..<64).map { index in
+        let sizeSeed = browserAnimationNoise(index, salt: 2.11)
+        let phase = browserAnimationNoise(index, salt: 2.29)
+        let xSeed = browserAnimationNoise(index, salt: 2.47)
+        let driftSeed = browserAnimationNoise(index, salt: 2.61)
+        let diameter = CGFloat(2 + sizeSeed * 5)
+        let fallSpeed = 0.045 + sizeSeed * 0.07
+        let yProgress = CGFloat((time * fallSpeed + phase).truncatingRemainder(dividingBy: 1))
+        let y = -diameter + yProgress * (size.height + diameter * 2)
+        let localDrift = sin(time * (0.8 + driftSeed * 1.6) + phase * .pi * 2) * CGFloat(8 + driftSeed * 18)
+        let gust = sin(time * 0.55 + Double(index) * 0.33) * CGFloat(6 + driftSeed * 10)
+        let x = CGFloat(xSeed) * size.width + CGFloat(globalDrift) + localDrift + gust
+        let opacity = 0.12 + sizeSeed * 0.18
+        return BrowserSnowParticle(
+            rect: CGRect(x: x - diameter / 2, y: y - diameter / 2, width: diameter, height: diameter),
+            opacity: opacity
         )
     }
 }
@@ -490,18 +519,12 @@ private struct BrowserAnimatedBackgroundOverlay: View {
     }
 
     private func drawSnow(context: inout GraphicsContext, size: CGSize, time: TimeInterval) {
-        let color = Color.white.opacity(colorScheme == .dark ? 0.24 : 0.18)
-        for index in 0..<40 {
-            let normalized = Double(index) / 40
-            let xOffset = CGFloat(sin(time * 0.7 + normalized * 12) * 18)
-            let x = CGFloat((normalized * 927).truncatingRemainder(dividingBy: 1)) * max(size.width, 1) + xOffset
-            let yProgress = CGFloat(((time * 0.06) + normalized * 1.7).truncatingRemainder(dividingBy: 1))
-            let y = (size.height + 40) * yProgress - 20
-            let diameter = CGFloat(3 + index % 4)
-            context.fill(
-                Path(ellipseIn: CGRect(x: x, y: y, width: diameter, height: diameter)),
-                with: .color(color)
-            )
+        let fillColor = Color.white.opacity(colorScheme == .dark ? 0.24 : 0.18)
+        let strokeColor = Color.white.opacity(colorScheme == .dark ? 0.34 : 0.24)
+        for particle in browserSnowParticles(in: size, time: time) {
+            let path = Path(ellipseIn: particle.rect)
+            context.fill(path, with: .color(fillColor.opacity(particle.opacity / 0.24)))
+            context.stroke(path, with: .color(strokeColor.opacity(particle.opacity / 0.24)), lineWidth: 0.8)
         }
     }
 
