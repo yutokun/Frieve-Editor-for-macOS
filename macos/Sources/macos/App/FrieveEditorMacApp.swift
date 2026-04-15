@@ -63,6 +63,9 @@ private struct FrieveEditorSettingsView: View {
     private var labelOutlineStyle: Binding<BrowserLabelOutlineStyle> {
         Binding(
             get: {
+                if settings.browserLabelCircleVisible && settings.browserLabelRectangleVisible {
+                    return .ellipse
+                }
                 if settings.browserLabelCircleVisible {
                     return .circle
                 }
@@ -72,8 +75,8 @@ private struct FrieveEditorSettingsView: View {
                 return .none
             },
             set: { style in
-                settings.browserLabelCircleVisible = style == .circle
-                settings.browserLabelRectangleVisible = style == .rectangle
+                settings.browserLabelCircleVisible = style == .circle || style == .ellipse
+                settings.browserLabelRectangleVisible = style == .rectangle || style == .ellipse
             }
         )
     }
@@ -162,6 +165,7 @@ private struct FrieveEditorSettingsView: View {
                         Text("None").tag(BrowserLabelOutlineStyle.none)
                         Text("Rectangle").tag(BrowserLabelOutlineStyle.rectangle)
                         Text("Circle").tag(BrowserLabelOutlineStyle.circle)
+                        Text("Ellipse").tag(BrowserLabelOutlineStyle.ellipse)
                     }
                     .pickerStyle(.segmented)
                     Toggle("Show Label Names", isOn: $settings.browserLabelNameVisible)

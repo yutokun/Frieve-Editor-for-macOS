@@ -2383,6 +2383,40 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(values.4 == false)
 }
 
+@Test func browserLabelOutlineSupportsEllipse() async throws {
+    let suiteName = "FrieveEditorMacTests.browserLabelEllipse"
+
+    let values = await MainActor.run { () -> (BrowserLabelOutlineStyle, CGRect) in
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let settings = AppSettings(userDefaults: defaults)
+        settings.browserLabelCircleVisible = true
+        settings.browserLabelRectangleVisible = true
+
+        let model = WorkspaceViewModel(settings: settings)
+        model.document = FrieveDocument(
+            title: "Ellipse",
+            metadata: [:],
+            focusedCardID: 1,
+            cards: [
+                FrieveCard(id: 1, title: "A", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0.2, y: 0.5), created: "", updated: "", viewed: "", labelIDs: [1], score: 0, imagePath: nil, videoPath: nil),
+                FrieveCard(id: 2, title: "B", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0.8, y: 0.5), created: "", updated: "", viewed: "", labelIDs: [1], score: 0, imagePath: nil, videoPath: nil)
+            ],
+            links: [],
+            cardLabels: [FrieveLabel(id: 1, name: "Topic", color: 0x3366AA, enabled: true, show: true, hide: false, fold: false, size: 100)],
+            linkLabels: [],
+            sourcePath: nil
+        )
+        let scene = model.browserSurfaceScene(in: CGSize(width: 1200, height: 800))
+        let labelGroup = try! #require(scene.labelGroups.first)
+        return (labelGroup.outlineStyle, labelGroup.worldRect)
+    }
+
+    #expect(values.0 == .ellipse)
+    #expect(values.1.width > values.1.height)
+}
+
 @Test func browserInlineEditorSettingsControlAlwaysShowAndPlacement() async throws {
     let suiteName = "FrieveEditorMacTests.browserInlineEditorSettings"
 

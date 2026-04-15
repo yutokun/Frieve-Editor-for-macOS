@@ -1373,6 +1373,9 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
                 let radius = Float(max(snapshot.worldRect.width, snapshot.worldRect.height) / 2)
                 halfSize = SIMD2(repeating: radius)
                 cornerRadius = -1
+            case .ellipse:
+                halfSize = SIMD2(Float(snapshot.worldRect.width / 2), Float(snapshot.worldRect.height / 2))
+                cornerRadius = -1
             case .rectangle:
                 halfSize = SIMD2(Float(snapshot.worldRect.width / 2), Float(snapshot.worldRect.height / 2))
                 cornerRadius = 14

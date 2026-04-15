@@ -112,6 +112,7 @@ enum BrowserLabelOutlineStyle: String, Hashable {
     case none
     case rectangle
     case circle
+    case ellipse
 }
 
 struct BrowserLinkRenderData: Identifiable {

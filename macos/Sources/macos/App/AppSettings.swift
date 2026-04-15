@@ -303,23 +303,11 @@ final class AppSettings: ObservableObject {
     }
 
     @Published var browserLabelCircleVisible: Bool {
-        didSet {
-            if browserLabelCircleVisible && browserLabelRectangleVisible {
-                browserLabelRectangleVisible = false
-                return
-            }
-            persistIfReady()
-        }
+        didSet { persistIfReady() }
     }
 
     @Published var browserLabelRectangleVisible: Bool {
-        didSet {
-            if browserLabelRectangleVisible && browserLabelCircleVisible {
-                browserLabelCircleVisible = false
-                return
-            }
-            persistIfReady()
-        }
+        didSet { persistIfReady() }
     }
 
     @Published var browserLabelNameVisible: Bool {
@@ -490,10 +478,8 @@ final class AppSettings: ObservableObject {
         browserLinkHemming = userDefaults.object(forKey: Keys.browserLinkHemming) as? Bool ?? false
         browserLinkDirectionVisible = userDefaults.object(forKey: Keys.browserLinkDirectionVisible) as? Bool ?? true
         browserLinkNameVisible = userDefaults.object(forKey: Keys.browserLinkNameVisible) as? Bool ?? true
-        let storedBrowserLabelCircleVisible = userDefaults.object(forKey: Keys.browserLabelCircleVisible) as? Bool ?? false
-        let storedBrowserLabelRectangleVisible = userDefaults.object(forKey: Keys.browserLabelRectangleVisible) as? Bool ?? true
-        browserLabelCircleVisible = storedBrowserLabelCircleVisible && !storedBrowserLabelRectangleVisible
-        browserLabelRectangleVisible = storedBrowserLabelRectangleVisible
+        browserLabelCircleVisible = userDefaults.object(forKey: Keys.browserLabelCircleVisible) as? Bool ?? false
+        browserLabelRectangleVisible = userDefaults.object(forKey: Keys.browserLabelRectangleVisible) as? Bool ?? true
         browserLabelNameVisible = userDefaults.object(forKey: Keys.browserLabelNameVisible) as? Bool ?? true
         browserTextVisible = userDefaults.object(forKey: Keys.browserTextVisible) as? Bool ?? true
         browserTextCentering = userDefaults.object(forKey: Keys.browserTextCentering) as? Bool ?? false

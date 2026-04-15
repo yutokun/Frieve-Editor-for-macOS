@@ -100,6 +100,9 @@ extension WorkspaceViewModel {
     }
 
     var browserLabelOutlineStyle: BrowserLabelOutlineStyle {
+        if settings.browserLabelCircleVisible && settings.browserLabelRectangleVisible {
+            return .ellipse
+        }
         if settings.browserLabelCircleVisible {
             return .circle
         }
