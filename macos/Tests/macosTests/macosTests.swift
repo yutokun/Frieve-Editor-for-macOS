@@ -2566,7 +2566,7 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         }
         model.invalidateDocumentCaches()
 
-        model.settings.browserNoScrollLag = false
+        model.settings.browserNoScrollLag = true
         model.canvasCenter = FrievePoint(x: 0.18, y: 0.22)
         model.autoScroll = true
         model.selectCard(childID)
@@ -2575,7 +2575,7 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         let delayedStep = model.applyBrowserAutoScrollStepIfNeeded(at: baselineTime + 0.5)
         let oneSecondStep = model.applyBrowserAutoScrollStepIfNeeded(at: baselineTime + 1.0)
 
-        model.settings.browserNoScrollLag = true
+        model.settings.browserNoScrollLag = false
         model.canvasCenter = FrievePoint(x: 0.18, y: 0.22)
         model.selectCard(rootID)
         model.selectCard(childID)

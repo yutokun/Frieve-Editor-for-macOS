@@ -6,7 +6,7 @@ extension WorkspaceViewModel {
     private var browserAutoArrangeBaselineInterval: CFTimeInterval { 1.0 / 30.0 }
     private var browserAutoArrangeFrameScale: Double { browserAutoArrangeFrameInterval / browserAutoArrangeBaselineInterval }
     private var browserAutoScrollDuration: CFTimeInterval { 0.28 }
-    private var browserAutoScrollSelectionLagDuration: CFTimeInterval { settings.browserNoScrollLag ? 0 : 1.0 }
+    private var browserAutoScrollSelectionLagDuration: CFTimeInterval { settings.browserNoScrollLag ? 1.0 : 0 }
     private var browserFitBoundsPadding: Double { 0.10 }
     private var browserFitVisibleFraction: Double { 0.94 }
     private var isBrowserAutoArrangeTemporarilySuspended: Bool {
