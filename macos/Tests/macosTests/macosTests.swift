@@ -2521,6 +2521,81 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(results.2 >= 4)
 }
 
+@Test func browserArrangeModeOptionsMatchWindowsVisibleModes() {
+    #expect(browserArrangeModeOptions == [
+        "None",
+        "Normalize",
+        "Repulsion",
+        "Link",
+        "Link(Soft)",
+        "Label",
+        "Label(Soft)",
+        "Index",
+        "Index(Soft)",
+        "Matrix",
+        "Index(Matrix)",
+        "Similarity",
+        "Similarity(Soft)",
+        "Tree"
+    ])
+}
+
+@MainActor
+@Test func browserMissingArrangeModesMoveCards() throws {
+    let modeNames = ["Label(Soft)", "Index(Soft)", "Index(Matrix)", "Similarity(Soft)"]
+    let results = modeNames.map { modeName -> Bool in
+        let model = WorkspaceViewModel()
+        model.document = FrieveDocument(
+            title: modeName,
+            metadata: [:],
+            focusedCardID: 1,
+            cards: [
+                FrieveCard(id: 1, title: "Root", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0.20, y: 0.20), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil),
+                FrieveCard(id: 2, title: "Alpha", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0.80, y: 0.25), created: "", updated: "", viewed: "", labelIDs: [1], score: 0, imagePath: nil, videoPath: nil),
+                FrieveCard(id: 3, title: "Beta", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0.25, y: 0.80), created: "", updated: "", viewed: "", labelIDs: [1], score: 0, imagePath: nil, videoPath: nil),
+                FrieveCard(id: 4, title: "Gamma", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 0.75, y: 0.75), created: "", updated: "", viewed: "", labelIDs: [2], score: 0, imagePath: nil, videoPath: nil)
+            ],
+            links: [
+                FrieveLink(fromCardID: 1, toCardID: 2, directionVisible: true, shape: 0, labelIDs: [], name: ""),
+                FrieveLink(fromCardID: 1, toCardID: 3, directionVisible: true, shape: 0, labelIDs: [], name: ""),
+                FrieveLink(fromCardID: 2, toCardID: 4, directionVisible: true, shape: 0, labelIDs: [], name: "")
+            ],
+            cardLabels: [
+                FrieveLabel(id: 1, name: "Group A", color: 0xFF0000, enabled: true, show: true, hide: false, fold: false, size: 100),
+                FrieveLabel(id: 2, name: "Group B", color: 0x00FF00, enabled: true, show: true, hide: false, fold: false, size: 100)
+            ],
+            linkLabels: []
+        )
+        model.selectedCardID = 1
+        model.selectedCardIDs = [1]
+        model.browserCanvasSize = CGSize(width: 1200, height: 800)
+
+        let before = Dictionary(uniqueKeysWithValues: model.document.cards.map { ($0.id, $0.position) })
+        model.arrangeMode = modeName
+        model.browserAutoArrangeEnabled = true
+        for _ in 0..<8 {
+            model.applyBrowserAutoArrangeStepIfNeeded(force: true)
+        }
+
+        return model.document.cards.contains { card in
+            before[card.id] != card.position
+        }
+    }
+
+    #expect(results.allSatisfy { $0 })
+}
+
+@MainActor
+@Test func browserIndexMatrixRectifiesCircularLayoutCoordinates() throws {
+    let model = WorkspaceViewModel()
+    let original = FrievePoint(x: 0.75, y: 0.75)
+    let rectified = model.rectifiedBrowserMatrixPoint(original)
+
+    #expect(rectified.x > original.x)
+    #expect(rectified.y > original.y)
+    #expect(model.rectifiedBrowserMatrixPoint(.init(x: 0.5, y: 0.5)) == .init(x: 0.5, y: 0.5))
+}
+
 @Test func browserMatrixAndTreeArrangeIgnoreDuplicateVisibleCardIDs() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 

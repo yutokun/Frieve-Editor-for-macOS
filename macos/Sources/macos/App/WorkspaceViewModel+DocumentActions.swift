@@ -930,12 +930,20 @@ extension WorkspaceViewModel {
             applyBrowserLinkAutoArrangeStep(ratio: 0.33, stepScale: stepScale)
         case "Label":
             applyBrowserLabelAutoArrangeStep(stepScale: stepScale)
+        case "Label(Soft)":
+            applyBrowserLabelAutoArrangeStep(stepScale: stepScale * 0.33)
         case "Index":
             applyBrowserIndexAutoArrangeStep(stepScale: stepScale)
+        case "Index(Soft)":
+            applyBrowserIndexAutoArrangeStep(stepScale: stepScale * 0.33)
         case "Matrix":
             applyBrowserMatrixAutoArrangeStep(stepScale: stepScale)
+        case "Index(Matrix)":
+            applyBrowserMatrixAutoArrangeStep(stepScale: stepScale, rectifiesCircularLayout: true)
         case "Similarity":
             applyBrowserSimilarityAutoArrangeStep(stepScale: stepScale)
+        case "Similarity(Soft)":
+            applyBrowserSimilarityAutoArrangeStep(stepScale: stepScale * 0.33)
         case "Tree":
             applyBrowserTreeAutoArrangeStep(stepScale: stepScale)
         default:
@@ -1175,11 +1183,11 @@ extension WorkspaceViewModel {
         finalizeBrowserAutoArrangeMutation()
     }
 
-    func applyBrowserMatrixAutoArrangeStep(stepScale: Double = 1.0) {
+    func applyBrowserMatrixAutoArrangeStep(stepScale: Double = 1.0, rectifiesCircularLayout: Bool = false) {
         let visibleCards = browserAutoArrangeCardsInDocumentOrder()
         guard !visibleCards.isEmpty else { return }
 
-        let targets = computeBrowserMatrixTargets(for: visibleCards)
+        let targets = computeBrowserMatrixTargets(for: visibleCards, rectifiesCircularLayout: rectifiesCircularLayout)
         guard !targets.isEmpty else { return }
 
         let freezeSelectedCards = hasActiveBrowserGesture
@@ -1391,7 +1399,7 @@ extension WorkspaceViewModel {
         )
     }
 
-    func computeBrowserMatrixTargets(for cards: [FrieveCard]) -> [Int: FrievePoint] {
+    func computeBrowserMatrixTargets(for cards: [FrieveCard], rectifiesCircularLayout: Bool = false) -> [Int: FrievePoint] {
         guard !cards.isEmpty else { return [:] }
 
         let visibleIDs = Set(cards.map(\.id))
@@ -1434,10 +1442,13 @@ extension WorkspaceViewModel {
 
         for id in orderedIDs {
             guard let position = positionsByID[id] else { continue }
-            let normalized = FrievePoint(
+            var normalized = FrievePoint(
                 x: (position.x - bounds.minX) / (bounds.maxX - bounds.minX),
                 y: (position.y - bounds.minY) / (bounds.maxY - bounds.minY)
             )
+            if rectifiesCircularLayout {
+                normalized = rectifiedBrowserMatrixPoint(normalized)
+            }
             guard let cellIndex = nearestEmptyBrowserMatrixCell(to: normalized, width: width, height: height, grid: grid) else {
                 continue
             }
@@ -1451,6 +1462,21 @@ extension WorkspaceViewModel {
         }
 
         return targetsByID
+    }
+
+    func rectifiedBrowserMatrixPoint(_ point: FrievePoint) -> FrievePoint {
+        let x = point.x - 0.5
+        let y = point.y - 0.5
+        let angle = atan2(y, x)
+        var radialAngle = (angle + (.pi * 2)).truncatingRemainder(dividingBy: .pi / 2)
+        if radialAngle > .pi / 4 {
+            radialAngle = (.pi / 2) - radialAngle
+        }
+        let coefficient = 1.0 / cos(radialAngle)
+        return FrievePoint(
+            x: x * coefficient + 0.5,
+            y: y * coefficient + 0.5
+        )
     }
 
     func browserMatrixAspectRatio(for cards: [FrieveCard]) -> Double {

@@ -1,6 +1,23 @@
 import SwiftUI
 import AppKit
 
+let browserArrangeModeOptions = [
+    "None",
+    "Normalize",
+    "Repulsion",
+    "Link",
+    "Link(Soft)",
+    "Label",
+    "Label(Soft)",
+    "Index",
+    "Index(Soft)",
+    "Matrix",
+    "Index(Matrix)",
+    "Similarity",
+    "Similarity(Soft)",
+    "Tree"
+]
+
 struct BrowserHUDAvoidanceInsets: Equatable {
     let bottom: CGFloat
     let trailing: CGFloat
@@ -912,16 +929,9 @@ private struct BrowserCanvasHUD: View {
         VStack(alignment: .trailing, spacing: 8) {
             HStack(spacing: 12) {
                 Picker("Arrange", selection: $viewModel.arrangeMode) {
-                    Text("None").tag("None")
-                    Text("Normalize").tag("Normalize")
-                    Text("Repulsion").tag("Repulsion")
-                    Text("Link").tag("Link")
-                    Text("Link(Soft)").tag("Link(Soft)")
-                    Text("Label").tag("Label")
-                    Text("Index").tag("Index")
-                    Text("Matrix").tag("Matrix")
-                    Text("Similarity").tag("Similarity")
-                    Text("Tree").tag("Tree")
+                    ForEach(browserArrangeModeOptions, id: \.self) { mode in
+                        Text(mode).tag(mode)
+                    }
                 }
                 .fixedSize()
                 Button("Shuffle") { viewModel.shuffleLayout() }
