@@ -15,14 +15,25 @@ struct WorkspaceRootView: View {
     @ObservedObject var viewModel: WorkspaceViewModel
 
     var body: some View {
-        NavigationSplitView {
-            SidebarView(viewModel: viewModel)
-                .navigationSplitViewColumnWidth(min: 230, ideal: 280, max: 340)
-        } content: {
-            CardListPane(viewModel: viewModel)
-                .navigationSplitViewColumnWidth(min: 230, ideal: 280, max: 340)
-        } detail: {
-            WorkspaceContentView(viewModel: viewModel)
+        Group {
+            if viewModel.showCardList {
+                NavigationSplitView {
+                    SidebarView(viewModel: viewModel)
+                        .navigationSplitViewColumnWidth(min: 230, ideal: 280, max: 340)
+                } content: {
+                    CardListPane(viewModel: viewModel)
+                        .navigationSplitViewColumnWidth(min: 230, ideal: 280, max: 340)
+                } detail: {
+                    WorkspaceContentView(viewModel: viewModel)
+                }
+            } else {
+                NavigationSplitView {
+                    SidebarView(viewModel: viewModel)
+                        .navigationSplitViewColumnWidth(min: 230, ideal: 280, max: 340)
+                } detail: {
+                    WorkspaceContentView(viewModel: viewModel)
+                }
+            }
         }
         .inspector(isPresented: $viewModel.showInspector) {
             InspectorPaneView(viewModel: viewModel)
@@ -155,6 +166,7 @@ private struct CardListPane: View {
                         .truncationMode(.tail)
                         .contentShape(Rectangle())
                         .onTapGesture(count: 2) {
+                            NSApp.keyWindow?.makeFirstResponder(nil)
                             viewModel.openCardInEditor(card.id)
                         }
                         .tag(card.id)
