@@ -939,6 +939,11 @@ import Testing
     #expect(center.alphaComponent > 0)
 }
 
+@Test func browserMetalViewportSizeScalesOnlyForOffscreenSnapshots() {
+    #expect(browserMetalViewportSize(for: CGSize(width: 320, height: 240), sceneScale: 1) == CGSize(width: 320, height: 240))
+    #expect(browserMetalViewportSize(for: CGSize(width: 320, height: 240), sceneScale: 2) == CGSize(width: 640, height: 480))
+}
+
 @Test func windowsShapeMenusExposeFullWindowsOptionSets() {
     #expect(frieveCardShapeOptions.count == 16)
     #expect(frieveCardShapeOptions.map(\.name).contains("No Drawing"))

@@ -162,6 +162,13 @@ func browserPresentationRefreshMode(selectionChanged: Bool, dragChanged: Bool, h
     return .cardsLinksAndText
 }
 
+func browserMetalViewportSize(for canvasSize: CGSize, sceneScale: Double) -> CGSize {
+    CGSize(
+        width: canvasSize.width * sceneScale,
+        height: canvasSize.height * sceneScale
+    )
+}
+
 @MainActor
 final class BrowserSurfaceNSView: BrowserInteractionNSView {
     override var isOpaque: Bool { false }
@@ -1308,7 +1315,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         encodeSceneRender(
             in: renderPassDescriptor,
             commandBuffer: commandBuffer,
-            drawableSize: view.drawableSize,
+            viewportSize: scene.canvasSize,
             sceneScale: 1,
             clearColor: view.clearColor,
             sampleCount: view.sampleCount
@@ -1365,7 +1372,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
         encodeSceneRender(
             in: renderPassDescriptor,
             commandBuffer: commandBuffer,
-            drawableSize: CGSize(width: pixelWidth, height: pixelHeight),
+            viewportSize: browserMetalViewportSize(for: scene.canvasSize, sceneScale: sceneScale),
             sceneScale: sceneScale,
             clearColor: clearColor,
             sampleCount: sampleCount
@@ -1412,7 +1419,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
     private func encodeSceneRender(
         in renderPassDescriptor: MTLRenderPassDescriptor,
         commandBuffer: MTLCommandBuffer,
-        drawableSize: CGSize,
+        viewportSize: CGSize,
         sceneScale: Double,
         clearColor: MTLClearColor,
         sampleCount: Int
@@ -1432,7 +1439,7 @@ private final class BrowserMetalRenderer: NSObject, MTKViewDelegate {
 #endif
 
         var viewport = BrowserMetalViewportUniforms(
-            viewportSize: SIMD2(Float(drawableSize.width), Float(drawableSize.height)),
+            viewportSize: SIMD2(Float(viewportSize.width), Float(viewportSize.height)),
             worldScale: SIMD2(
                 Float(scene.worldToCanvasTransform.a * sceneScale),
                 Float(scene.worldToCanvasTransform.d * sceneScale)
