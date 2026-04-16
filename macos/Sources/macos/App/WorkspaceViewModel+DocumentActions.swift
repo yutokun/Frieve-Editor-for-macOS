@@ -98,6 +98,16 @@ func browserPrintImageRect(for imageSize: CGSize, in printableRect: CGRect) -> C
     )
 }
 
+func browserPrintContentRect(for imageableBounds: CGRect, padding: CGFloat = 12) -> CGRect {
+    CGRect(
+        origin: CGPoint(x: padding, y: padding),
+        size: CGSize(
+            width: max(imageableBounds.width - padding * 2, 0),
+            height: max(imageableBounds.height - padding * 2, 0)
+        )
+    )
+}
+
 private final class BrowserPrintPageView: NSView {
     let image: NSImage
     let printableRect: CGRect
@@ -469,10 +479,11 @@ extension WorkspaceViewModel {
         let printInfo = NSPrintInfo.shared.copy() as? NSPrintInfo ?? NSPrintInfo.shared
         printInfo.horizontalPagination = .fit
         printInfo.verticalPagination = .fit
-        printInfo.isHorizontallyCentered = false
-        printInfo.isVerticallyCentered = false
+        printInfo.isHorizontallyCentered = true
+        printInfo.isVerticallyCentered = true
 
-        let printableRect = printInfo.imageablePageBounds.insetBy(dx: 12, dy: 12)
+        let imageableBounds = printInfo.imageablePageBounds
+        let printableRect = browserPrintContentRect(for: imageableBounds)
         let snapshotScale = browserPrintSnapshotScale(for: resolvedBrowserCanvasSize(), printableSize: printableRect.size)
         guard let image = browserHighResolutionSnapshotProvider?(snapshotScale) ?? browserSnapshotProvider?() else {
             statusMessage = "Browser image is unavailable"
@@ -480,7 +491,7 @@ extension WorkspaceViewModel {
         }
 
         let printView = BrowserPrintPageView(
-            frame: CGRect(origin: .zero, size: printInfo.paperSize),
+            frame: CGRect(origin: .zero, size: imageableBounds.size),
             image: image,
             printableRect: printableRect
         )

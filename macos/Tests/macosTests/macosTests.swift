@@ -184,12 +184,14 @@ import Testing
         for: CGSize(width: 1200, height: 800),
         printableSize: CGSize(width: 540, height: 720)
     )
+    let contentRect = browserPrintContentRect(for: CGRect(x: 18, y: 18, width: 576, height: 756))
     let rect = browserPrintImageRect(
         for: CGSize(width: 1600, height: 900),
         in: CGRect(x: 0, y: 0, width: 500, height: 700)
     )
 
     #expect(scale == 2)
+    #expect(contentRect == CGRect(x: 12, y: 12, width: 552, height: 732))
     #expect(rect == CGRect(x: 0, y: 209.375, width: 500, height: 281.25))
 }
 
