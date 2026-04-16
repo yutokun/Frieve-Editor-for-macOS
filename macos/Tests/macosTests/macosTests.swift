@@ -2631,17 +2631,17 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
     #expect(model.rectifiedBrowserMatrixPoint(.init(x: 0.5, y: 0.5)) == .init(x: 0.5, y: 0.5))
 }
 
-@Test func browserMatrixAndTreeArrangeIgnoreDuplicateVisibleCardIDs() async throws {
+@Test func browserArrangeModesIgnoreDuplicateVisibleCardIDs() async throws {
     let model = await MainActor.run { WorkspaceViewModel() }
 
-    let results = await MainActor.run { () -> (Int, Int, Int, FrievePoint, FrievePoint) in
+    let results = await MainActor.run { () -> (Int, Int, Int, [String: FrievePoint]) in
         model.newDocument()
         let rootID = model.selectedCardID ?? 0
         let childID = model.document.addCard(title: "Alpha", linkedFrom: rootID)
         _ = model.document.addCard(title: "Beta", linkedFrom: rootID)
 
         guard var duplicate = model.document.card(withID: childID) else {
-            return (0, 0, 0, .zero, .zero)
+            return (0, 0, 0, [:])
         }
         duplicate.title = "Alpha Duplicate"
         duplicate.position = FrievePoint(x: 0.95, y: 0.1)
@@ -2652,24 +2652,23 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
         let matrixTargetCount = model.computeBrowserMatrixTargets(for: autoArrangeCards).count
         let treeTargetCount = model.computeBrowserTreeTargets(for: autoArrangeCards).count
 
-        model.arrangeMode = "Matrix"
-        model.browserAutoArrangeEnabled = true
-        model.applyBrowserAutoArrangeStepIfNeeded(force: true)
-        let matrixPosition = model.document.card(withID: childID)?.position ?? .zero
+        let arrangeModes = browserArrangeModeOptions.filter { $0 != "None" }
+        var positionsByMode: [String: FrievePoint] = [:]
+        for mode in arrangeModes {
+            model.arrangeMode = mode
+            model.browserAutoArrangeEnabled = true
+            model.applyBrowserAutoArrangeStepIfNeeded(force: true)
+            positionsByMode[mode] = model.document.card(withID: childID)?.position ?? .zero
+        }
 
-        model.arrangeMode = "Tree"
-        model.browserAutoArrangeEnabled = true
-        model.applyBrowserAutoArrangeStepIfNeeded(force: true)
-        let treePosition = model.document.card(withID: childID)?.position ?? .zero
-
-        return (autoArrangeCards.count, matrixTargetCount, treeTargetCount, matrixPosition, treePosition)
+        return (autoArrangeCards.count, matrixTargetCount, treeTargetCount, positionsByMode)
     }
 
     #expect(results.0 == 3)
     #expect(results.1 == 3)
     #expect(results.2 == 3)
-    #expect(results.3 != FrievePoint(x: 0.58, y: 0.58))
-    #expect(results.4 != FrievePoint(x: 0.58, y: 0.58))
+    #expect(results.3.count == browserArrangeModeOptions.count - 1)
+    #expect(results.3.values.allSatisfy { $0.x.isFinite && $0.y.isFinite })
 }
 
 @Test func shuffleLayoutRepositionsWholeBrowserLayoutInOnePass() async throws {

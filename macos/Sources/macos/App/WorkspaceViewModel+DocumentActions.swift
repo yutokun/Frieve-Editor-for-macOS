@@ -976,11 +976,11 @@ extension WorkspaceViewModel {
     }
 
     func applyBrowserLinkAutoArrangeStep(ratio: Double = 1.0, stepScale: Double = 1.0) {
-        let visibleCards = visibleSortedCards()
+        let visibleCards = browserArrangeUniqueCards(visibleSortedCards())
         guard visibleCards.count > 1 else { return }
         let freezeSelectedCards = hasActiveBrowserGesture
 
-        let positions = Dictionary(uniqueKeysWithValues: visibleCards.map { ($0.id, $0.position) })
+        let positions = browserArrangePositionsByCardID(visibleCards)
         let baseLinkRatio = ratio * 0.66 * 0.3
         let linkRatio = 1 - pow(max(1 - baseLinkRatio, 0.0001), stepScale)
         var nextPositions = browserRepulsedPositions(for: visibleCards, stepScale: stepScale, ratio: 0.5)
@@ -1024,7 +1024,7 @@ extension WorkspaceViewModel {
     }
 
     func applyBrowserNormalizeArrangeStep(using randomUnit: () -> Double = { Double.random(in: 0 ... 1) }) {
-        let visibleCards = visibleSortedCards()
+        let visibleCards = browserArrangeUniqueCards(visibleSortedCards())
         let targetIDs = Set(visibleCards.map(\.id))
         guard !targetIDs.isEmpty else { return }
         let positions = preparedBrowserNormalizePositions(for: visibleCards, randomUnit: randomUnit)
@@ -1032,7 +1032,7 @@ extension WorkspaceViewModel {
     }
 
     func applyBrowserRepulsionAutoArrangeStep(stepScale: Double = 1.0, ratio: Double = 1.0) {
-        let visibleCards = visibleSortedCards()
+        let visibleCards = browserArrangeUniqueCards(visibleSortedCards())
         guard visibleCards.count > 1 else { return }
         let targetIDs = Set(visibleCards.filter { !$0.isFixed && !(hasActiveBrowserGesture && selectedCardIDs.contains($0.id)) }.map(\.id))
         guard !targetIDs.isEmpty else { return }
@@ -1041,8 +1041,9 @@ extension WorkspaceViewModel {
     }
 
     func browserRepulsedPositions(for visibleCards: [FrieveCard], stepScale: Double, ratio: Double) -> [Int: FrievePoint] {
+        let visibleCards = browserArrangeUniqueCards(visibleCards)
         let freezeSelectedCards = hasActiveBrowserGesture
-        let positions = Dictionary(uniqueKeysWithValues: visibleCards.map { ($0.id, $0.position) })
+        let positions = browserArrangePositionsByCardID(visibleCards)
         var nextPositions = positions
 
         for card in visibleCards where !card.isFixed && !(freezeSelectedCards && selectedCardIDs.contains(card.id)) {
@@ -1098,14 +1099,12 @@ extension WorkspaceViewModel {
     }
 
     func applyBrowserSimilarityAutoArrangeStep(stepScale: Double = 1.0) {
-        let visibleCards = visibleSortedCards()
+        let visibleCards = browserArrangeUniqueCards(visibleSortedCards())
         guard visibleCards.count > 1 else { return }
         let freezeSelectedCards = hasActiveBrowserGesture
         let positions = browserRepulsedPositions(for: visibleCards, stepScale: stepScale, ratio: 0.5)
         var nextPositions = positions
-        let linkNeighborSets = Dictionary(uniqueKeysWithValues: visibleCards.map { card in
-            (card.id, Set(linksForCard(card.id).flatMap { [$0.fromCardID, $0.toCardID] }.filter { $0 != card.id }))
-        })
+        let linkNeighborSets = browserArrangeNeighborSetsByCardID(visibleCards)
         let blend = 1 - pow(0.5, stepScale)
 
         for card in visibleCards where !card.isFixed && !(freezeSelectedCards && selectedCardIDs.contains(card.id)) {
@@ -1303,7 +1302,8 @@ extension WorkspaceViewModel {
         for visibleCards: [FrieveCard],
         randomUnit: () -> Double = { Double.random(in: 0 ... 1) }
     ) -> [Int: FrievePoint] {
-        var positions = Dictionary(uniqueKeysWithValues: visibleCards.map { ($0.id, $0.position) })
+        let visibleCards = browserArrangeUniqueCards(visibleCards)
+        var positions = browserArrangePositionsByCardID(visibleCards)
         guard visibleCards.count > 1 else { return positions }
 
         let rawBounds = visibleCards.reduce(into: (minX: 0.5, maxX: 0.5, minY: 0.5, maxY: 0.5, initialized: false)) { partial, card in
@@ -1337,17 +1337,43 @@ extension WorkspaceViewModel {
         document.cards.filter(\.visible)
     }
 
-    func browserAutoArrangeCardsInDocumentOrder() -> [FrieveCard] {
+    func browserArrangeUniqueCards(_ cards: [FrieveCard]) -> [FrieveCard] {
         var seenCardIDs = Set<Int>()
         var uniqueCards: [FrieveCard] = []
-        uniqueCards.reserveCapacity(document.cards.count)
+        uniqueCards.reserveCapacity(cards.count)
 
-        for card in browserVisibleCardsInDocumentOrder() {
+        for card in cards {
             guard seenCardIDs.insert(card.id).inserted else { continue }
             uniqueCards.append(card)
         }
 
         return uniqueCards
+    }
+
+    func browserArrangePositionsByCardID(_ cards: [FrieveCard]) -> [Int: FrievePoint] {
+        var positionsByID: [Int: FrievePoint] = [:]
+        positionsByID.reserveCapacity(cards.count)
+        for card in cards where positionsByID[card.id] == nil {
+            positionsByID[card.id] = card.position
+        }
+        return positionsByID
+    }
+
+    func browserArrangeNeighborSetsByCardID(_ cards: [FrieveCard]) -> [Int: Set<Int>] {
+        var neighborSetsByID: [Int: Set<Int>] = [:]
+        neighborSetsByID.reserveCapacity(cards.count)
+        for card in cards where neighborSetsByID[card.id] == nil {
+            neighborSetsByID[card.id] = Set(
+                linksForCard(card.id)
+                    .flatMap { [$0.fromCardID, $0.toCardID] }
+                    .filter { $0 != card.id }
+            )
+        }
+        return neighborSetsByID
+    }
+
+    func browserAutoArrangeCardsInDocumentOrder() -> [FrieveCard] {
+        browserArrangeUniqueCards(browserVisibleCardsInDocumentOrder())
     }
 
     func browserArrangeBounds(for cards: [FrieveCard]) -> (minX: Double, maxX: Double, minY: Double, maxY: Double) {
@@ -1400,10 +1426,11 @@ extension WorkspaceViewModel {
     }
 
     func computeBrowserMatrixTargets(for cards: [FrieveCard], rectifiesCircularLayout: Bool = false) -> [Int: FrievePoint] {
+        let cards = browserArrangeUniqueCards(cards)
         guard !cards.isEmpty else { return [:] }
 
         let visibleIDs = Set(cards.map(\.id))
-        let positionsByID = Dictionary(uniqueKeysWithValues: cards.map { ($0.id, $0.position) })
+        let positionsByID = browserArrangePositionsByCardID(cards)
         let bounds = browserArrangeBounds(for: cards)
         let selectedID = selectedCardID.flatMap { visibleIDs.contains($0) ? $0 : nil }
         let relatedIDs = browserRelatedCardIDs(for: selectedID, visibleIDs: visibleIDs)
@@ -1523,8 +1550,12 @@ extension WorkspaceViewModel {
     }
 
     func browserTreeHierarchy(for cards: [FrieveCard]) -> (orderedIDs: [Int], levelsByID: [Int: Int], parentByID: [Int: Int]) {
+        let cards = browserArrangeUniqueCards(cards)
         let originalIDs = cards.map(\.id)
-        let originalIndexByID = Dictionary(uniqueKeysWithValues: originalIDs.enumerated().map { ($1, $0) })
+        var originalIndexByID: [Int: Int] = [:]
+        for (index, id) in originalIDs.enumerated() where originalIndexByID[id] == nil {
+            originalIndexByID[id] = index
+        }
         let topIDs = Set(cards.filter(\.isTop).map(\.id))
 
         var parentIndicesByChildIndex: [Int: [Int]] = [:]
@@ -1636,13 +1667,14 @@ extension WorkspaceViewModel {
     }
 
     func computeBrowserTreeTargets(for cards: [FrieveCard], ratio: Double = 1.0) -> [Int: FrievePoint] {
+        let cards = browserArrangeUniqueCards(cards)
         guard !cards.isEmpty else { return [:] }
 
         let hierarchy = browserTreeHierarchy(for: cards)
         let orderedIDs = hierarchy.orderedIDs
         guard !orderedIDs.isEmpty else { return [:] }
 
-        var positions = Dictionary(uniqueKeysWithValues: cards.map { ($0.id, $0.position) })
+        var positions = browserArrangePositionsByCardID(cards)
         var nodeGroupByID: [Int: Int] = [:]
         var nodeHeightByID = Dictionary(uniqueKeysWithValues: orderedIDs.map { ($0, 0) })
         let visibleCount = max(orderedIDs.count + 1, 1)
