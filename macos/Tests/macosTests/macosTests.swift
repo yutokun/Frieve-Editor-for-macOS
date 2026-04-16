@@ -81,6 +81,124 @@ import Testing
 }
 
 @MainActor
+@Test func browserArrangeMetadataPersistsNormalizeModeAcrossToggleOff() throws {
+    let model = WorkspaceViewModel()
+
+    model.arrangeMode = "Normalize"
+    model.syncDocumentMetadataFromSettings()
+    #expect(model.document.metadata["Arrange"] == "1")
+    #expect(model.document.metadata["ArrangeMode"] == "0")
+
+    model.arrangeMode = "None"
+    model.syncDocumentMetadataFromSettings()
+    #expect(model.document.metadata["Arrange"] == "0")
+    #expect(model.document.metadata["ArrangeMode"] == "0")
+}
+
+@MainActor
+@Test func openDocumentRestoresSavedNormalizeArrangeMode() throws {
+    let suiteName = "FrieveEditorTests.\(UUID().uuidString)"
+    guard let defaults = UserDefaults(suiteName: suiteName) else {
+        Issue.record("Failed to create isolated UserDefaults suite")
+        return
+    }
+    defaults.removePersistentDomain(forName: suiteName)
+    defer { defaults.removePersistentDomain(forName: suiteName) }
+
+    let model = WorkspaceViewModel(settings: AppSettings(userDefaults: defaults))
+    let temporaryDirectory = FileManager.default.temporaryDirectory
+        .appendingPathComponent(UUID().uuidString, isDirectory: true)
+    try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+
+    let url = temporaryDirectory.appendingPathComponent("normalize.fip2")
+    let document = FrieveDocument(
+        title: "Normalize Metadata",
+        metadata: [
+            "Arrange": "1",
+            "ArrangeMode": "0"
+        ],
+        focusedCardID: 1,
+        cards: [
+            FrieveCard(id: 1, title: "Left", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: -4.0, y: -1.0), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil),
+            FrieveCard(id: 2, title: "Right", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 8.0, y: 5.0), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil)
+        ],
+        links: [],
+        cardLabels: [],
+        linkLabels: [],
+        sourcePath: nil
+    )
+    try DocumentFileCodec.save(document: document, to: url)
+
+    model.openDocument(url)
+    model.applyBrowserAutoArrangeStepIfNeeded(force: true)
+
+    #expect(model.arrangeMode == "Normalize")
+    #expect(model.browserAutoArrangeEnabled)
+    #expect(model.document.card(withID: 1)?.position == FrievePoint(x: 0, y: 0))
+    #expect(model.document.card(withID: 2)?.position == FrievePoint(x: 1, y: 1))
+}
+
+@MainActor
+@Test func normalizeTimerMovesCardsWithoutForcedStep() throws {
+    let model = WorkspaceViewModel()
+    model.document = FrieveDocument(
+        title: "Normalize Timer",
+        metadata: [:],
+        focusedCardID: 1,
+        cards: [
+            FrieveCard(id: 1, title: "A", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: -4.0, y: -2.0), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil),
+            FrieveCard(id: 2, title: "B", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 9.0, y: 7.0), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil)
+        ],
+        links: [],
+        cardLabels: [],
+        linkLabels: [],
+        sourcePath: nil
+    )
+
+    let before = Dictionary(uniqueKeysWithValues: model.document.cards.map { ($0.id, $0.position) })
+    model.arrangeMode = "Normalize"
+    RunLoop.main.run(until: Date().addingTimeInterval(0.05))
+
+    let moved = model.document.cards.contains { card in
+        before[card.id] != card.position
+    }
+    model.browserAutoArrangeEnabled = false
+
+    #expect(moved)
+}
+
+@MainActor
+@Test func selectingNormalizeImmediatelyRequestsViewportFit() throws {
+    let model = WorkspaceViewModel()
+    model.document = FrieveDocument(
+        title: "Normalize Immediate Fit",
+        metadata: [:],
+        focusedCardID: 1,
+        cards: [
+            FrieveCard(id: 1, title: "A", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: -6.0, y: -3.0), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil),
+            FrieveCard(id: 2, title: "B", bodyText: "", drawingEncoded: "", visible: true, shape: 0, size: 100, isTop: false, isFixed: false, isFolded: false, position: FrievePoint(x: 12.0, y: 9.0), created: "", updated: "", viewed: "", labelIDs: [], score: 0, imagePath: nil, videoPath: nil)
+        ],
+        links: [],
+        cardLabels: [],
+        linkLabels: [],
+        sourcePath: nil
+    )
+
+    let beforeRevision = model.browserViewportRevision
+    let beforeCenter = model.canvasCenter
+    let beforeZoom = model.zoom
+
+    model.arrangeMode = "Normalize"
+    model.resetCanvasToFit(in: CGSize(width: 1200, height: 800))
+
+    #expect(model.browserViewportRevision == beforeRevision + 1)
+    #expect(model.canvasCenter != beforeCenter || model.zoom != beforeZoom)
+    #expect(model.document.card(withID: 1)?.position == FrievePoint(x: 0, y: 0))
+    #expect(model.document.card(withID: 2)?.position == FrievePoint(x: 1, y: 1))
+}
+
+@MainActor
 @Test func browserCardTextPrefersHoverAndFallsBackToSelection() async throws {
     let model = WorkspaceViewModel()
     model.newDocument()
@@ -3601,6 +3719,41 @@ private func firstMatchingRowFromTop(in bitmap: NSBitmapImageRep, predicate: (NS
 
     #expect(document.cardCount > 0)
     #expect(document.focusedCardID != nil)
+}
+
+@MainActor
+@Test func normalizeMovesCardsInLegacyHelpDocument() throws {
+    let model = WorkspaceViewModel()
+    let helpURL = URL(fileURLWithPath: "/Users/yuto/SoftwareProjects/Frieve-Editor/windows/resource/help.fip")
+
+    model.openDocument(helpURL)
+    let uniqueVisibleIDs = model.browserArrangeUniqueCards(model.document.cards.filter(\.visible)).map(\.id)
+    let before = model.document.cards.reduce(into: [Int: FrievePoint]()) { partial, card in
+        if partial[card.id] == nil {
+            partial[card.id] = card.position
+        }
+    }
+
+    model.arrangeMode = "Normalize"
+    model.applyBrowserAutoArrangeStepIfNeeded(force: true)
+
+    let maxDelta = uniqueVisibleIDs.reduce(0.0) { partial, cardID in
+        guard let previous = before[cardID], let current = model.document.card(withID: cardID)?.position else {
+            return partial
+        }
+        let dx = current.x - previous.x
+        let dy = current.y - previous.y
+        return max(partial, hypot(dx, dy))
+    }
+    let movedVisibleCardCount = uniqueVisibleIDs.filter { cardID in
+        guard let previous = before[cardID], let current = model.document.card(withID: cardID)?.position else {
+            return false
+        }
+        return previous != current
+    }.count
+
+    #expect(movedVisibleCardCount > 0)
+    #expect(maxDelta > 0.01)
 }
 
 @Test func browserAutoArrangeStepScaleUsesStableFixedScaleAt60Hz() async throws {

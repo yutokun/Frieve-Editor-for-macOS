@@ -181,6 +181,7 @@ extension WorkspaceViewModel {
             hasUnsavedChanges = false
             lastKnownFileModificationDate = fileModificationDate(for: url)
             recordRecent(url)
+            applyDocumentArrangeMetadata()
             syncDocumentMetadataFromSettings()
             resetCanvasStateFromDocument()
             statusMessage = "Opened \(url.lastPathComponent)"
@@ -916,12 +917,17 @@ extension WorkspaceViewModel {
 
     func arrangeCards() {
         if arrangeMode == "None" {
-            // Toggle: switch to Link
-            arrangeMode = "Link"
+            // Toggle: restore the most recently selected non-none mode.
+            arrangeMode = browserActiveArrangeMode ?? "Link"
         } else {
             // Toggle: switch to None
             arrangeMode = "None"
         }
+    }
+
+    func applyBrowserNormalizeModeImmediately() {
+        applyBrowserAutoArrangeStepIfNeeded(force: true)
+        requestBrowserFit()
     }
 
     func applyBrowserAutoArrangeStepIfNeeded(force: Bool = false) {

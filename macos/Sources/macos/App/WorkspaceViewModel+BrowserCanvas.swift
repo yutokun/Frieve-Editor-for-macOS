@@ -17,7 +17,7 @@ extension WorkspaceViewModel {
         guard browserAutoArrangeTimer == nil else { return }
         let timer = Timer(timeInterval: browserAutoArrangeFrameInterval, repeats: true) { [weak self] _ in
             guard let self else { return }
-            Task { @MainActor in
+            MainActor.assumeIsolated {
                 self.applyBrowserAutoArrangeStepIfNeeded()
             }
         }

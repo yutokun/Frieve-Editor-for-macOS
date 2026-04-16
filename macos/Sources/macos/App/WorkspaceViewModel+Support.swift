@@ -7,6 +7,68 @@ private let maxDocumentUndoSnapshots = 64
 private let browserCardBaseTitlePointSize: CGFloat = 13
 private let browserCardBaseContentPadding: CGFloat = 8
 private let browserCardBaseMaximumTextWidth: CGFloat = 200
+private let browserArrangeModeCodesByName: [String: Int] = [
+    "Normalize": 0,
+    "Repulsion": 1,
+    "Link": 2,
+    "Label": 3,
+    "Index": 4,
+    "Link(Soft)": 102,
+    "Label(Soft)": 103,
+    "Index(Soft)": 104,
+    "Matrix": 200,
+    "Index(Matrix)": 204,
+    "Similarity": 500,
+    "Similarity(Soft)": 600,
+    "Tree": 1000
+]
+
+func browserArrangeModeCode(for modeName: String) -> Int? {
+    browserArrangeModeCodesByName[modeName]
+}
+
+func browserArrangeModeName(for rawValue: String?) -> String? {
+    guard let rawValue,
+          let code = Int(rawValue.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+        return nil
+    }
+
+    switch code {
+    case 0:
+        return "Normalize"
+    case 1:
+        return "Repulsion"
+    case 2:
+        return "Link"
+    case 3:
+        return "Label"
+    case 4:
+        return "Index"
+    case 102:
+        return "Link(Soft)"
+    case 103:
+        return "Label(Soft)"
+    case 104:
+        return "Index(Soft)"
+    case 200, 202, 203:
+        return "Matrix"
+    case 204:
+        return "Index(Matrix)"
+    case 500, 700:
+        return "Similarity"
+    case 600:
+        return "Similarity(Soft)"
+    case 1000 ..< 2000:
+        return "Tree"
+    default:
+        return nil
+    }
+}
+
+func browserMetadataFlag(from rawValue: String?) -> Bool? {
+    guard let rawValue else { return nil }
+    return Int(rawValue.trimmingCharacters(in: .whitespacesAndNewlines)).map { $0 != 0 }
+}
 
 struct BrowserCardScoreBarLayout: Hashable {
     let baselineFraction: CGFloat
@@ -496,6 +558,7 @@ extension WorkspaceViewModel {
             selectedCardID = loaded.focusedCardID ?? loaded.cards.first?.id
             selectedCardIDs = selectedCardID.map { [$0] } ?? []
             lastKnownFileModificationDate = modificationDate
+            applyDocumentArrangeMetadata()
             syncDocumentMetadataFromSettings()
             resetCanvasStateFromDocument()
             statusMessage = "Reloaded \(url.lastPathComponent) from disk"
@@ -504,9 +567,38 @@ extension WorkspaceViewModel {
         }
     }
 
+    func applyDocumentArrangeMetadata() {
+        let storedMode = browserArrangeModeName(for: document.metadata["ArrangeMode"])
+        if let storedMode {
+            browserActiveArrangeMode = storedMode
+        }
+
+        guard let shouldArrange = browserMetadataFlag(from: document.metadata["Arrange"]) else {
+            return
+        }
+
+        if shouldArrange {
+            arrangeMode = storedMode ?? browserActiveArrangeMode ?? "Link"
+        } else {
+            arrangeMode = "None"
+            browserAutoArrangeEnabled = false
+            if let storedMode {
+                browserActiveArrangeMode = storedMode
+            }
+        }
+    }
+
     func syncDocumentMetadataFromSettings() {
         document.metadata["Title"] = document.title
         document.metadata["DefaultView"] = String(WorkspaceTab.allCases.firstIndex(of: selectedTab) ?? 0)
+        document.metadata["Arrange"] = browserAutoArrangeEnabled ? "1" : "0"
+        let storedArrangeMode = arrangeMode == "None" ? browserActiveArrangeMode : arrangeMode
+        if let storedArrangeMode,
+           let rawArrangeMode = browserArrangeModeCode(for: storedArrangeMode) {
+            document.metadata["ArrangeMode"] = String(rawArrangeMode)
+        } else {
+            document.metadata.removeValue(forKey: "ArrangeMode")
+        }
         document.metadata["AutoSave"] = settings.autoSaveDefault ? "1" : "0"
         document.metadata["AutoReload"] = settings.autoReloadDefault ? "1" : "0"
         document.metadata["Language"] = settings.language

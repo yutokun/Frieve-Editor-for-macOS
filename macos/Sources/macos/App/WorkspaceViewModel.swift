@@ -367,18 +367,23 @@ final class WorkspaceViewModel: ObservableObject {
             guard arrangeMode != oldValue else { return }
             resetBrowserArrangeTransientState()
             if arrangeMode == "None" {
+                if oldValue != "None" {
+                    browserActiveArrangeMode = oldValue
+                }
                 browserAutoArrangeEnabled = false
             } else {
                 browserAutoArrangeEnabled = true
                 browserActiveArrangeMode = arrangeMode
             }
             updateBrowserAutoArrangeTimerState()
+            if arrangeMode == "Normalize", selectedTab == .browser {
+                applyBrowserNormalizeModeImmediately()
+            }
         }
     }
     @Published var browserAutoArrangeEnabled: Bool = false {
         didSet {
             if !browserAutoArrangeEnabled {
-                browserActiveArrangeMode = nil
                 resetBrowserArrangeTransientState()
             }
             updateBrowserAutoArrangeTimerState()
